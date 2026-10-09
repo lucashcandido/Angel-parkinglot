@@ -18,6 +18,16 @@ Die Oberfläche gibt es auf **Spanisch und Englisch**; umgeschaltet wird mit dem
 - Hinweis, wenn bei einem Kunden noch Vormonate offen sind
 - Kundenliste direkt aus Excel einfügen, Monat als CSV exportieren, Sicherung als Datei
 
+## Kontoauszüge mit Claude einlesen
+
+Über **Extracto bancario / Bank statement** lädt man ein PDF oder Screenshots der Bank hoch. Claude liest die Zahlungseingänge und ordnet sie den Kunden zu. Vor dem Speichern zeigt die App eine Vorschau, in der jede Zuordnung geändert werden kann:
+
+- Name passt eindeutig und der Betrag reicht → Vorschlag **bezahlt**
+- Name passt nur ungefähr oder der Betrag ist zu niedrig → Vorschlag **uneindeutig**, Claudes Begründung wird als Notiz gespeichert
+- kein passender Kunde, Datum außerhalb des Monats oder schon einmal eingelesen → wird nicht eingetragen, lässt sich aber von Hand zuordnen
+
+Dafür braucht die App einen eigenen **Anthropic-API-Schlüssel** (https://platform.claude.com/settings/keys, Guthaben unter „Billing“). Die Abrechnung läuft nach Verbrauch über das Anthropic-Konto. Der Schlüssel wird nur im Browser des Geräts gespeichert; der QR-Code für ein weiteres Gerät überträgt ihn mit. Beim Einlesen gehen die Dateien und die Kundenliste (Namen, Zahlernamen, Beträge) an Anthropic, sonst nirgendwohin.
+
 ## Speicherung auf mehreren Geräten
 
 Dieses Repo enthält **nur den Programmcode**. Die Kundendaten liegen getrennt im privaten Repo `Angel-parkinglot-data` (Datei `data.json`) und werden von der App automatisch gelesen und geschrieben. Ändern zwei Geräte gleichzeitig etwas, werden die Stände zusammengeführt; pro Kunde und Monat gilt die jeweils neueste Änderung. Ohne Internet speichert die App lokal und gleicht später ab.
