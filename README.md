@@ -1,1 +1,37 @@
-# Angel-parkinglot
+# Angel Parkinglot
+
+Zahlungsübersicht für die drei Parkanlagen: pro Monat sieht man, wer **bezahlt**, **nicht bezahlt** oder **uneindeutig** ist. Läuft als eine einzige HTML-Seite im Browser – auf dem PC und auf dem iPhone.
+
+**App öffnen:** https://lucashcandido.github.io/angel-parkinglot/
+
+## Was die App kann
+
+- Parkanlage per Klick wählen (oder „Alle“), Namen der Anlagen frei änderbar
+- Monatsansicht mit den drei Listen, Blättern zu früheren und späteren Monaten
+- Ein Tipp auf ✓ / ? / ✕ ändert den Status, mit „Rückgängig“
+- Pro Kunde hinterlegbar, **über welche anderen Namen er zahlt** – die Suche findet ihn dann auch über den Namen auf dem Kontoauszug
+- Pro Zahlung: Betrag, Datum, „überwiesen von“ und Notiz; ein neuer Zahlername lässt sich mit einem Haken dauerhaft merken
+- Hinweis, wenn bei einem Kunden noch Vormonate offen sind
+- Kundenliste direkt aus Excel einfügen, Monat als CSV exportieren, Sicherung als Datei
+
+## Speicherung auf mehreren Geräten
+
+Dieses Repo enthält **nur den Programmcode**. Die Kundendaten liegen getrennt im privaten Repo `angel-parkinglot-data` (Datei `data.json`) und werden von der App automatisch gelesen und geschrieben. Ändern zwei Geräte gleichzeitig etwas, werden die Stände zusammengeführt; pro Kunde und Monat gilt die jeweils neueste Änderung. Ohne Internet speichert die App lokal und gleicht später ab.
+
+### Einmalig einrichten
+
+1. Token erstellen: https://github.com/settings/personal-access-tokens/new
+   - **Repository access:** „Only select repositories“ → `angel-parkinglot-data`
+   - **Permissions → Repository permissions → Contents:** „Read and write“
+   - **Expiration:** „No expiration“ oder das längste Angebot
+2. App öffnen → Zahnrad → **Geräte-Sync** → Token einfügen → **Verbinden**.
+3. Zweites Gerät: auf dem ersten Gerät **„Weiteres Gerät verbinden“** wählen und den QR-Code mit der iPhone-Kamera scannen.
+4. Auf dem iPhone in Safari: Teilen → **„Zum Home-Bildschirm“**, dann startet die App wie eine normale App.
+
+Der Token wird nur im Browser des jeweiligen Geräts gespeichert und nur an `api.github.com` gesendet. Den Kopplungs-Link bzw. QR-Code nicht weitergeben – er enthält den Token.
+
+## Technik
+
+- `index.html` – die komplette App (HTML, CSS, JavaScript), keine externen Abhängigkeiten zur Laufzeit
+- `vendor/qrcode.js` – QR-Code-Erzeugung ([qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator) 1.4.4, MIT-Lizenz, © Kazuhiko Arase)
+- `manifest.webmanifest`, `icon-*.png` – Symbol für den Home-Bildschirm

@@ -1,0 +1,1012 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Angel Parkinglot</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; connect-src https://api.github.com; manifest-src 'self'; base-uri 'none'; form-action 'none'">
+<meta name="theme-color" content="#1d4ed8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Parkinglot">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<style>
+:root{
+  --bg:#f3f4f7; --card:#ffffff; --text:#171a21; --muted:#667085; --line:#e2e5eb; --soft:#f0f2f6;
+  --accent:#1d4ed8; --accent-soft:#e3ebff; --on-accent:#ffffff;
+  --paid:#15803d; --paid-soft:#dcf5e4;
+  --unpaid:#c62828; --unpaid-soft:#fde4e4;
+  --unclear:#b45309; --unclear-soft:#fdeed3;
+  --shadow:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.08);
+  --r:14px;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#0f1218; --card:#191d26; --text:#eef0f4; --muted:#98a2b3; --line:#2a303c; --soft:#222733;
+    --accent:#6b93ff; --accent-soft:#1d2a4d; --on-accent:#0b1020;
+    --paid:#4ade80; --paid-soft:#12301f;
+    --unpaid:#f87171; --unpaid-soft:#3a1a1a;
+    --unclear:#fbbf24; --unclear-soft:#3a2a0d;
+    --shadow:0 1px 2px rgba(0,0,0,.4);
+  }
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-tap-highlight-color:transparent}
+body.noscroll{overflow:hidden}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+h1,h2,h3,p{margin:0}
+.wrap{max-width:1180px;margin:0 auto;padding:0 16px}
+
+/* Kopf */
+.top{position:sticky;top:0;z-index:20;background:var(--card);border-bottom:1px solid var(--line);padding-top:env(safe-area-inset-top)}
+.top-in{display:flex;align-items:center;gap:10px;padding-top:10px;padding-bottom:8px}
+.top h1{font-size:17px;font-weight:700;display:flex;align-items:center;gap:8px;flex:1;min-width:0}
+.top h1 span:last-child{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.logo{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:8px;background:var(--accent);color:var(--on-accent);font-weight:800;font-size:16px;flex:none}
+.pill{border:1px solid var(--line);background:var(--soft);border-radius:999px;padding:6px 11px;font-size:13px;display:flex;align-items:center;gap:6px;white-space:nowrap;flex:none}
+.pill .dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.pill.ok .dot{background:var(--paid)} .pill.error .dot{background:var(--unpaid)}
+.pill.pending .dot,.pill.offline .dot,.pill.local .dot{background:var(--unclear)}
+.pill.busy .dot{background:var(--accent);animation:pulse 1s infinite}
+@keyframes pulse{50%{opacity:.25}}
+.icon-btn{border:0;background:transparent;width:40px;height:40px;border-radius:10px;display:grid;place-items:center;flex:none}
+.icon-btn:hover{background:var(--soft)}
+.icon-btn svg{width:22px;height:22px}
+
+.tabs{display:flex;gap:8px;overflow-x:auto;padding-bottom:10px;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:1 0 auto;min-width:104px;border:1px solid var(--line);background:var(--card);border-radius:12px;padding:8px 12px;text-align:left;line-height:1.2}
+.tab b{display:block;font-size:15px;font-weight:650;white-space:nowrap}
+.tab small{color:var(--muted);font-size:12px}
+.tab.on{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.tab.on small{color:inherit;opacity:.85}
+
+/* Monat */
+.monthbar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:14px 0 10px}
+.monthbar .nav{width:44px;height:44px;border-radius:12px;border:1px solid var(--line);background:var(--card);font-size:22px;line-height:1;flex:none}
+.monthmid{text-align:center;min-width:0}
+#monthLabel{font-size:21px;font-weight:750;letter-spacing:-.01em}
+.link{border:0;background:none;color:var(--accent);padding:2px 4px;font-size:13.5px;text-decoration:underline;text-underline-offset:2px}
+.tag-now{font-size:12.5px;color:var(--muted)}
+
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow)}
+.summary{padding:14px 16px}
+.sum-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.sum-head .big{font-size:17px;font-weight:700}
+.sum-head .money{font-size:14px;color:var(--muted);font-variant-numeric:tabular-nums}
+.bar{display:flex;height:10px;border-radius:99px;overflow:hidden;background:var(--soft);margin-top:10px}
+.bar i{display:block;height:100%}
+.bar .p{background:var(--paid)} .bar .c{background:var(--unclear)} .bar .u{background:var(--unpaid);opacity:.55}
+.banner{margin-top:12px;padding:11px 14px;border-radius:12px;background:var(--unclear-soft);font-size:14px;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.banner.err{background:var(--unpaid-soft)}
+
+.toolbar{display:flex;gap:10px;margin:14px 0 10px}
+.toolbar input{flex:1;min-width:0}
+input[type=text],input[type=search],input[type=password],input[type=date],input[type=tel],select,textarea{
+  width:100%;border:1px solid var(--line);background:var(--card);border-radius:11px;padding:10px 12px;font-size:16px;min-height:44px;-webkit-appearance:none;appearance:none}
+textarea{min-height:76px;resize:vertical}
+select{background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 18px) 19px,calc(100% - 13px) 19px;background-size:5px 5px;background-repeat:no-repeat;padding-right:32px}
+input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.btn{border:1px solid var(--line);background:var(--card);border-radius:11px;padding:10px 14px;min-height:44px;font-weight:600;white-space:nowrap}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.btn.danger{color:var(--unpaid);border-color:var(--unpaid)}
+.btn.small{min-height:36px;padding:6px 11px;font-size:14px}
+.btn:disabled{opacity:.5;cursor:default}
+
+/* Listen-Umschalter (Handy) */
+.switch{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px}
+.switch button{border:1px solid var(--line);background:var(--card);border-radius:11px;padding:7px 4px;font-size:13px;line-height:1.25;min-height:48px}
+.switch button b{display:block;font-size:17px;font-variant-numeric:tabular-nums}
+.switch button.on.paid{background:var(--paid-soft);border-color:var(--paid);color:var(--paid)}
+.switch button.on.unpaid{background:var(--unpaid-soft);border-color:var(--unpaid);color:var(--unpaid)}
+.switch button.on.unclear{background:var(--unclear-soft);border-color:var(--unclear);color:var(--unclear)}
+
+.lists{display:grid;gap:14px;padding-bottom:calc(40px + env(safe-area-inset-bottom))}
+.col{overflow:hidden}
+.col-head{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--line);font-weight:700}
+.col-head .cnt{margin-left:auto;font-variant-numeric:tabular-nums}
+.col-head .sum{font-weight:500;color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums}
+.col-head .mark{width:10px;height:10px;border-radius:50%}
+.col.paid .mark{background:var(--paid)} .col.unpaid .mark{background:var(--unpaid)} .col.unclear .mark{background:var(--unclear)}
+.col.paid .col-head{background:var(--paid-soft)} .col.unpaid .col-head{background:var(--unpaid-soft)} .col.unclear .col-head{background:var(--unclear-soft)}
+.col ul{list-style:none;margin:0;padding:0}
+.row{display:flex;align-items:stretch;border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:0}
+.row-main{flex:1;min-width:0;text-align:left;border:0;background:none;padding:10px 6px 10px 14px;display:block}
+.row-main:hover{background:var(--soft)}
+.row-name{display:block;font-weight:650;overflow-wrap:anywhere}
+.row-sub{display:block;color:var(--muted);font-size:13.5px;overflow-wrap:anywhere}
+.row-note{display:block;font-size:13.5px;margin-top:2px;overflow-wrap:anywhere}
+.badge{display:inline-block;font-size:11.5px;font-weight:650;border-radius:6px;padding:1px 6px;vertical-align:1px;margin-left:4px;background:var(--soft);color:var(--muted)}
+.badge.warn{background:var(--unpaid-soft);color:var(--unpaid)}
+.row-actions{display:flex;align-items:center;gap:6px;padding:0 10px 0 4px}
+.ib{width:44px;height:44px;border-radius:12px;border:1px solid var(--line);background:var(--card);display:grid;place-items:center;font-size:19px;font-weight:800;line-height:1}
+.ib.ok{color:var(--paid);border-color:var(--paid);background:var(--paid-soft)}
+.ib.q{color:var(--unclear);border-color:var(--unclear);background:var(--unclear-soft)}
+.ib.no{color:var(--unpaid);border-color:var(--unpaid);background:var(--unpaid-soft)}
+.ib.back{color:var(--muted)}
+.empty{padding:18px 14px;color:var(--muted);font-size:14px}
+.welcome{padding:22px 18px;text-align:center}
+.welcome p{color:var(--muted);margin:6px 0 14px}
+.welcome .btn{margin:4px}
+
+@media (min-width:900px){
+  .lists{grid-template-columns:repeat(3,minmax(0,1fr));align-items:start}
+  .switch{display:none}
+  .top h1{font-size:19px}
+}
+@media (max-width:899px){
+  .lists:not(.searching) .col:not(.active){display:none}
+}
+@media (max-width:430px){
+  .top h1{font-size:16px;gap:7px}
+  .top-in{gap:6px}
+  .pill{font-size:12px;padding:6px 9px}
+}
+
+/* Dialoge */
+.ov{position:fixed;inset:0;z-index:50;background:rgba(10,14,22,.5);display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--card);width:100%;max-width:560px;max-height:92dvh;max-height:92vh;overflow:auto;border-radius:18px 18px 0 0;padding:16px 16px calc(18px + env(safe-area-inset-bottom));-webkit-overflow-scrolling:touch}
+@supports (max-height:92dvh){.sheet{max-height:92dvh}}
+@media (min-width:640px){.ov{align-items:center;padding:20px}.sheet{border-radius:18px;padding:20px}}
+.sheet-head{display:flex;align-items:flex-start;gap:10px;margin-bottom:12px}
+.sheet-head h2{font-size:19px;flex:1;overflow-wrap:anywhere}
+.sheet-head .sub{color:var(--muted);font-size:14px;font-weight:400;display:block;margin-top:2px}
+.field{margin-bottom:12px}
+.field label,.lbl{display:block;font-size:13.5px;font-weight:600;margin-bottom:5px}
+.field .hint,.hint{font-size:13px;color:var(--muted);margin-top:4px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.seg label{display:block;margin:0}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg span{display:block;text-align:center;border:1px solid var(--line);border-radius:11px;padding:10px 4px;font-size:14px;font-weight:650;min-height:44px}
+.seg input:checked+span.paid{background:var(--paid-soft);border-color:var(--paid);color:var(--paid)}
+.seg input:checked+span.unpaid{background:var(--unpaid-soft);border-color:var(--unpaid);color:var(--unpaid)}
+.seg input:checked+span.unclear{background:var(--unclear-soft);border-color:var(--unclear);color:var(--unclear)}
+.seg input:focus-visible+span{outline:2px solid var(--accent)}
+.check{display:flex;gap:9px;align-items:flex-start;font-size:14.5px;margin-bottom:12px}
+.check input{width:20px;height:20px;margin-top:1px;flex:none;accent-color:var(--accent)}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+.actions .grow{flex:1}
+.hist{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.chip{font-size:12.5px;border-radius:8px;padding:3px 8px;font-weight:600}
+.chip.paid{background:var(--paid-soft);color:var(--paid)} .chip.unpaid{background:var(--unpaid-soft);color:var(--unpaid)} .chip.unclear{background:var(--unclear-soft);color:var(--unclear)}
+.sec{border-top:1px solid var(--line);padding-top:14px;margin-top:16px}
+.sec h3{font-size:16px;margin-bottom:8px}
+.sec p{font-size:14.5px;margin-bottom:10px}
+.lotrow{display:flex;gap:8px;margin-bottom:8px}
+details{font-size:14.5px;margin:8px 0}
+summary{cursor:pointer;color:var(--accent);font-weight:600;padding:4px 0}
+details ol{padding-left:20px;margin:8px 0}
+details li{margin-bottom:6px}
+code{background:var(--soft);border-radius:5px;padding:1px 5px;font-size:13.5px;overflow-wrap:anywhere}
+.msg{font-size:14px;padding:9px 12px;border-radius:10px;margin:10px 0;background:var(--soft)}
+.msg.err{background:var(--unpaid-soft);color:var(--unpaid)} .msg.good{background:var(--paid-soft);color:var(--paid)}
+.qr{display:grid;place-items:center;background:#fff;border-radius:12px;padding:12px;margin:10px 0}
+.qr svg{width:min(100%,280px);height:auto}
+
+#toast{position:fixed;left:12px;right:12px;margin:0 auto;width:fit-content;bottom:calc(18px + env(safe-area-inset-bottom));z-index:60;background:#111827;color:#fff;border-radius:12px;padding:10px 12px 10px 16px;display:none;align-items:center;gap:12px;font-size:14.5px;max-width:calc(100vw - 24px);box-shadow:0 8px 24px rgba(0,0,0,.3)}
+#toast.show{display:flex}
+#toast button{flex:none;border:0;background:rgba(255,255,255,.16);color:#fff;border-radius:8px;padding:7px 11px;font-weight:650;min-height:36px}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <div class="top-in">
+      <h1><span class="logo">P</span><span>Angel Parkinglot</span></h1>
+      <button id="syncPill" class="pill" type="button"></button>
+      <button id="btnSettings" class="icon-btn" type="button" aria-label="Einstellungen" title="Einstellungen">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+      </button>
+    </div>
+    <nav id="tabs" class="tabs" aria-label="Parkanlagen"></nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="monthbar">
+    <button id="prev" class="nav" type="button" aria-label="Vorheriger Monat">‹</button>
+    <div class="monthmid">
+      <div id="monthLabel"></div>
+      <div id="monthSub"></div>
+    </div>
+    <button id="next" class="nav" type="button" aria-label="Nächster Monat">›</button>
+  </section>
+
+  <section id="summary" class="card summary"></section>
+  <div id="banner"></div>
+
+  <div class="toolbar">
+    <input id="search" type="search" placeholder="Suchen: Name, Zahler, Stellplatz …" autocomplete="off" aria-label="Suchen">
+    <button id="btnAdd" class="btn primary" type="button">+ Kunde</button>
+  </div>
+
+  <div id="switch" class="switch"></div>
+  <div id="lists" class="lists"></div>
+</main>
+
+<div id="toast" role="status"></div>
+
+<script>
+'use strict';
+/* =====================================================================
+   Angel Parkinglot – Zahlungsübersicht für Parkanlagen
+   Eine einzelne HTML-Datei. Daten liegen lokal im Browser und werden
+   (wenn eingerichtet) als data.json in einem privaten GitHub-Repo
+   gespeichert, damit mehrere Geräte denselben Stand sehen.
+   ===================================================================== */
+
+const LS = { data:'apl.data.v1', cfg:'apl.cfg.v1', ui:'apl.ui.v1', dirty:'apl.dirty.v1' };
+const DATA_FILE = 'data.json';
+const DEFAULT_REPO = 'lucashcandido/angel-parkinglot-data';
+const API = 'https://api.github.com';
+const STATUS = {
+  paid:    { label:'Bezahlt',       short:'Bezahlt' },
+  unpaid:  { label:'Nicht bezahlt', short:'Nicht bezahlt' },
+  unclear: { label:'Uneindeutig',   short:'Uneindeutig' }
+};
+const ORDER = ['paid','unpaid','unclear'];
+
+/* ---------- kleine Helfer ---------- */
+const $ = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const norm = s => String(s ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); return true; }catch(e){ return false; } },
+  del(k){ try{ localStorage.removeItem(k); }catch(e){} }
+};
+
+const pad2 = n => String(n).padStart(2,'0');
+function curMonth(){ const d = new Date(); return d.getFullYear() + '-' + pad2(d.getMonth()+1); }
+function todayISO(){ const d = new Date(); return d.getFullYear() + '-' + pad2(d.getMonth()+1) + '-' + pad2(d.getDate()); }
+function addMonth(m, n){ let [y, mo] = m.split('-').map(Number); mo += n; y += Math.floor((mo-1)/12); mo = ((mo-1)%12+12)%12+1; return y + '-' + pad2(mo); }
+const fmtMonthLong = m => { const [y, mo] = m.split('-').map(Number); return new Intl.DateTimeFormat('de-DE',{month:'long',year:'numeric'}).format(new Date(y, mo-1, 1)); };
+const fmtMonthShort = m => { const [y, mo] = m.split('-').map(Number); return new Intl.DateTimeFormat('de-DE',{month:'short'}).format(new Date(y, mo-1, 1)).replace('.','') + ' ' + String(y).slice(2); };
+const fmtDate = iso => { if(!iso) return ''; const [y, m, d] = iso.split('-'); return d + '.' + m + '.'; };
+const numFmt0 = new Intl.NumberFormat('es-AR',{maximumFractionDigits:0});
+const numFmt2 = new Intl.NumberFormat('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtNum = n => n ? (Number.isInteger(n) ? numFmt0 : numFmt2).format(n) : '';
+const fmtMoney = n => '$ ' + (fmtNum(Math.round((n || 0) * 100) / 100) || '0');
+
+/* Versteht 45000 · 45.000 · 45.000,50 · 45,000.50 */
+function parseAmount(v){
+  let s = String(v ?? '').replace(/[^\d.,-]/g,'');
+  if(!s) return 0;
+  const dot = s.includes('.'), comma = s.includes(',');
+  if(dot && comma){
+    const dec = s.lastIndexOf('.') > s.lastIndexOf(',') ? '.' : ',';
+    const th = dec === '.' ? ',' : '.';
+    s = s.split(th).join('').replace(dec,'.');
+  }else if(comma){
+    s = (/,\d{1,2}$/.test(s) && s.split(',').length === 2) ? s.replace(',','.') : s.split(',').join('');
+  }else if(dot){
+    if(/^-?\d{1,3}(\.\d{3})+$/.test(s)) s = s.split('.').join('');
+  }
+  const n = parseFloat(s);
+  return isFinite(n) ? Math.round(n*100)/100 : 0;
+}
+const splitNames = s => String(s ?? '').split(/[,;\n]/).map(x => x.trim()).filter(Boolean);
+
+/* ---------- Datenmodell ----------
+   lots:      { id: {id,name,order,deleted?,t} }
+   customers: { id: {id,lot,name,spot,amount,aliases[],phone,note,from,until,deleted?,t} }
+   payments:  { "kundenId|JJJJ-MM": {s:'paid'|'unpaid'|'unclear', a,d,p,n, t} }
+   t = Zeitstempel der letzten Änderung; beim Zusammenführen gewinnt der neuere Eintrag. */
+function emptyState(){
+  return { v:1,
+    lots:{ lot1:{id:'lot1',name:'Parkanlage 1',order:1,t:0}, lot2:{id:'lot2',name:'Parkanlage 2',order:2,t:0}, lot3:{id:'lot3',name:'Parkanlage 3',order:3,t:0} },
+    customers:{}, payments:{} };
+}
+function normalize(s){
+  const base = emptyState();
+  const out = { v:1, lots:{}, customers:{}, payments:{} };
+  if(s && typeof s === 'object'){
+    for(const k of ['lots','customers','payments']) if(s[k] && typeof s[k] === 'object' && !Array.isArray(s[k])) out[k] = s[k];
+  }
+  for(const id in base.lots) if(!out.lots[id]) out.lots[id] = base.lots[id];
+  return out;
+}
+function canon(o){
+  if(o === null || typeof o !== 'object') return JSON.stringify(o) ?? 'null';
+  if(Array.isArray(o)) return '[' + o.map(canon).join(',') + ']';
+  return '{' + Object.keys(o).sort().filter(k => o[k] !== undefined).map(k => JSON.stringify(k) + ':' + canon(o[k])).join(',') + '}';
+}
+function mergeMap(a, b){
+  const out = {};
+  for(const k of new Set([...Object.keys(a || {}), ...Object.keys(b || {})])){
+    const x = a && a[k], y = b && b[k];
+    if(!x) out[k] = y;
+    else if(!y) out[k] = x;
+    else if((y.t || 0) > (x.t || 0)) out[k] = y;
+    else if((x.t || 0) > (y.t || 0)) out[k] = x;
+    else out[k] = canon(x) >= canon(y) ? x : y;
+  }
+  return out;
+}
+function mergeState(a, b){
+  return { v:1, lots:mergeMap(a.lots, b.lots), customers:mergeMap(a.customers, b.customers), payments:mergeMap(a.payments, b.payments) };
+}
+
+let state = normalize(store.get(LS.data, null));
+let cfg = store.get(LS.cfg, null);
+let ui = Object.assign({ lot:'lot1', list:'unpaid', sort:'name' }, store.get(LS.ui, {}));
+ui.month = curMonth();
+let rev = 0;
+const sync = { status: cfg ? 'pending' : 'local', msg:'', last:0, busy:false, again:false, timer:null };
+
+function saveLocal(){ if(!store.set(LS.data, state)) toast('Achtung: Der Browser konnte nicht lokal speichern.'); }
+function saveUi(){ store.set(LS.ui, { lot:ui.lot, list:ui.list, sort:ui.sort }); }
+function commit(){
+  rev++;
+  saveLocal(); store.set(LS.dirty, true);
+  render();
+  if(cfg){ setSync('pending'); clearTimeout(sync.timer); sync.timer = setTimeout(runSync, 1500); }
+}
+
+/* ---------- Abfragen ---------- */
+const lotsList = () => Object.values(state.lots).filter(l => !l.deleted).sort((a,b) => (a.order||0) - (b.order||0) || a.name.localeCompare(b.name));
+const lotName = id => (state.lots[id] && !state.lots[id].deleted) ? state.lots[id].name : '';
+function customersFor(lot, month){
+  return Object.values(state.customers).filter(c =>
+    !c.deleted && state.lots[c.lot] && !state.lots[c.lot].deleted &&
+    (lot === 'all' || c.lot === lot) &&
+    (!c.from || c.from <= month) && (!c.until || month <= c.until));
+}
+const payKey = (cid, m) => cid + '|' + m;
+const payOf = (cid, m) => state.payments[payKey(cid, m)] || null;
+const statusOf = (cid, m) => { const p = payOf(cid, m); return (p && STATUS[p.s]) ? p.s : 'unpaid'; };
+function priorOpen(c, month){
+  let n = 0;
+  for(let i = 1; i <= 12; i++){
+    const m = addMonth(month, -i);
+    if(c.from && m < c.from) break;
+    if(statusOf(c.id, m) !== 'paid') n++;
+  }
+  return n;
+}
+function setPayment(cid, month, rec){
+  const clean = { s: rec.s, t: Date.now() };
+  if(rec.a) clean.a = rec.a;
+  if(rec.d) clean.d = rec.d;
+  if(rec.p) clean.p = rec.p;
+  if(rec.n) clean.n = rec.n;
+  state.payments[payKey(cid, month)] = clean;
+}
+function quickStatus(cid, s){
+  const c = state.customers[cid]; if(!c) return;
+  const month = ui.month, key = payKey(cid, month);
+  const old = state.payments[key] ? Object.assign({}, state.payments[key]) : null;
+  const o = old || {};
+  if(s === 'paid') setPayment(cid, month, { s, a: o.a || c.amount, d: o.d || todayISO(), p: o.p, n: o.n });
+  else if(s === 'unclear') setPayment(cid, month, { s, a: o.a, d: o.d, p: o.p, n: o.n });
+  else setPayment(cid, month, { s:'unpaid', n: o.n });
+  commit();
+  toast(c.name + ' → ' + STATUS[s].label, 'Rückgängig', () => {
+    if(old){ old.t = Date.now(); state.payments[key] = old; }
+    else state.payments[key] = { s:'unpaid', t: Date.now() };
+    commit();
+  });
+}
+
+/* ---------- Anzeige ---------- */
+function render(){ renderTabs(); renderMonth(); renderLists(); renderSync(); }
+
+function renderTabs(){
+  const lots = lotsList();
+  if(ui.lot !== 'all' && !lots.some(l => l.id === ui.lot)) ui.lot = lots[0] ? lots[0].id : 'all';
+  const cell = (id, name) => {
+    const cs = customersFor(id, ui.month);
+    const paid = cs.filter(c => statusOf(c.id, ui.month) === 'paid').length;
+    return `<button type="button" class="tab${ui.lot === id ? ' on' : ''}" data-lot="${esc(id)}" aria-pressed="${ui.lot === id}"><b>${esc(name)}</b><small>${paid} / ${cs.length} bezahlt</small></button>`;
+  };
+  $('#tabs').innerHTML = lots.map(l => cell(l.id, l.name)).join('') + (lots.length > 1 ? cell('all', 'Alle') : '');
+}
+
+function renderMonth(){
+  $('#monthLabel').textContent = fmtMonthLong(ui.month);
+  $('#monthSub').innerHTML = ui.month === curMonth()
+    ? '<span class="tag-now">Aktueller Monat</span>'
+    : '<button type="button" class="link" id="toNow">Zum aktuellen Monat</button>';
+}
+
+function searchText(c, p){
+  return norm([c.name, (c.aliases || []).join(' '), c.spot, c.phone, c.note, p && p.p, p && p.n, lotName(c.lot)].filter(Boolean).join(' '));
+}
+function sortCustomers(list){
+  const coll = new Intl.Collator('de', { numeric:true, sensitivity:'base' });
+  return list.sort((a, b) => ui.sort === 'spot'
+    ? (coll.compare(a.spot || '\uffff', b.spot || '\uffff') || coll.compare(a.name, b.name))
+    : (coll.compare(a.name, b.name) || coll.compare(a.spot || '', b.spot || '')));
+}
+
+function rowHtml(c, s, p){
+  const bits = [];
+  if(c.spot) bits.push('Platz ' + esc(c.spot));
+  if(s === 'paid'){
+    const a = (p && p.a) || c.amount;
+    bits.push(esc(fmtMoney(a)) + (c.amount && a !== c.amount ? ' (statt ' + esc(fmtMoney(c.amount)) + ')' : ''));
+    if(p && p.d) bits.push('am ' + esc(fmtDate(p.d)));
+    if(p && p.p) bits.push('von ' + esc(p.p));
+  }else{
+    if(c.amount) bits.push(esc(fmtMoney(c.amount)));
+    if(p && p.p) bits.push('evtl. von ' + esc(p.p));
+  }
+  const alias = (c.aliases && c.aliases.length && !(s === 'paid' && p && p.p)) ? `<span class="row-sub">zahlt über: ${esc(c.aliases.join(', '))}</span>` : '';
+  const note = (p && p.n) ? `<span class="row-note">📝 ${esc(p.n)}</span>` : '';
+  const open = s !== 'paid' ? priorOpen(c, ui.month) : 0;
+  const badges = (ui.lot === 'all' ? `<span class="badge">${esc(lotName(c.lot))}</span>` : '') +
+    (open ? `<span class="badge warn">${open === 1 ? 'Vormonat offen' : open + ' Vormonate offen'}</span>` : '');
+  const btn = (act, cls, sym, label) => `<button type="button" class="ib ${cls}" data-act="${act}" aria-label="${label}" title="${label}">${sym}</button>`;
+  let acts = '';
+  if(s === 'unpaid') acts = btn('paid','ok','✓','Als bezahlt markieren') + btn('unclear','q','?','Als uneindeutig markieren');
+  else if(s === 'unclear') acts = btn('paid','ok','✓','Als bezahlt markieren') + btn('unpaid','no','✕','Als nicht bezahlt markieren');
+  else acts = btn('unpaid','back','↩','Zurück auf nicht bezahlt');
+  return `<li class="row" data-id="${esc(c.id)}">
+    <button type="button" class="row-main" data-act="open">
+      <span class="row-name">${esc(c.name)}${badges}</span>
+      <span class="row-sub">${bits.join(' · ')}</span>${alias}${note}
+    </button>
+    <div class="row-actions">${acts}</div></li>`;
+}
+
+function renderLists(){
+  const month = ui.month, q = norm($('#search').value);
+  const all = customersFor(ui.lot, month);
+  const groups = { paid:[], unpaid:[], unclear:[] }, totals = { paid:0, unpaid:0, unclear:0 }, counts = { paid:0, unpaid:0, unclear:0 };
+  let expected = 0, received = 0;
+  for(const c of all){
+    const p = payOf(c.id, month), s = statusOf(c.id, month);
+    const amt = (s === 'paid' && p && p.a) ? p.a : (c.amount || 0);
+    counts[s]++; totals[s] += amt; expected += c.amount || 0; if(s === 'paid') received += amt;
+    if(!q || searchText(c, p).includes(q)) groups[s].push(c);
+  }
+  const n = all.length;
+
+  /* Zusammenfassung */
+  const pct = k => n ? (counts[k] / n * 100) : 0;
+  $('#summary').innerHTML = n ? `
+    <div class="sum-head">
+      <span class="big">${counts.paid} von ${n} bezahlt</span>
+      <span class="money">${esc(fmtMoney(received))} von ${esc(fmtMoney(expected))} eingegangen</span>
+    </div>
+    <div class="bar" aria-hidden="true"><i class="p" style="width:${pct('paid')}%"></i><i class="c" style="width:${pct('unclear')}%"></i><i class="u" style="width:${pct('unpaid')}%"></i></div>`
+    : `<div class="sum-head"><span class="big">Keine Kunden in ${esc(fmtMonthLong(month))}</span></div>`;
+
+  /* Hinweis-Banner */
+  let banner = '';
+  if(!cfg) banner = `<div class="banner"><span>Die Daten liegen bisher nur auf diesem Gerät.</span><button type="button" class="btn small" data-open="sync">Geräte-Sync einrichten</button></div>`;
+  else if(sync.status === 'error') banner = `<div class="banner err"><span>${esc(sync.msg || 'Synchronisierung fehlgeschlagen.')}</span><button type="button" class="btn small" data-open="sync">Einstellungen</button></div>`;
+  $('#banner').innerHTML = banner;
+
+  /* Umschalter (Handy) */
+  $('#switch').innerHTML = ORDER.map(k => `<button type="button" class="${k}${ui.list === k ? ' on' : ''}" data-list="${k}"><b>${counts[k]}</b>${STATUS[k].short}</button>`).join('');
+
+  /* Listen */
+  const lists = $('#lists');
+  lists.classList.toggle('searching', !!q);
+  const totalCustomers = Object.values(state.customers).filter(c => !c.deleted).length;
+  if(!totalCustomers){
+    lists.innerHTML = `<div class="card welcome" style="grid-column:1/-1">
+      <h2>Willkommen</h2>
+      <p>Lege deine Kunden an – einzeln oder alle auf einmal aus deiner Excel-Liste. Danach hakst du jeden Monat ab, wer bezahlt hat.</p>
+      <button type="button" class="btn primary" data-open="add">+ Kunde anlegen</button>
+      <button type="button" class="btn" data-open="bulk">Liste aus Excel einfügen</button>
+    </div>`;
+    return;
+  }
+  const emptyText = { paid:'Noch keine Zahlung eingetragen.', unpaid:'Niemand offen. 🎉', unclear:'Keine unklaren Fälle.' };
+  lists.innerHTML = ORDER.map(k => {
+    const rows = sortCustomers(groups[k]).map(c => rowHtml(c, k, payOf(c.id, month))).join('');
+    return `<section class="card col ${k}${ui.list === k ? ' active' : ''}">
+      <div class="col-head"><span class="mark"></span><span>${STATUS[k].label}</span><span class="sum">${counts[k] ? esc(fmtMoney(totals[k])) : ''}</span><span class="cnt">${q ? groups[k].length + ' / ' : ''}${counts[k]}</span></div>
+      ${rows ? '<ul>' + rows + '</ul>' : `<div class="empty">${q ? 'Kein Treffer.' : emptyText[k]}</div>`}
+    </section>`;
+  }).join('');
+}
+
+const SYNC_TEXT = { local:'Nur dieses Gerät', ok:'Synchronisiert', busy:'Synchronisiere …', pending:'Wird gespeichert …', offline:'Offline', error:'Sync-Fehler' };
+function renderSync(){
+  const el = $('#syncPill');
+  el.className = 'pill ' + sync.status;
+  el.innerHTML = `<span class="dot"></span><span>${SYNC_TEXT[sync.status]}</span>`;
+  el.title = sync.status === 'ok' && sync.last ? 'Zuletzt synchronisiert um ' + new Date(sync.last).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}) : (sync.msg || '');
+}
+function setSync(status, msg){
+  const was = sync.status;
+  sync.status = status; sync.msg = msg || '';
+  renderSync();
+  if((was === 'error') !== (status === 'error')) renderLists();
+}
+
+/* ---------- Toast ---------- */
+let toastTimer = null;
+function toast(text, actionLabel, action){
+  const el = $('#toast');
+  el.innerHTML = `<span>${esc(text)}</span>` + (actionLabel ? `<button type="button">${esc(actionLabel)}</button>` : '');
+  el.classList.add('show');
+  if(actionLabel) $('button', el).onclick = () => { el.classList.remove('show'); action(); };
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), actionLabel ? 6000 : 3500);
+}
+
+/* ---------- Dialoge ---------- */
+const modals = [];
+function openModal(html){
+  const ov = document.createElement('div');
+  ov.className = 'ov';
+  ov.innerHTML = `<div class="sheet" role="dialog" aria-modal="true">${html}</div>`;
+  document.body.appendChild(ov);
+  modals.push(ov);
+  document.body.classList.add('noscroll');
+  $('#toast').classList.remove('show');
+  ov.addEventListener('click', e => { if(e.target.closest('[data-close]')) closeModal(ov); });
+  return ov.firstElementChild;
+}
+function closeModal(ov){
+  ov = ov && ov.classList && ov.classList.contains('ov') ? ov : (ov ? ov.closest('.ov') : modals[modals.length-1]);
+  if(!ov) return;
+  const i = modals.indexOf(ov); if(i >= 0) modals.splice(i, 1);
+  ov.remove();
+  if(!modals.length) document.body.classList.remove('noscroll');
+}
+const closeX = '<button type="button" class="icon-btn" data-close aria-label="Schließen" title="Schließen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
+function confirmBox(title, text, okLabel, danger){
+  return new Promise(resolve => {
+    const el = openModal(`<div class="sheet-head"><h2>${esc(title)}</h2></div><p>${esc(text)}</p>
+      <div class="actions"><button type="button" class="btn grow" data-no>Abbrechen</button><button type="button" class="btn grow ${danger ? 'danger' : 'primary'}" data-yes>${esc(okLabel)}</button></div>`);
+    $('[data-no]', el).onclick = () => { closeModal(el); resolve(false); };
+    $('[data-yes]', el).onclick = () => { closeModal(el); resolve(true); };
+  });
+}
+function monthOptions(selected, withNone){
+  const now = curMonth(); let html = withNone ? `<option value="">– läuft weiter –</option>` : '';
+  const set = new Set(); for(let i = -36; i <= 12; i++) set.add(addMonth(now, i)); if(selected) set.add(selected);
+  for(const m of Array.from(set).sort()) html += `<option value="${m}"${m === selected ? ' selected' : ''}>${esc(fmtMonthLong(m))}</option>`;
+  return html;
+}
+const lotOptions = sel => lotsList().map(l => `<option value="${esc(l.id)}"${l.id === sel ? ' selected' : ''}>${esc(l.name)}</option>`).join('');
+
+/* Zahlung eines Kunden im gewählten Monat */
+function openPayment(cid){
+  const c = state.customers[cid]; if(!c) return;
+  const month = ui.month, p = payOf(cid, month) || {}, s = statusOf(cid, month);
+  const hist = []; for(let i = 5; i >= 0; i--){ const m = addMonth(month, -i); if(c.from && m < c.from) continue; hist.push(`<span class="chip ${statusOf(cid, m)}">${esc(fmtMonthShort(m))}</span>`); }
+  const names = [c.name].concat(c.aliases || []);
+  const el = openModal(`
+    <div class="sheet-head"><h2>${esc(c.name)}<span class="sub">${esc([lotName(c.lot), c.spot && 'Platz ' + c.spot, fmtMonthLong(month)].filter(Boolean).join(' · '))}</span></h2>${closeX}</div>
+    <form novalidate>
+      <div class="field"><span class="lbl">Status</span>
+        <div class="seg">${ORDER.map(k => `<label><input type="radio" name="s" value="${k}"${k === s ? ' checked' : ''}><span class="${k}">${STATUS[k].label}</span></label>`).join('')}</div>
+      </div>
+      <div class="two">
+        <div class="field"><label for="pa">Betrag (ARS)</label><input id="pa" type="text" inputmode="decimal" value="${esc(fmtNum(p.a || c.amount))}"></div>
+        <div class="field"><label for="pd">Eingegangen am</label><input id="pd" type="date" value="${esc(p.d || '')}"></div>
+      </div>
+      <div class="field"><label for="pp">Überwiesen von (Name auf dem Kontoauszug)</label>
+        <input id="pp" type="text" list="payerNames" autocomplete="off" value="${esc(p.p || '')}" placeholder="leer = Kunde selbst">
+        <datalist id="payerNames">${names.map(n => `<option value="${esc(n)}">`).join('')}</datalist>
+      </div>
+      <label class="check" id="rememberRow" hidden><input type="checkbox" id="remember" checked><span id="rememberText"></span></label>
+      <div class="field"><label for="pn">Notiz zu diesem Monat</label><textarea id="pn" placeholder="z. B. warum die Zahlung unklar ist">${esc(p.n || '')}</textarea></div>
+      ${c.aliases && c.aliases.length ? `<p class="hint">Zahlt üblicherweise über: ${esc(c.aliases.join(', '))}</p>` : ''}
+      ${c.note ? `<p class="hint">Kundennotiz: ${esc(c.note)}</p>` : ''}
+      <div class="field" style="margin-top:12px"><span class="lbl">Letzte Monate</span><div class="hist">${hist.join('')}</div></div>
+      <div class="actions"><button type="button" class="btn" id="editCust">Kunde bearbeiten</button><button type="submit" class="btn primary grow">Speichern</button></div>
+    </form>`);
+  const payer = $('#pp', el);
+  const refreshRemember = () => {
+    const v = payer.value.trim();
+    const known = !v || names.some(n => norm(n) === norm(v));
+    $('#rememberRow', el).hidden = known;
+    if(!known) $('#rememberText', el).textContent = `„${v}“ als Zahler für ${c.name} merken`;
+  };
+  payer.addEventListener('input', refreshRemember); refreshRemember();
+  $('#editCust', el).onclick = () => { closeModal(el); openCustomer(cid); };
+  $('form', el).onsubmit = e => {
+    e.preventDefault();
+    const st = ($('input[name=s]:checked', el) || {}).value || 'unpaid';
+    const pv = payer.value.trim();
+    let a = parseAmount($('#pa', el).value), d = $('#pd', el).value;
+    if(st === 'paid'){ if(!a) a = c.amount; if(!d) d = todayISO(); }
+    if(st === 'unpaid' && !d && !pv) a = 0;
+    setPayment(cid, month, { s: st, a, d, p: pv, n: $('#pn', el).value.trim() });
+    if(pv && !$('#rememberRow', el).hidden && $('#remember', el).checked){
+      c.aliases = (c.aliases || []).concat(pv); c.t = Date.now();
+    }
+    closeModal(el); commit();
+  };
+}
+
+/* Kunde anlegen / bearbeiten */
+function openCustomer(cid){
+  const c = cid ? state.customers[cid] : null;
+  const lot = c ? c.lot : (ui.lot !== 'all' ? ui.lot : (lotsList()[0] || {}).id);
+  const el = openModal(`
+    <div class="sheet-head"><h2>${c ? 'Kunde bearbeiten' : 'Neuer Kunde'}</h2>${closeX}</div>
+    <form novalidate>
+      <div class="field"><label for="cn">Name</label><input id="cn" type="text" autocomplete="off" value="${esc(c ? c.name : '')}" required></div>
+      <div class="field"><label for="cl">Parkanlage</label><select id="cl">${lotOptions(lot)}</select></div>
+      <div class="two">
+        <div class="field"><label for="cs">Stellplatz</label><input id="cs" type="text" autocomplete="off" value="${esc(c ? c.spot || '' : '')}"></div>
+        <div class="field"><label for="ca">Monatsbetrag (ARS)</label><input id="ca" type="text" inputmode="decimal" value="${esc(c ? fmtNum(c.amount) : '')}"></div>
+      </div>
+      <div class="field"><label for="cz">Zahlt über (andere Namen auf dem Kontoauszug)</label>
+        <input id="cz" type="text" autocomplete="off" value="${esc(c ? (c.aliases || []).join(', ') : '')}" placeholder="z. B. María Gómez, Taller Sur SRL">
+        <div class="hint">Mehrere Namen mit Komma trennen. Die Suche findet den Kunden auch über diese Namen.</div></div>
+      <div class="field"><label for="cp">Telefon</label><input id="cp" type="tel" autocomplete="off" value="${esc(c ? c.phone || '' : '')}"></div>
+      <div class="field"><label for="co">Notiz</label><textarea id="co">${esc(c ? c.note || '' : '')}</textarea></div>
+      <div class="two">
+        <div class="field"><label for="cf">Zahlt ab</label><select id="cf">${monthOptions(c ? c.from : ui.month, false)}</select></div>
+        <div class="field"><label for="cu">Letzter Monat</label><select id="cu">${monthOptions(c ? c.until || '' : '', true)}</select></div>
+      </div>
+      <div id="cErr"></div>
+      <div class="actions">${c ? '<button type="button" class="btn danger" id="delCust">Löschen</button>' : ''}<button type="submit" class="btn primary grow">Speichern</button></div>
+    </form>`);
+  if(!c) setTimeout(() => $('#cn', el).focus(), 50);
+  $('form', el).onsubmit = e => {
+    e.preventDefault();
+    const name = $('#cn', el).value.trim();
+    const from = $('#cf', el).value, until = $('#cu', el).value;
+    if(!name){ $('#cErr', el).innerHTML = '<div class="msg err">Bitte einen Namen eintragen.</div>'; return; }
+    if(until && until < from){ $('#cErr', el).innerHTML = '<div class="msg err">„Letzter Monat“ liegt vor „Zahlt ab“.</div>'; return; }
+    const id = c ? c.id : uid();
+    state.customers[id] = { id, lot: $('#cl', el).value, name, spot: $('#cs', el).value.trim(), amount: parseAmount($('#ca', el).value),
+      aliases: splitNames($('#cz', el).value), phone: $('#cp', el).value.trim(), note: $('#co', el).value.trim(), from, until, t: Date.now() };
+    closeModal(el); commit();
+  };
+  if(c) $('#delCust', el).onclick = async () => {
+    if(!await confirmBox('Kunde löschen?', `${c.name} wird aus allen Monaten entfernt. Wenn der Kunde nur aufhört, trage stattdessen einen „Letzten Monat“ ein – dann bleibt die Historie erhalten.`, 'Löschen', true)) return;
+    state.customers[c.id] = Object.assign({}, c, { deleted:true, t: Date.now() });
+    closeModal(el); commit();
+  };
+}
+
+/* Mehrere Kunden aus Excel einfügen */
+function parseBulk(text){
+  return String(text).split(/\r?\n/).map(l => l.trim()).filter(Boolean).map(l => {
+    const parts = (l.includes('\t') ? l.split('\t') : l.split(';')).map(x => x.trim());
+    return { name: parts[0] || '', spot: parts[1] || '', amount: parseAmount(parts[2]), aliases: splitNames(parts[3]) };
+  }).filter((r, i) => r.name && !(i === 0 && /^(name|nombre|kunde|cliente)$/i.test(r.name)));
+}
+function openBulk(){
+  const lot = ui.lot !== 'all' ? ui.lot : (lotsList()[0] || {}).id;
+  const el = openModal(`
+    <div class="sheet-head"><h2>Liste aus Excel einfügen</h2>${closeX}</div>
+    <p class="hint" style="margin-bottom:12px">Markiere in Excel die Spalten in dieser Reihenfolge und füge sie hier ein – eine Zeile pro Kunde:<br><b>Name · Stellplatz · Monatsbetrag · Zahlt über</b><br>Nur der Name ist Pflicht.</p>
+    <div class="two">
+      <div class="field"><label for="bl">Parkanlage</label><select id="bl">${lotOptions(lot)}</select></div>
+      <div class="field"><label for="bf">Zahlt ab</label><select id="bf">${monthOptions(ui.month, false)}</select></div>
+    </div>
+    <div class="field"><label for="bt">Zeilen</label><textarea id="bt" style="min-height:170px" placeholder="Juan Pérez&#9;12&#9;45.000&#9;María Gómez"></textarea><div class="hint" id="bInfo">Noch nichts eingefügt.</div></div>
+    <div class="actions"><button type="button" class="btn primary grow" id="bGo" disabled>Übernehmen</button></div>`);
+  const ta = $('#bt', el);
+  const upd = () => { const n = parseBulk(ta.value).length; $('#bInfo', el).textContent = n ? n + (n === 1 ? ' Kunde erkannt.' : ' Kunden erkannt.') : 'Noch nichts eingefügt.'; $('#bGo', el).disabled = !n; };
+  ta.addEventListener('input', upd);
+  $('#bGo', el).onclick = () => {
+    const rows = parseBulk(ta.value), lotId = $('#bl', el).value, from = $('#bf', el).value, t = Date.now();
+    for(const r of rows){ const id = uid(); state.customers[id] = { id, lot: lotId, name: r.name, spot: r.spot, amount: r.amount, aliases: r.aliases, phone:'', note:'', from, until:'', t }; }
+    closeModal(el); closeModal(); ui.lot = lotId; saveUi(); commit();
+    toast(rows.length + (rows.length === 1 ? ' Kunde angelegt.' : ' Kunden angelegt.'));
+  };
+}
+
+/* ---------- Einstellungen ---------- */
+function openSettings(focusSync){
+  const el = openModal(`<div class="sheet-head"><h2>Einstellungen</h2>${closeX}</div><div id="setBody"></div>`);
+  const draw = () => {
+    const lots = lotsList();
+    $('#setBody', el).innerHTML = `
+      <div class="sec" style="border-top:0;padding-top:0;margin-top:0">
+        <h3>Parkanlagen</h3>
+        ${lots.map(l => `<div class="lotrow"><input type="text" data-lotname="${esc(l.id)}" value="${esc(l.name)}" aria-label="Name der Parkanlage"><button type="button" class="btn danger" data-lotdel="${esc(l.id)}" aria-label="Parkanlage entfernen" title="Entfernen">✕</button></div>`).join('')}
+        <button type="button" class="btn small" id="lotAdd">+ Parkanlage</button>
+      </div>
+
+      <div class="sec" id="syncSec">
+        <h3>Geräte-Sync</h3>
+        ${cfg ? `
+          <p>Verbunden mit <code>${esc(cfg.repo)}</code>.${sync.last ? ' Zuletzt synchronisiert um ' + new Date(sync.last).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}) + ' Uhr.' : ''}</p>
+          ${sync.status === 'error' ? `<div class="msg err">${esc(sync.msg)}</div>` : ''}
+          <div class="actions" style="margin-top:0">
+            <button type="button" class="btn small" id="syncNow">Jetzt synchronisieren</button>
+            <button type="button" class="btn small" id="pair">Weiteres Gerät verbinden</button>
+            <button type="button" class="btn small danger" id="unlink">Trennen</button>
+          </div>
+          <div id="pairBox"></div>
+        ` : `
+          <p>Damit PC und iPhone denselben Stand zeigen, speichert die App deine Daten in deinem <b>privaten</b> GitHub-Repo. Du brauchst dafür einmalig einen Zugangsschlüssel (Token).</p>
+          <details>
+            <summary>So erstellst du den Token (2 Minuten)</summary>
+            <ol>
+              <li>Öffne <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">github.com → Settings → Fine-grained tokens → Generate new token</a>.</li>
+              <li><b>Token name:</b> z. B. <code>Parkinglot</code>. <b>Expiration:</b> „No expiration“ (oder das längste Angebot).</li>
+              <li><b>Repository access:</b> „Only select repositories“ → dein Daten-Repo auswählen.</li>
+              <li><b>Permissions → Repository permissions → Contents:</b> „Read and write“.</li>
+              <li>„Generate token“ klicken, den Token (beginnt mit <code>github_pat_</code>) kopieren und unten einfügen.</li>
+            </ol>
+          </details>
+          <div class="field"><label for="sRepo">Daten-Repo (Besitzer/Name)</label><input id="sRepo" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" value="${esc(DEFAULT_REPO)}"></div>
+          <div class="field"><label for="sTok">Token</label><input id="sTok" type="password" autocomplete="off" placeholder="github_pat_…"><div class="hint">Der Token bleibt auf diesem Gerät gespeichert und wird nur an GitHub gesendet.</div></div>
+          <div id="sMsg"></div>
+          <button type="button" class="btn primary" id="connect">Verbinden</button>
+        `}
+      </div>
+
+      <div class="sec">
+        <h3>Kunden &amp; Daten</h3>
+        <div class="field"><label for="sSort">Sortierung der Listen</label><select id="sSort"><option value="name"${ui.sort === 'name' ? ' selected' : ''}>nach Name</option><option value="spot"${ui.sort === 'spot' ? ' selected' : ''}>nach Stellplatz</option></select></div>
+        <div class="actions" style="margin-top:0">
+          <button type="button" class="btn small" id="bulk">Liste aus Excel einfügen</button>
+          <button type="button" class="btn small" id="csv">Monat als CSV (Excel)</button>
+          <button type="button" class="btn small" id="backup">Sicherung speichern</button>
+          <button type="button" class="btn small" id="restore">Sicherung laden</button>
+          <input type="file" id="restoreFile" accept="application/json,.json" hidden>
+        </div>
+      </div>`;
+
+    $$('[data-lotname]', el).forEach(inp => inp.onchange = () => {
+      const l = state.lots[inp.dataset.lotname], v = inp.value.trim();
+      if(!v){ inp.value = l.name; return; }
+      if(v !== l.name){ state.lots[l.id] = Object.assign({}, l, { name: v, t: Date.now() }); commit(); }
+    });
+    $$('[data-lotdel]', el).forEach(b => b.onclick = async () => {
+      const l = state.lots[b.dataset.lotdel];
+      const n = Object.values(state.customers).filter(c => !c.deleted && c.lot === l.id).length;
+      if(n){ toast(`„${l.name}“ hat noch ${n} Kunden – bitte zuerst verschieben oder löschen.`); return; }
+      if(!await confirmBox('Parkanlage entfernen?', `„${l.name}“ wird aus der Auswahl entfernt.`, 'Entfernen', true)) return;
+      state.lots[l.id] = Object.assign({}, l, { deleted:true, t: Date.now() }); commit(); draw();
+    });
+    $('#lotAdd', el).onclick = () => {
+      const id = 'lot_' + uid(), order = Math.max(0, ...Object.values(state.lots).map(l => l.order || 0)) + 1;
+      state.lots[id] = { id, name: 'Parkanlage ' + (lotsList().length + 1), order, t: Date.now() }; commit(); draw();
+      const inp = $(`[data-lotname="${id}"]`, el); if(inp){ inp.focus(); inp.select(); }
+    };
+    $('#sSort', el).onchange = e => { ui.sort = e.target.value; saveUi(); renderLists(); };
+    $('#bulk', el).onclick = openBulk;
+    $('#csv', el).onclick = exportCsv;
+    $('#backup', el).onclick = () => download('parkinglot-sicherung-' + todayISO() + '.json', JSON.stringify(state), 'application/json');
+    $('#restore', el).onclick = () => $('#restoreFile', el).click();
+    $('#restoreFile', el).onchange = async e => {
+      const f = e.target.files[0]; if(!f) return;
+      try{
+        const data = JSON.parse(await f.text());
+        if(!data || typeof data.customers !== 'object') throw new Error('x');
+        state = mergeState(state, normalize(data)); commit(); draw(); toast('Sicherung eingelesen.');
+      }catch(err){ toast('Diese Datei ist keine gültige Sicherung.'); }
+    };
+
+    if(cfg){
+      $('#syncNow', el).onclick = async () => { await runSync(); draw(); };
+      $('#unlink', el).onclick = async () => {
+        if(!await confirmBox('Sync trennen?', 'Dieses Gerät synchronisiert dann nicht mehr. Die Daten bleiben hier und im Repo erhalten.', 'Trennen', true)) return;
+        cfg = null; store.del(LS.cfg); clearTimeout(sync.timer); setSync('local'); render(); draw();
+      };
+      $('#pair', el).onclick = () => showPairing($('#pairBox', el));
+    }else{
+      $('#connect', el).onclick = async () => {
+        const repo = $('#sRepo', el).value.trim().replace(/^https?:\/\/github\.com\//i,'').replace(/\.git$/,'').replace(/\/+$/,'');
+        const token = $('#sTok', el).value.trim(), msg = $('#sMsg', el), btn = $('#connect', el);
+        if(!/^[\w.-]+\/[\w.-]+$/.test(repo)){ msg.innerHTML = '<div class="msg err">Bitte das Repo als <code>Besitzer/Name</code> eintragen.</div>'; return; }
+        if(!token){ msg.innerHTML = '<div class="msg err">Bitte den Token einfügen.</div>'; return; }
+        btn.disabled = true; msg.innerHTML = '<div class="msg">Prüfe Verbindung …</div>';
+        const err = await connect(repo, token);
+        if(err){ btn.disabled = false; msg.innerHTML = `<div class="msg err">${esc(err)}</div>`; }
+        else { draw(); toast('Geräte-Sync ist eingerichtet.'); }
+      };
+    }
+  };
+  draw();
+  if(focusSync) setTimeout(() => { const s = $('#syncSec', el); if(s) s.scrollIntoView({ block:'start' }); }, 30);
+}
+
+function download(name, text, type){
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text], { type }));
+  a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+function exportCsv(){
+  const cell = v => { let s = String(v ?? ''); if(/^[=+\-@\t\r]/.test(s)) s = "'" + s; return '"' + s.replace(/"/g,'""') + '"'; };
+  const rows = [['Parkanlage','Stellplatz','Name','Monatsbetrag','Status','Gezahlt','Eingegangen am','Überwiesen von','Notiz']];
+  for(const c of sortCustomers(customersFor(ui.lot, ui.month))){
+    const p = payOf(c.id, ui.month) || {}, s = statusOf(c.id, ui.month);
+    rows.push([lotName(c.lot), c.spot, c.name, String(c.amount || 0).replace('.',','), STATUS[s].label, s === 'paid' ? String(p.a || c.amount || 0).replace('.',',') : '', p.d || '', p.p || '', p.n || '']);
+  }
+  download('parkinglot-' + ui.month + '.csv', '\ufeff' + rows.map(r => r.map(cell).join(';')).join('\r\n'), 'text/csv;charset=utf-8');
+}
+
+/* ---------- Synchronisierung über GitHub ---------- */
+class SyncError extends Error {}
+function b64enc(str){
+  const bytes = new TextEncoder().encode(str); let bin = '';
+  for(let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  return btoa(bin);
+}
+function b64dec(b64){
+  const bin = atob(String(b64).replace(/\s/g,''));
+  return new TextDecoder().decode(Uint8Array.from(bin, ch => ch.charCodeAt(0)));
+}
+function gh(conf, path, opts){
+  opts = opts || {};
+  const headers = { 'Accept':'application/vnd.github+json', 'Authorization':'Bearer ' + conf.token };
+  if(opts.body) headers['Content-Type'] = 'application/json';
+  return fetch(API + path, { method: opts.method || 'GET', body: opts.body, headers, cache:'no-store' });
+}
+async function httpErr(res){
+  let m = ''; try{ m = (await res.json()).message || ''; }catch(e){}
+  if(res.status === 401) return new SyncError('Der Token ist ungültig oder abgelaufen. Bitte in den Einstellungen einen neuen eintragen.');
+  if(res.status === 403 && /rate limit/i.test(m)) return new SyncError('GitHub nimmt gerade keine weiteren Anfragen an. Bitte in ein paar Minuten erneut versuchen.');
+  if(res.status === 403) return new SyncError('Keine Schreibrechte: Der Token braucht „Contents: Read and write“ für das Daten-Repo.');
+  if(res.status === 404) return new SyncError('Repo nicht gefunden oder der Token hat keinen Zugriff darauf.');
+  return new SyncError('GitHub-Fehler ' + res.status + (m ? ': ' + m : ''));
+}
+async function fetchRemote(conf){
+  const res = await gh(conf, `/repos/${conf.repo}/contents/${DATA_FILE}`);
+  if(res.status === 404){
+    const r2 = await gh(conf, `/repos/${conf.repo}`);
+    if(r2.ok) return { sha:null, data:null };
+    throw await httpErr(r2);
+  }
+  if(!res.ok) throw await httpErr(res);
+  const j = await res.json();
+  let content = j.content;
+  if(!content && j.sha && j.size > 0){           /* Dateien über 1 MB */
+    const b = await gh(conf, `/repos/${conf.repo}/git/blobs/${j.sha}`);
+    if(!b.ok) throw await httpErr(b);
+    content = (await b.json()).content;
+  }
+  if(!content || !String(content).trim()) return { sha: j.sha, data:null };
+  let data;
+  try{ data = JSON.parse(b64dec(content)); }
+  catch(e){ throw new SyncError('Die Datei data.json im Repo ist beschädigt. Es wurde nichts überschrieben.'); }
+  if(!data || typeof data !== 'object' || Array.isArray(data)) throw new SyncError('Die Datei data.json im Repo hat ein unbekanntes Format. Es wurde nichts überschrieben.');
+  return { sha: j.sha, data: normalize(data) };
+}
+function putRemote(conf, data, sha){
+  const body = { message: 'Daten aktualisiert', content: b64enc(JSON.stringify(data)) };
+  if(sha) body.sha = sha;
+  return gh(conf, `/repos/${conf.repo}/contents/${DATA_FILE}`, { method:'PUT', body: JSON.stringify(body) });
+}
+async function runSync(){
+  if(!cfg) return;
+  if(sync.busy){ sync.again = true; return; }
+  clearTimeout(sync.timer);
+  if(navigator.onLine === false){ setSync('offline'); return; }
+  sync.busy = true; setSync('busy');
+  const conf = cfg;
+  try{
+    let done = false;
+    for(let i = 0; i < 5 && !done; i++){
+      const remote = await fetchRemote(conf);
+      if(cfg !== conf) return;
+      if(remote.data){
+        const merged = mergeState(state, remote.data);
+        if(canon(merged) !== canon(state)){ state = merged; saveLocal(); render(); }
+        if(canon(remote.data) === canon(state)){ done = true; store.del(LS.dirty); break; }
+      }
+      const startRev = rev;
+      const res = await putRemote(conf, state, remote.sha);
+      if(res.ok){ done = true; if(rev !== startRev) sync.again = true; else store.del(LS.dirty); }
+      else if(res.status === 409 || res.status === 422) await sleep(350 * (i + 1));
+      else throw await httpErr(res);
+    }
+    if(!done) throw new SyncError('Speichern hat mehrfach nicht geklappt, weil ein anderes Gerät gleichzeitig geschrieben hat. Wird erneut versucht.');
+    sync.last = Date.now();
+    setSync(sync.again ? 'pending' : 'ok');
+  }catch(e){
+    if(e instanceof SyncError) setSync('error', e.message); else setSync('offline');
+  }finally{
+    sync.busy = false;
+    if(sync.again && cfg){ sync.again = false; sync.timer = setTimeout(runSync, 400); }
+  }
+}
+/* Prüft Repo + Token und richtet den Sync ein. Gibt eine Fehlermeldung zurück oder ''. */
+async function connect(repo, token){
+  const conf = { repo, token };
+  try{
+    const r = await gh(conf, `/repos/${repo}`);
+    if(!r.ok) return (await httpErr(r)).message;
+    const info = await r.json();
+    if(info.private === false) return 'Dieses Repo ist öffentlich – deine Kundendaten wären für jeden sichtbar. Bitte ein privates Repo verwenden.';
+    await fetchRemote(conf);
+  }catch(e){
+    return e instanceof SyncError ? e.message : 'Keine Verbindung zu GitHub. Bitte Internetverbindung prüfen.';
+  }
+  cfg = conf; store.set(LS.cfg, cfg);
+  await runSync();
+  if(sync.status === 'error'){ const m = sync.msg; cfg = null; store.del(LS.cfg); setSync('local'); render(); return m; }
+  render();
+  return '';
+}
+
+/* Weiteres Gerät: Link/QR-Code, der Repo + Token enthält (steht nur hinter dem #, geht nie an einen Server) */
+const b64url = s => b64enc(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+const unb64url = s => b64dec(s.replace(/-/g,'+').replace(/_/g,'/'));
+function showPairing(box){
+  const link = location.origin + location.pathname + '#k=' + b64url(cfg.repo + '\n' + cfg.token);
+  box.innerHTML = `
+    <div class="msg">Scanne den Code mit der Kamera des anderen Geräts oder schicke dir den Link selbst. <b>Nicht weitergeben</b> – er enthält deinen Zugangsschlüssel.</div>
+    <div class="qr" id="qrBox" hidden></div>
+    <div class="actions" style="margin-top:0"><button type="button" class="btn small" id="pairCopy">Link kopieren</button>${navigator.share ? '<button type="button" class="btn small" id="pairShare">Teilen …</button>' : ''}</div>`;
+  $('#pairCopy', box).onclick = async () => {
+    try{ await navigator.clipboard.writeText(link); toast('Link kopiert.'); }
+    catch(e){ box.insertAdjacentHTML('beforeend', `<textarea readonly style="margin-top:10px">${esc(link)}</textarea>`); $('#pairCopy', box).disabled = true; }
+  };
+  if(navigator.share) $('#pairShare', box).onclick = () => navigator.share({ title:'Angel Parkinglot', url: link }).catch(() => {});
+  const drawQr = () => {
+    try{
+      const q = window.qrcode(0, 'L'); q.addData(link); q.make();
+      const qb = $('#qrBox', box); qb.innerHTML = q.createSvgTag({ cellSize:4, margin:4, scalable:true }); qb.hidden = false;
+    }catch(e){}
+  };
+  if(window.qrcode) drawQr();
+  else { const s = document.createElement('script'); s.src = 'vendor/qrcode.js'; s.onload = drawQr; document.head.appendChild(s); }
+}
+async function checkPairingLink(){
+  const m = /^#k=([\w-]+)$/.exec(location.hash);
+  if(!m) return;
+  history.replaceState(null, '', location.pathname + location.search);
+  let repo, token;
+  try{ [repo, token] = unb64url(m[1]).split('\n'); }catch(e){ return; }
+  if(!repo || !token || !/^[\w.-]+\/[\w.-]+$/.test(repo)) return;
+  if(cfg && cfg.repo === repo && cfg.token === token) return;
+  if(!await confirmBox('Gerät verbinden?', `Dieses Gerät wird mit dem Daten-Repo ${repo} verbunden und zeigt danach denselben Stand wie deine anderen Geräte.`, 'Verbinden')) return;
+  const err = await connect(repo, token);
+  toast(err || 'Dieses Gerät ist jetzt verbunden.');
+}
+
+/* ---------- Ereignisse ---------- */
+$('#tabs').addEventListener('click', e => { const b = e.target.closest('[data-lot]'); if(!b) return; ui.lot = b.dataset.lot; saveUi(); render(); });
+$('#prev').onclick = () => { ui.month = addMonth(ui.month, -1); render(); };
+$('#next').onclick = () => { ui.month = addMonth(ui.month, 1); render(); };
+$('#monthSub').addEventListener('click', e => { if(e.target.id === 'toNow'){ ui.month = curMonth(); render(); } });
+$('#search').addEventListener('input', renderLists);
+$('#btnAdd').onclick = () => openCustomer(null);
+$('#btnSettings').onclick = () => openSettings(false);
+$('#syncPill').onclick = () => { if(cfg && sync.status !== 'error') runSync(); else openSettings(true); };
+$('#switch').addEventListener('click', e => { const b = e.target.closest('[data-list]'); if(!b) return; ui.list = b.dataset.list; saveUi(); renderLists(); });
+$('#banner').addEventListener('click', e => { if(e.target.closest('[data-open="sync"]')) openSettings(true); });
+$('#lists').addEventListener('click', e => {
+  const o = e.target.closest('[data-open]');
+  if(o){ if(o.dataset.open === 'add') openCustomer(null); else if(o.dataset.open === 'bulk') openBulk(); return; }
+  const b = e.target.closest('[data-act]'); if(!b) return;
+  const id = b.closest('.row').dataset.id;
+  if(b.dataset.act === 'open') openPayment(id); else quickStatus(id, b.dataset.act);
+});
+document.addEventListener('keydown', e => { if(e.key === 'Escape' && modals.length) closeModal(modals[modals.length-1]); });
+document.addEventListener('visibilitychange', () => {
+  if(document.visibilityState !== 'visible') return;
+  if(sessionMonth !== curMonth()){            /* Monatswechsel, während die App offen war */
+    sessionMonth = curMonth();
+    if(!modals.length){ ui.month = sessionMonth; render(); }
+  }
+  runSync();
+});
+window.addEventListener('online', runSync);
+window.addEventListener('offline', () => { if(cfg) setSync('offline'); });
+window.addEventListener('storage', e => {                 /* zweiter Tab im selben Browser */
+  if(e.key === LS.data && e.newValue){ try{ state = mergeState(state, normalize(JSON.parse(e.newValue))); render(); }catch(err){} }
+  if(e.key === LS.cfg){ cfg = store.get(LS.cfg, null); setSync(cfg ? 'pending' : 'local'); render(); if(cfg) runSync(); }
+});
+let sessionMonth = curMonth();
+setInterval(() => { if(cfg && document.visibilityState === 'visible' && !sync.busy) runSync(); }, 45000);
+
+render();
+checkPairingLink().then(() => { if(cfg) runSync(); });
+</script>
+</body>
+</html>
