@@ -2,7 +2,7 @@
 
 Zahlungsübersicht für die drei Parkanlagen: pro Monat sieht man, wer **bezahlt**, **nicht bezahlt** oder **uneindeutig** ist. Läuft als eine einzige HTML-Seite im Browser – auf dem PC und auf dem iPhone.
 
-**App öffnen:** https://lucashcandido.github.io/angel-parkinglot/
+**App öffnen:** https://lucashcandido.github.io/Angel-parkinglot/
 
 ## Was die App kann
 
@@ -16,12 +16,12 @@ Zahlungsübersicht für die drei Parkanlagen: pro Monat sieht man, wer **bezahlt
 
 ## Speicherung auf mehreren Geräten
 
-Dieses Repo enthält **nur den Programmcode**. Die Kundendaten liegen getrennt im privaten Repo `angel-parkinglot-data` (Datei `data.json`) und werden von der App automatisch gelesen und geschrieben. Ändern zwei Geräte gleichzeitig etwas, werden die Stände zusammengeführt; pro Kunde und Monat gilt die jeweils neueste Änderung. Ohne Internet speichert die App lokal und gleicht später ab.
+Dieses Repo enthält **nur den Programmcode**. Die Kundendaten liegen getrennt im privaten Repo `Angel-parkinglot-data` (Datei `data.json`) und werden von der App automatisch gelesen und geschrieben. Ändern zwei Geräte gleichzeitig etwas, werden die Stände zusammengeführt; pro Kunde und Monat gilt die jeweils neueste Änderung. Ohne Internet speichert die App lokal und gleicht später ab.
 
 ### Einmalig einrichten
 
 1. Token erstellen: https://github.com/settings/personal-access-tokens/new
-   - **Repository access:** „Only select repositories“ → `angel-parkinglot-data`
+   - **Repository access:** „Only select repositories“ → `Angel-parkinglot-data`
    - **Permissions → Repository permissions → Contents:** „Read and write“
    - **Expiration:** „No expiration“ oder das längste Angebot
 2. App öffnen → Zahnrad → **Geräte-Sync** → Token einfügen → **Verbinden**.
