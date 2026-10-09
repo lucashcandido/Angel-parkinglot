@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="de">
+<html lang="es">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -45,7 +45,7 @@ button{cursor:pointer}
 h1,h2,h3,p{margin:0}
 .wrap{max-width:1180px;margin:0 auto;padding:0 16px}
 
-/* Kopf */
+/* header */
 .top{position:sticky;top:0;z-index:20;background:var(--card);border-bottom:1px solid var(--line);padding-top:env(safe-area-inset-top)}
 .top-in{display:flex;align-items:center;gap:10px;padding-top:10px;padding-bottom:8px}
 .top h1{font-size:17px;font-weight:700;display:flex;align-items:center;gap:8px;flex:1;min-width:0}
@@ -57,6 +57,9 @@ h1,h2,h3,p{margin:0}
 .pill.pending .dot,.pill.offline .dot,.pill.local .dot{background:var(--unclear)}
 .pill.busy .dot{background:var(--accent);animation:pulse 1s infinite}
 @keyframes pulse{50%{opacity:.25}}
+.lang{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;flex:none}
+.lang button{border:0;background:var(--card);color:var(--muted);padding:0 9px;min-height:34px;font-size:13px;font-weight:700}
+.lang button.on{background:var(--accent);color:var(--on-accent)}
 .icon-btn{border:0;background:transparent;width:40px;height:40px;border-radius:10px;display:grid;place-items:center;flex:none}
 .icon-btn:hover{background:var(--soft)}
 .icon-btn svg{width:22px;height:22px}
@@ -69,7 +72,7 @@ h1,h2,h3,p{margin:0}
 .tab.on{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
 .tab.on small{color:inherit;opacity:.85}
 
-/* Monat */
+/* month */
 .monthbar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:14px 0 10px}
 .monthbar .nav{width:44px;height:44px;border-radius:12px;border:1px solid var(--line);background:var(--card);font-size:22px;line-height:1;flex:none}
 .monthmid{text-align:center;min-width:0}
@@ -101,7 +104,7 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 .btn.small{min-height:36px;padding:6px 11px;font-size:14px}
 .btn:disabled{opacity:.5;cursor:default}
 
-/* Listen-Umschalter (Handy) */
+/* list switch (phone) */
 .switch{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px}
 .switch button{border:1px solid var(--line);background:var(--card);border-radius:11px;padding:7px 4px;font-size:13px;line-height:1.25;min-height:48px}
 .switch button b{display:block;font-size:17px;font-variant-numeric:tabular-nums}
@@ -150,9 +153,12 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
   .top h1{font-size:16px;gap:7px}
   .top-in{gap:6px}
   .pill{font-size:12px;padding:6px 9px}
+  .pill.ok{padding:9px}
+  .pill.ok .txt{display:none}
+  .lang button{padding:0 8px}
 }
 
-/* Dialoge */
+/* dialogs */
 .ov{position:fixed;inset:0;z-index:50;background:rgba(10,14,22,.5);display:flex;align-items:flex-end;justify-content:center}
 .sheet{background:var(--card);width:100%;max-width:560px;max-height:92dvh;max-height:92vh;overflow:auto;border-radius:18px 18px 0 0;padding:16px 16px calc(18px + env(safe-area-inset-bottom));-webkit-overflow-scrolling:touch}
 @supports (max-height:92dvh){.sheet{max-height:92dvh}}
@@ -205,30 +211,34 @@ code{background:var(--soft);border-radius:5px;padding:1px 5px;font-size:13.5px;o
     <div class="top-in">
       <h1><span class="logo">P</span><span>Angel Parkinglot</span></h1>
       <button id="syncPill" class="pill" type="button"></button>
-      <button id="btnSettings" class="icon-btn" type="button" aria-label="Einstellungen" title="Einstellungen">
+      <div id="langSwitch" class="lang" role="group" aria-label="Idioma / Language">
+        <button type="button" data-lang="es" title="Español">ES</button>
+        <button type="button" data-lang="en" title="English">EN</button>
+      </div>
+      <button id="btnSettings" class="icon-btn" type="button">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
       </button>
     </div>
-    <nav id="tabs" class="tabs" aria-label="Parkanlagen"></nav>
+    <nav id="tabs" class="tabs"></nav>
   </div>
 </header>
 
 <main class="wrap">
   <section class="monthbar">
-    <button id="prev" class="nav" type="button" aria-label="Vorheriger Monat">‹</button>
+    <button id="prev" class="nav" type="button">‹</button>
     <div class="monthmid">
       <div id="monthLabel"></div>
       <div id="monthSub"></div>
     </div>
-    <button id="next" class="nav" type="button" aria-label="Nächster Monat">›</button>
+    <button id="next" class="nav" type="button">›</button>
   </section>
 
   <section id="summary" class="card summary"></section>
   <div id="banner"></div>
 
   <div class="toolbar">
-    <input id="search" type="search" placeholder="Suchen: Name, Zahler, Stellplatz …" autocomplete="off" aria-label="Suchen">
-    <button id="btnAdd" class="btn primary" type="button">+ Kunde</button>
+    <input id="search" type="search" autocomplete="off">
+    <button id="btnAdd" class="btn primary" type="button"></button>
   </div>
 
   <div id="switch" class="switch"></div>
@@ -240,24 +250,119 @@ code{background:var(--soft);border-radius:5px;padding:1px 5px;font-size:13.5px;o
 <script>
 'use strict';
 /* =====================================================================
-   Angel Parkinglot – Zahlungsübersicht für Parkanlagen
-   Eine einzelne HTML-Datei. Daten liegen lokal im Browser und werden
-   (wenn eingerichtet) als data.json in einem privaten GitHub-Repo
-   gespeichert, damit mehrere Geräte denselben Stand sehen.
+   Angel Parkinglot – payment overview for parking lots
+   A single HTML file. Data lives in the browser and (once set up) is
+   stored as data.json in a private GitHub repository so that several
+   devices see the same state. Interface languages: Spanish and English.
    ===================================================================== */
 
 const LS = { data:'apl.data.v1', cfg:'apl.cfg.v1', ui:'apl.ui.v1', dirty:'apl.dirty.v1' };
 const DATA_FILE = 'data.json';
 const DEFAULT_REPO = 'lucashcandido/Angel-parkinglot-data';
 const API = 'https://api.github.com';
-const STATUS = {
-  paid:    { label:'Bezahlt',       short:'Bezahlt' },
-  unpaid:  { label:'Nicht bezahlt', short:'Nicht bezahlt' },
-  unclear: { label:'Uneindeutig',   short:'Uneindeutig' }
-};
 const ORDER = ['paid','unpaid','unclear'];
 
-/* ---------- kleine Helfer ---------- */
+/* ---------- texts: [español, English] ---------- */
+const I18N = {
+  paid:['Pagado','Paid'], unpaid:['No pagado','Unpaid'], unclear:['Dudoso','Unclear'],
+  all:['Todos','All'],
+  lotN:['Estacionamiento {0}','Parking lot {0}'],
+  tabCount:['{0} / {1} pagados','{0} / {1} paid'],
+  aLots:['Estacionamientos','Parking lots'], aSettings:['Ajustes','Settings'], aPrev:['Mes anterior','Previous month'], aNext:['Mes siguiente','Next month'],
+  aSearch:['Buscar','Search'], aClose:['Cerrar','Close'],
+  searchPh:['Buscar: nombre, pagador, lugar…','Search: name, payer, space…'],
+  addCustomer:['+ Cliente','+ Customer'],
+  curMonth:['Mes actual','Current month'], toNow:['Ir al mes actual','Go to current month'],
+  sumPaid:['{0} de {1} pagaron','{0} of {1} paid'],
+  sumMoney:['{0} de {1} cobrados','{0} of {1} received'],
+  sumNone:['Sin clientes en {0}','No customers in {0}'],
+  bannerLocal:['Los datos están por ahora solo en este dispositivo.','Your data is only on this device so far.'],
+  bannerSetup:['Configurar sincronización','Set up sync'],
+  bannerErr:['La sincronización falló.','Sync failed.'],
+  welcome:['Bienvenido','Welcome'],
+  welcomeText:['Cargá tus clientes, de a uno o todos juntos desde tu planilla de Excel. Después marcás cada mes quién pagó.','Add your customers – one by one or all at once from your Excel sheet. Then tick off every month who has paid.'],
+  welcomeAdd:['+ Agregar cliente','+ Add customer'],
+  bulkTitle:['Pegar lista desde Excel','Paste list from Excel'],
+  emptyPaid:['Todavía no hay pagos registrados.','No payments recorded yet.'],
+  emptyUnpaid:['Nadie debe. 🎉','Nobody outstanding. 🎉'],
+  emptyUnclear:['No hay casos dudosos.','No unclear cases.'],
+  noMatch:['Sin resultados.','No matches.'],
+  space:['Lugar {0}','Space {0}'],
+  insteadOf:['(en vez de {0})','(instead of {0})'],
+  onDate:['el {0}','on {0}'], fromPayer:['de {0}','from {0}'], maybeFrom:['quizás de {0}','possibly from {0}'],
+  paysVia:['paga a través de: {0}','pays via: {0}'],
+  open1:['1 mes anterior impago','1 earlier month unpaid'], openN:['{0} meses anteriores impagos','{0} earlier months unpaid'],
+  actPaid:['Marcar como pagado','Mark as paid'], actUnclear:['Marcar como dudoso','Mark as unclear'],
+  actUnpaid:['Marcar como no pagado','Mark as unpaid'], actBack:['Volver a no pagado','Back to unpaid'],
+  undo:['Deshacer','Undo'],
+  sLocal:['Solo este dispositivo','This device only'], sOk:['Sincronizado','Synced'], sBusy:['Sincronizando…','Syncing…'],
+  sPending:['Guardando…','Saving…'], sOffline:['Sin conexión','Offline'], sError:['Error de sync','Sync error'],
+  lastSync:['Última sincronización a las {0}','Last synced at {0}'],
+  storageFail:['Atención: el navegador no pudo guardar los datos en este dispositivo.','Warning: the browser could not save the data on this device.'],
+  cancel:['Cancelar','Cancel'], save:['Guardar','Save'], del:['Eliminar','Delete'],
+  status:['Estado','Status'], amount:['Monto (ARS)','Amount (ARS)'], receivedOn:['Recibido el','Received on'],
+  payer:['Transferido por (nombre en el extracto bancario)','Transferred by (name on the bank statement)'],
+  payerPh:['vacío = el cliente','empty = the customer'],
+  remember:['Recordar a «{0}» como pagador de {1}','Remember “{0}” as a payer for {1}'],
+  monthNote:['Nota de este mes','Note for this month'], monthNotePh:['p. ej. por qué el pago es dudoso','e.g. why the payment is unclear'],
+  usuallyVia:['Suele pagar a través de: {0}','Usually pays via: {0}'], custNote:['Nota del cliente: {0}','Customer note: {0}'],
+  recent:['Últimos meses','Recent months'], editCustomer:['Editar cliente','Edit customer'], newCustomer:['Nuevo cliente','New customer'],
+  name:['Nombre','Name'], lot:['Estacionamiento','Parking lot'], spaceLbl:['Lugar','Space'], monthly:['Monto mensual (ARS)','Monthly amount (ARS)'],
+  aliases:['Paga a través de (otros nombres en el extracto bancario)','Pays via (other names on the bank statement)'],
+  aliasesPh:['p. ej. María Gómez, Taller Sur SRL','e.g. María Gómez, Taller Sur SRL'],
+  aliasesHint:['Separar varios nombres con coma. La búsqueda también encuentra al cliente por estos nombres.','Separate several names with commas. Search also finds the customer by these names.'],
+  phone:['Teléfono','Phone'], note:['Nota','Note'], paysFrom:['Paga desde','Pays from'], lastMonth:['Último mes','Last month'], ongoing:['– sigue vigente –','– ongoing –'],
+  errName:['Ingresá un nombre.','Please enter a name.'], errUntil:['«Último mes» es anterior a «Paga desde».','“Last month” is before “Pays from”.'],
+  delTitle:['¿Eliminar cliente?','Delete customer?'],
+  delText:['{0} se quitará de todos los meses. Si el cliente solo deja de alquilar, es mejor cargar un «Último mes»: así se conserva el historial.','{0} will be removed from all months. If the customer is simply leaving, set a “Last month” instead – that keeps the history.'],
+  bulkIntro:['Seleccioná en Excel las columnas en este orden y pegalas acá, una fila por cliente:','Select the columns in Excel in this order and paste them here – one row per customer:'],
+  bulkCols:['Nombre · Lugar · Monto mensual · Paga a través de','Name · Space · Monthly amount · Pays via'],
+  bulkReq:['Solo el nombre es obligatorio.','Only the name is required.'],
+  rows:['Filas','Rows'], bulkNone:['Todavía no pegaste nada.','Nothing pasted yet.'],
+  bulk1:['1 cliente detectado.','1 customer recognised.'], bulkN:['{0} clientes detectados.','{0} customers recognised.'],
+  bulkGo:['Importar','Import'], created1:['1 cliente creado.','1 customer added.'], createdN:['{0} clientes creados.','{0} customers added.'],
+  settings:['Ajustes','Settings'], lotNameAria:['Nombre del estacionamiento','Parking lot name'], remove:['Quitar','Remove'], addLot:['+ Estacionamiento','+ Parking lot'],
+  lotHasCust:['«{0}» todavía tiene {1} clientes: primero hay que moverlos o eliminarlos.','“{0}” still has {1} customers – move or delete them first.'],
+  lotDelTitle:['¿Quitar estacionamiento?','Remove parking lot?'], lotDelText:['«{0}» se quitará de la selección.','“{0}” will be removed from the selection.'],
+  syncTitle:['Sincronización entre dispositivos','Device sync'],
+  connectedTo:['Conectado a','Connected to'],
+  syncNow:['Sincronizar ahora','Sync now'], pair:['Conectar otro dispositivo','Connect another device'], unlink:['Desconectar','Disconnect'],
+  syncIntro_html:['Para que la PC y el iPhone muestren lo mismo, la app guarda los datos en tu repositorio <b>privado</b> de GitHub. Para eso necesitás, una sola vez, una clave de acceso (token).','So that your PC and iPhone show the same data, the app stores it in your <b>private</b> GitHub repository. For that you need an access key (token), once.'],
+  tokenHow:['Cómo crear el token (2 minutos)','How to create the token (2 minutes)'],
+  tokenSteps_html:[
+    '<li>Abrí <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">github.com → Settings → Fine-grained tokens → Generate new token</a>.</li><li><b>Token name:</b> p. ej. <code>Parkinglot</code>. <b>Expiration:</b> «No expiration» (o el plazo más largo).</li><li><b>Repository access:</b> «Only select repositories» → elegí tu repositorio de datos.</li><li><b>Permissions → Repository permissions → Contents:</b> «Read and write».</li><li>Hacé clic en «Generate token», copiá el token (empieza con <code>github_pat_</code>) y pegalo abajo.</li>',
+    '<li>Open <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">github.com → Settings → Fine-grained tokens → Generate new token</a>.</li><li><b>Token name:</b> e.g. <code>Parkinglot</code>. <b>Expiration:</b> “No expiration” (or the longest option).</li><li><b>Repository access:</b> “Only select repositories” → choose your data repository.</li><li><b>Permissions → Repository permissions → Contents:</b> “Read and write”.</li><li>Click “Generate token”, copy the token (it starts with <code>github_pat_</code>) and paste it below.</li>'],
+  repoLbl:['Repositorio de datos (dueño/nombre)','Data repository (owner/name)'],
+  tokenHint:['El token queda guardado en este dispositivo y solo se envía a GitHub.','The token stays on this device and is only sent to GitHub.'],
+  connect:['Conectar','Connect'],
+  errRepoFmt:['Escribí el repositorio como dueño/nombre.','Please enter the repository as owner/name.'],
+  errNoToken:['Pegá el token.','Please paste the token.'],
+  checking:['Verificando conexión…','Checking connection…'],
+  syncReady:['La sincronización quedó configurada.','Device sync is set up.'],
+  unlinkTitle:['¿Desconectar la sincronización?','Disconnect sync?'],
+  unlinkText:['Este dispositivo dejará de sincronizar. Los datos se conservan acá y en el repositorio.','This device will stop syncing. The data stays here and in the repository.'],
+  dataTitle:['Clientes y datos','Customers & data'], sortLbl:['Orden de las listas','List order'], sortName:['por nombre','by name'], sortSpot:['por lugar','by space'],
+  csvBtn:['Mes en CSV (Excel)','Month as CSV (Excel)'], backupBtn:['Guardar copia de seguridad','Save backup'], restoreBtn:['Cargar copia de seguridad','Load backup'],
+  restored:['Copia de seguridad cargada.','Backup loaded.'], restoreBad:['Este archivo no es una copia de seguridad válida.','This file is not a valid backup.'],
+  csvHead:['Estacionamiento;Lugar;Nombre;Monto mensual;Estado;Pagado;Recibido el;Transferido por;Nota','Parking lot;Space;Name;Monthly amount;Status;Paid;Received on;Transferred by;Note'],
+  pairMsg_html:['Escaneá el código con la cámara del otro dispositivo o enviate el enlace a vos mismo. <b>No lo compartas</b>: contiene tu clave de acceso.','Scan the code with the other device’s camera or send the link to yourself. <b>Do not share it</b> – it contains your access key.'],
+  copyLink:['Copiar enlace','Copy link'], share:['Compartir…','Share…'], linkCopied:['Enlace copiado.','Link copied.'],
+  pairTitle:['¿Conectar este dispositivo?','Connect this device?'],
+  pairText:['Este dispositivo se conectará al repositorio de datos {0} y mostrará lo mismo que tus otros dispositivos.','This device will be connected to the data repository {0} and will show the same data as your other devices.'],
+  paired:['Este dispositivo ya está conectado.','This device is now connected.'],
+  eToken:['El token no es válido o venció. Cargá uno nuevo en los ajustes.','The token is invalid or has expired. Please enter a new one in the settings.'],
+  eRate:['GitHub no acepta más pedidos por ahora. Probá de nuevo en unos minutos.','GitHub is not accepting more requests right now. Please try again in a few minutes.'],
+  ePerm:['Sin permiso de escritura: el token necesita «Contents: Read and write» para el repositorio de datos.','No write access: the token needs “Contents: Read and write” for the data repository.'],
+  eRepo:['No se encontró el repositorio o el token no tiene acceso a él.','Repository not found, or the token has no access to it.'],
+  eHttp:['Error de GitHub {0}','GitHub error {0}'],
+  eCorrupt:['El archivo data.json del repositorio está dañado. No se sobrescribió nada.','The file data.json in the repository is damaged. Nothing was overwritten.'],
+  eFormat:['El archivo data.json del repositorio tiene un formato desconocido. No se sobrescribió nada.','The file data.json in the repository has an unknown format. Nothing was overwritten.'],
+  eConflict:['No se pudo guardar varias veces porque otro dispositivo estaba escribiendo al mismo tiempo. Se volverá a intentar.','Saving failed several times because another device was writing at the same time. It will be retried.'],
+  ePublic:['Este repositorio es público: tus datos de clientes quedarían a la vista de cualquiera. Usá un repositorio privado.','This repository is public – your customer data would be visible to anyone. Please use a private repository.'],
+  eNet:['Sin conexión con GitHub. Revisá tu conexión a internet.','No connection to GitHub. Please check your internet connection.']
+};
+
+/* ---------- small helpers ---------- */
 const $ = (s, r=document) => r.querySelector(s);
 const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -270,19 +375,30 @@ const store = {
   del(k){ try{ localStorage.removeItem(k); }catch(e){} }
 };
 
+let ui = Object.assign({ lot:'lot1', list:'unpaid', sort:'name', lang:'' }, store.get(LS.ui, {}));
+if(ui.lang !== 'es' && ui.lang !== 'en') ui.lang = /^en/i.test(navigator.language || '') ? 'en' : 'es';
+function t(key){
+  const e = I18N[key], a = arguments;
+  const s = e ? e[ui.lang === 'en' ? 1 : 0] : key;
+  return a.length > 1 ? s.replace(/\{(\d)\}/g, (m, i) => a[+i + 1] ?? '') : s;
+}
+const loc = () => ui.lang === 'en' ? 'en-GB' : 'es-AR';
+
 const pad2 = n => String(n).padStart(2,'0');
 function curMonth(){ const d = new Date(); return d.getFullYear() + '-' + pad2(d.getMonth()+1); }
 function todayISO(){ const d = new Date(); return d.getFullYear() + '-' + pad2(d.getMonth()+1) + '-' + pad2(d.getDate()); }
 function addMonth(m, n){ let [y, mo] = m.split('-').map(Number); mo += n; y += Math.floor((mo-1)/12); mo = ((mo-1)%12+12)%12+1; return y + '-' + pad2(mo); }
-const fmtMonthLong = m => { const [y, mo] = m.split('-').map(Number); return new Intl.DateTimeFormat('de-DE',{month:'long',year:'numeric'}).format(new Date(y, mo-1, 1)); };
-const fmtMonthShort = m => { const [y, mo] = m.split('-').map(Number); return new Intl.DateTimeFormat('de-DE',{month:'short'}).format(new Date(y, mo-1, 1)).replace('.','') + ' ' + String(y).slice(2); };
-const fmtDate = iso => { if(!iso) return ''; const [y, m, d] = iso.split('-'); return d + '.' + m + '.'; };
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+const fmtMonthLong = m => { const [y, mo] = m.split('-').map(Number); return cap(new Intl.DateTimeFormat(loc(),{month:'long',year:'numeric'}).format(new Date(y, mo-1, 1))); };
+const fmtMonthShort = m => { const [y, mo] = m.split('-').map(Number); return cap(new Intl.DateTimeFormat(loc(),{month:'short'}).format(new Date(y, mo-1, 1)).replace('.','')) + ' ' + String(y).slice(2); };
+const fmtDate = iso => { if(!iso) return ''; const [y, m, d] = iso.split('-').map(Number); return new Intl.DateTimeFormat(loc(),{day:'numeric',month:'short'}).format(new Date(y, m-1, d)).replace('.',''); };
+const fmtTime = ts => new Date(ts).toLocaleTimeString(loc(),{hour:'2-digit',minute:'2-digit',hour12:false});
 const numFmt0 = new Intl.NumberFormat('es-AR',{maximumFractionDigits:0});
 const numFmt2 = new Intl.NumberFormat('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2});
 const fmtNum = n => n ? (Number.isInteger(n) ? numFmt0 : numFmt2).format(n) : '';
 const fmtMoney = n => '$ ' + (fmtNum(Math.round((n || 0) * 100) / 100) || '0');
 
-/* Versteht 45000 · 45.000 · 45.000,50 · 45,000.50 */
+/* Understands 45000 · 45.000 · 45.000,50 · 45,000.50 */
 function parseAmount(v){
   let s = String(v ?? '').replace(/[^\d.,-]/g,'');
   if(!s) return 0;
@@ -301,11 +417,12 @@ function parseAmount(v){
 }
 const splitNames = s => String(s ?? '').split(/[,;\n]/).map(x => x.trim()).filter(Boolean);
 
-/* ---------- Datenmodell ----------
+/* ---------- data model ----------
    lots:      { id: {id,name,order,deleted?,t} }
    customers: { id: {id,lot,name,spot,amount,aliases[],phone,note,from,until,deleted?,t} }
-   payments:  { "kundenId|JJJJ-MM": {s:'paid'|'unpaid'|'unclear', a,d,p,n, t} }
-   t = Zeitstempel der letzten Änderung; beim Zusammenführen gewinnt der neuere Eintrag. */
+   payments:  { "customerId|YYYY-MM": {s:'paid'|'unpaid'|'unclear', a,d,p,n, t} }
+   t = timestamp of the last change; when merging, the newer record wins.
+   The three built-in lots keep their internal name until renamed (t = 0) and are shown translated. */
 function emptyState(){
   return { v:1,
     lots:{ lot1:{id:'lot1',name:'Parkanlage 1',order:1,t:0}, lot2:{id:'lot2',name:'Parkanlage 2',order:2,t:0}, lot3:{id:'lot3',name:'Parkanlage 3',order:3,t:0} },
@@ -343,13 +460,12 @@ function mergeState(a, b){
 
 let state = normalize(store.get(LS.data, null));
 let cfg = store.get(LS.cfg, null);
-let ui = Object.assign({ lot:'lot1', list:'unpaid', sort:'name' }, store.get(LS.ui, {}));
 ui.month = curMonth();
 let rev = 0;
 const sync = { status: cfg ? 'pending' : 'local', msg:'', last:0, busy:false, again:false, timer:null };
 
-function saveLocal(){ if(!store.set(LS.data, state)) toast('Achtung: Der Browser konnte nicht lokal speichern.'); }
-function saveUi(){ store.set(LS.ui, { lot:ui.lot, list:ui.list, sort:ui.sort }); }
+function saveLocal(){ if(!store.set(LS.data, state)) toast(t('storageFail')); }
+function saveUi(){ store.set(LS.ui, { lot:ui.lot, list:ui.list, sort:ui.sort, lang:ui.lang }); }
 function commit(){
   rev++;
   saveLocal(); store.set(LS.dirty, true);
@@ -357,9 +473,10 @@ function commit(){
   if(cfg){ setSync('pending'); clearTimeout(sync.timer); sync.timer = setTimeout(runSync, 1500); }
 }
 
-/* ---------- Abfragen ---------- */
+/* ---------- queries ---------- */
+const lotLabel = l => (!l.t && /^Parkanlage \d+$/.test(l.name)) ? t('lotN', l.order) : l.name;
 const lotsList = () => Object.values(state.lots).filter(l => !l.deleted).sort((a,b) => (a.order||0) - (b.order||0) || a.name.localeCompare(b.name));
-const lotName = id => (state.lots[id] && !state.lots[id].deleted) ? state.lots[id].name : '';
+const lotName = id => (state.lots[id] && !state.lots[id].deleted) ? lotLabel(state.lots[id]) : '';
 function customersFor(lot, month){
   return Object.values(state.customers).filter(c =>
     !c.deleted && state.lots[c.lot] && !state.lots[c.lot].deleted &&
@@ -368,7 +485,7 @@ function customersFor(lot, month){
 }
 const payKey = (cid, m) => cid + '|' + m;
 const payOf = (cid, m) => state.payments[payKey(cid, m)] || null;
-const statusOf = (cid, m) => { const p = payOf(cid, m); return (p && STATUS[p.s]) ? p.s : 'unpaid'; };
+const statusOf = (cid, m) => { const p = payOf(cid, m); return (p && ORDER.includes(p.s)) ? p.s : 'unpaid'; };
 function priorOpen(c, month){
   let n = 0;
   for(let i = 1; i <= 12; i++){
@@ -395,15 +512,29 @@ function quickStatus(cid, s){
   else if(s === 'unclear') setPayment(cid, month, { s, a: o.a, d: o.d, p: o.p, n: o.n });
   else setPayment(cid, month, { s:'unpaid', n: o.n });
   commit();
-  toast(c.name + ' → ' + STATUS[s].label, 'Rückgängig', () => {
+  toast(c.name + ' → ' + t(s), t('undo'), () => {
     if(old){ old.t = Date.now(); state.payments[key] = old; }
     else state.payments[key] = { s:'unpaid', t: Date.now() };
     commit();
   });
 }
 
-/* ---------- Anzeige ---------- */
+/* ---------- rendering ---------- */
 function render(){ renderTabs(); renderMonth(); renderLists(); renderSync(); }
+
+function applyStatic(){
+  document.documentElement.lang = ui.lang;
+  $$('#langSwitch button').forEach(b => { const on = b.dataset.lang === ui.lang; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
+  $('#tabs').setAttribute('aria-label', t('aLots'));
+  $('#btnSettings').setAttribute('aria-label', t('aSettings')); $('#btnSettings').title = t('aSettings');
+  $('#prev').setAttribute('aria-label', t('aPrev')); $('#next').setAttribute('aria-label', t('aNext'));
+  $('#search').placeholder = t('searchPh'); $('#search').setAttribute('aria-label', t('aSearch'));
+  $('#btnAdd').textContent = t('addCustomer');
+}
+function setLang(l){
+  if(l !== 'es' && l !== 'en' || l === ui.lang) return;
+  ui.lang = l; saveUi(); applyStatic(); render();
+}
 
 function renderTabs(){
   const lots = lotsList();
@@ -411,23 +542,23 @@ function renderTabs(){
   const cell = (id, name) => {
     const cs = customersFor(id, ui.month);
     const paid = cs.filter(c => statusOf(c.id, ui.month) === 'paid').length;
-    return `<button type="button" class="tab${ui.lot === id ? ' on' : ''}" data-lot="${esc(id)}" aria-pressed="${ui.lot === id}"><b>${esc(name)}</b><small>${paid} / ${cs.length} bezahlt</small></button>`;
+    return `<button type="button" class="tab${ui.lot === id ? ' on' : ''}" data-lot="${esc(id)}" aria-pressed="${ui.lot === id}"><b>${esc(name)}</b><small>${esc(t('tabCount', paid, cs.length))}</small></button>`;
   };
-  $('#tabs').innerHTML = lots.map(l => cell(l.id, l.name)).join('') + (lots.length > 1 ? cell('all', 'Alle') : '');
+  $('#tabs').innerHTML = lots.map(l => cell(l.id, lotLabel(l))).join('') + (lots.length > 1 ? cell('all', t('all')) : '');
 }
 
 function renderMonth(){
   $('#monthLabel').textContent = fmtMonthLong(ui.month);
   $('#monthSub').innerHTML = ui.month === curMonth()
-    ? '<span class="tag-now">Aktueller Monat</span>'
-    : '<button type="button" class="link" id="toNow">Zum aktuellen Monat</button>';
+    ? `<span class="tag-now">${esc(t('curMonth'))}</span>`
+    : `<button type="button" class="link" id="toNow">${esc(t('toNow'))}</button>`;
 }
 
 function searchText(c, p){
   return norm([c.name, (c.aliases || []).join(' '), c.spot, c.phone, c.note, p && p.p, p && p.n, lotName(c.lot)].filter(Boolean).join(' '));
 }
 function sortCustomers(list){
-  const coll = new Intl.Collator('de', { numeric:true, sensitivity:'base' });
+  const coll = new Intl.Collator(ui.lang, { numeric:true, sensitivity:'base' });
   return list.sort((a, b) => ui.sort === 'spot'
     ? (coll.compare(a.spot || '\uffff', b.spot || '\uffff') || coll.compare(a.name, b.name))
     : (coll.compare(a.name, b.name) || coll.compare(a.spot || '', b.spot || '')));
@@ -435,26 +566,26 @@ function sortCustomers(list){
 
 function rowHtml(c, s, p){
   const bits = [];
-  if(c.spot) bits.push('Platz ' + esc(c.spot));
+  if(c.spot) bits.push(esc(t('space', c.spot)));
   if(s === 'paid'){
     const a = (p && p.a) || c.amount;
-    bits.push(esc(fmtMoney(a)) + (c.amount && a !== c.amount ? ' (statt ' + esc(fmtMoney(c.amount)) + ')' : ''));
-    if(p && p.d) bits.push('am ' + esc(fmtDate(p.d)));
-    if(p && p.p) bits.push('von ' + esc(p.p));
+    bits.push(esc(fmtMoney(a)) + (c.amount && a !== c.amount ? ' ' + esc(t('insteadOf', fmtMoney(c.amount))) : ''));
+    if(p && p.d) bits.push(esc(t('onDate', fmtDate(p.d))));
+    if(p && p.p) bits.push(esc(t('fromPayer', p.p)));
   }else{
     if(c.amount) bits.push(esc(fmtMoney(c.amount)));
-    if(p && p.p) bits.push('evtl. von ' + esc(p.p));
+    if(p && p.p) bits.push(esc(t('maybeFrom', p.p)));
   }
-  const alias = (c.aliases && c.aliases.length && !(s === 'paid' && p && p.p)) ? `<span class="row-sub">zahlt über: ${esc(c.aliases.join(', '))}</span>` : '';
+  const alias = (c.aliases && c.aliases.length && !(s === 'paid' && p && p.p)) ? `<span class="row-sub">${esc(t('paysVia', c.aliases.join(', ')))}</span>` : '';
   const note = (p && p.n) ? `<span class="row-note">📝 ${esc(p.n)}</span>` : '';
   const open = s !== 'paid' ? priorOpen(c, ui.month) : 0;
   const badges = (ui.lot === 'all' ? `<span class="badge">${esc(lotName(c.lot))}</span>` : '') +
-    (open ? `<span class="badge warn">${open === 1 ? 'Vormonat offen' : open + ' Vormonate offen'}</span>` : '');
-  const btn = (act, cls, sym, label) => `<button type="button" class="ib ${cls}" data-act="${act}" aria-label="${label}" title="${label}">${sym}</button>`;
+    (open ? `<span class="badge warn">${esc(open === 1 ? t('open1') : t('openN', open))}</span>` : '');
+  const btn = (act, cls, sym, label) => `<button type="button" class="ib ${cls}" data-act="${act}" aria-label="${esc(label)}" title="${esc(label)}">${sym}</button>`;
   let acts = '';
-  if(s === 'unpaid') acts = btn('paid','ok','✓','Als bezahlt markieren') + btn('unclear','q','?','Als uneindeutig markieren');
-  else if(s === 'unclear') acts = btn('paid','ok','✓','Als bezahlt markieren') + btn('unpaid','no','✕','Als nicht bezahlt markieren');
-  else acts = btn('unpaid','back','↩','Zurück auf nicht bezahlt');
+  if(s === 'unpaid') acts = btn('paid','ok','✓',t('actPaid')) + btn('unclear','q','?',t('actUnclear'));
+  else if(s === 'unclear') acts = btn('paid','ok','✓',t('actPaid')) + btn('unpaid','no','✕',t('actUnpaid'));
+  else acts = btn('unpaid','back','↩',t('actBack'));
   return `<li class="row" data-id="${esc(c.id)}">
     <button type="button" class="row-main" data-act="open">
       <span class="row-name">${esc(c.name)}${badges}</span>
@@ -476,54 +607,55 @@ function renderLists(){
   }
   const n = all.length;
 
-  /* Zusammenfassung */
+  /* summary */
   const pct = k => n ? (counts[k] / n * 100) : 0;
   $('#summary').innerHTML = n ? `
     <div class="sum-head">
-      <span class="big">${counts.paid} von ${n} bezahlt</span>
-      <span class="money">${esc(fmtMoney(received))} von ${esc(fmtMoney(expected))} eingegangen</span>
+      <span class="big">${esc(t('sumPaid', counts.paid, n))}</span>
+      <span class="money">${esc(t('sumMoney', fmtMoney(received), fmtMoney(expected)))}</span>
     </div>
     <div class="bar" aria-hidden="true"><i class="p" style="width:${pct('paid')}%"></i><i class="c" style="width:${pct('unclear')}%"></i><i class="u" style="width:${pct('unpaid')}%"></i></div>`
-    : `<div class="sum-head"><span class="big">Keine Kunden in ${esc(fmtMonthLong(month))}</span></div>`;
+    : `<div class="sum-head"><span class="big">${esc(t('sumNone', fmtMonthLong(month)))}</span></div>`;
 
-  /* Hinweis-Banner */
+  /* banner */
   let banner = '';
-  if(!cfg) banner = `<div class="banner"><span>Die Daten liegen bisher nur auf diesem Gerät.</span><button type="button" class="btn small" data-open="sync">Geräte-Sync einrichten</button></div>`;
-  else if(sync.status === 'error') banner = `<div class="banner err"><span>${esc(sync.msg || 'Synchronisierung fehlgeschlagen.')}</span><button type="button" class="btn small" data-open="sync">Einstellungen</button></div>`;
+  if(!cfg) banner = `<div class="banner"><span>${esc(t('bannerLocal'))}</span><button type="button" class="btn small" data-open="sync">${esc(t('bannerSetup'))}</button></div>`;
+  else if(sync.status === 'error') banner = `<div class="banner err"><span>${esc(sync.msg || t('bannerErr'))}</span><button type="button" class="btn small" data-open="sync">${esc(t('settings'))}</button></div>`;
   $('#banner').innerHTML = banner;
 
-  /* Umschalter (Handy) */
-  $('#switch').innerHTML = ORDER.map(k => `<button type="button" class="${k}${ui.list === k ? ' on' : ''}" data-list="${k}"><b>${counts[k]}</b>${STATUS[k].short}</button>`).join('');
+  /* list switch (phone) */
+  $('#switch').innerHTML = ORDER.map(k => `<button type="button" class="${k}${ui.list === k ? ' on' : ''}" data-list="${k}"><b>${counts[k]}</b>${esc(t(k))}</button>`).join('');
 
-  /* Listen */
+  /* lists */
   const lists = $('#lists');
   lists.classList.toggle('searching', !!q);
   const totalCustomers = Object.values(state.customers).filter(c => !c.deleted).length;
   if(!totalCustomers){
     lists.innerHTML = `<div class="card welcome" style="grid-column:1/-1">
-      <h2>Willkommen</h2>
-      <p>Lege deine Kunden an – einzeln oder alle auf einmal aus deiner Excel-Liste. Danach hakst du jeden Monat ab, wer bezahlt hat.</p>
-      <button type="button" class="btn primary" data-open="add">+ Kunde anlegen</button>
-      <button type="button" class="btn" data-open="bulk">Liste aus Excel einfügen</button>
+      <h2>${esc(t('welcome'))}</h2>
+      <p>${esc(t('welcomeText'))}</p>
+      <button type="button" class="btn primary" data-open="add">${esc(t('welcomeAdd'))}</button>
+      <button type="button" class="btn" data-open="bulk">${esc(t('bulkTitle'))}</button>
     </div>`;
     return;
   }
-  const emptyText = { paid:'Noch keine Zahlung eingetragen.', unpaid:'Niemand offen. 🎉', unclear:'Keine unklaren Fälle.' };
+  const emptyKey = { paid:'emptyPaid', unpaid:'emptyUnpaid', unclear:'emptyUnclear' };
   lists.innerHTML = ORDER.map(k => {
     const rows = sortCustomers(groups[k]).map(c => rowHtml(c, k, payOf(c.id, month))).join('');
     return `<section class="card col ${k}${ui.list === k ? ' active' : ''}">
-      <div class="col-head"><span class="mark"></span><span>${STATUS[k].label}</span><span class="sum">${counts[k] ? esc(fmtMoney(totals[k])) : ''}</span><span class="cnt">${q ? groups[k].length + ' / ' : ''}${counts[k]}</span></div>
-      ${rows ? '<ul>' + rows + '</ul>' : `<div class="empty">${q ? 'Kein Treffer.' : emptyText[k]}</div>`}
+      <div class="col-head"><span class="mark"></span><span>${esc(t(k))}</span><span class="sum">${counts[k] ? esc(fmtMoney(totals[k])) : ''}</span><span class="cnt">${q ? groups[k].length + ' / ' : ''}${counts[k]}</span></div>
+      ${rows ? '<ul>' + rows + '</ul>' : `<div class="empty">${esc(q ? t('noMatch') : t(emptyKey[k]))}</div>`}
     </section>`;
   }).join('');
 }
 
-const SYNC_TEXT = { local:'Nur dieses Gerät', ok:'Synchronisiert', busy:'Synchronisiere …', pending:'Wird gespeichert …', offline:'Offline', error:'Sync-Fehler' };
+const SYNC_KEY = { local:'sLocal', ok:'sOk', busy:'sBusy', pending:'sPending', offline:'sOffline', error:'sError' };
 function renderSync(){
-  const el = $('#syncPill');
+  const el = $('#syncPill'), label = t(SYNC_KEY[sync.status]);
   el.className = 'pill ' + sync.status;
-  el.innerHTML = `<span class="dot"></span><span>${SYNC_TEXT[sync.status]}</span>`;
-  el.title = sync.status === 'ok' && sync.last ? 'Zuletzt synchronisiert um ' + new Date(sync.last).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}) : (sync.msg || '');
+  el.innerHTML = `<span class="dot"></span><span class="txt">${esc(label)}</span>`;
+  el.setAttribute('aria-label', label);
+  el.title = sync.status === 'ok' && sync.last ? t('lastSync', fmtTime(sync.last)) : (sync.msg || label);
 }
 function setSync(status, msg){
   const was = sync.status;
@@ -532,7 +664,7 @@ function setSync(status, msg){
   if((was === 'error') !== (status === 'error')) renderLists();
 }
 
-/* ---------- Toast ---------- */
+/* ---------- toast ---------- */
 let toastTimer = null;
 function toast(text, actionLabel, action){
   const el = $('#toast');
@@ -543,7 +675,7 @@ function toast(text, actionLabel, action){
   toastTimer = setTimeout(() => el.classList.remove('show'), actionLabel ? 6000 : 3500);
 }
 
-/* ---------- Dialoge ---------- */
+/* ---------- dialogs ---------- */
 const modals = [];
 function openModal(html){
   const ov = document.createElement('div');
@@ -563,56 +695,56 @@ function closeModal(ov){
   ov.remove();
   if(!modals.length) document.body.classList.remove('noscroll');
 }
-const closeX = '<button type="button" class="icon-btn" data-close aria-label="Schließen" title="Schließen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
+const closeX = () => `<button type="button" class="icon-btn" data-close aria-label="${esc(t('aClose'))}" title="${esc(t('aClose'))}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>`;
 function confirmBox(title, text, okLabel, danger){
   return new Promise(resolve => {
     const el = openModal(`<div class="sheet-head"><h2>${esc(title)}</h2></div><p>${esc(text)}</p>
-      <div class="actions"><button type="button" class="btn grow" data-no>Abbrechen</button><button type="button" class="btn grow ${danger ? 'danger' : 'primary'}" data-yes>${esc(okLabel)}</button></div>`);
+      <div class="actions"><button type="button" class="btn grow" data-no>${esc(t('cancel'))}</button><button type="button" class="btn grow ${danger ? 'danger' : 'primary'}" data-yes>${esc(okLabel)}</button></div>`);
     $('[data-no]', el).onclick = () => { closeModal(el); resolve(false); };
     $('[data-yes]', el).onclick = () => { closeModal(el); resolve(true); };
   });
 }
 function monthOptions(selected, withNone){
-  const now = curMonth(); let html = withNone ? `<option value="">– läuft weiter –</option>` : '';
+  const now = curMonth(); let html = withNone ? `<option value="">${esc(t('ongoing'))}</option>` : '';
   const set = new Set(); for(let i = -36; i <= 12; i++) set.add(addMonth(now, i)); if(selected) set.add(selected);
   for(const m of Array.from(set).sort()) html += `<option value="${m}"${m === selected ? ' selected' : ''}>${esc(fmtMonthLong(m))}</option>`;
   return html;
 }
-const lotOptions = sel => lotsList().map(l => `<option value="${esc(l.id)}"${l.id === sel ? ' selected' : ''}>${esc(l.name)}</option>`).join('');
+const lotOptions = sel => lotsList().map(l => `<option value="${esc(l.id)}"${l.id === sel ? ' selected' : ''}>${esc(lotLabel(l))}</option>`).join('');
 
-/* Zahlung eines Kunden im gewählten Monat */
+/* a customer's payment in the selected month */
 function openPayment(cid){
   const c = state.customers[cid]; if(!c) return;
   const month = ui.month, p = payOf(cid, month) || {}, s = statusOf(cid, month);
   const hist = []; for(let i = 5; i >= 0; i--){ const m = addMonth(month, -i); if(c.from && m < c.from) continue; hist.push(`<span class="chip ${statusOf(cid, m)}">${esc(fmtMonthShort(m))}</span>`); }
   const names = [c.name].concat(c.aliases || []);
   const el = openModal(`
-    <div class="sheet-head"><h2>${esc(c.name)}<span class="sub">${esc([lotName(c.lot), c.spot && 'Platz ' + c.spot, fmtMonthLong(month)].filter(Boolean).join(' · '))}</span></h2>${closeX}</div>
+    <div class="sheet-head"><h2>${esc(c.name)}<span class="sub">${esc([lotName(c.lot), c.spot && t('space', c.spot), fmtMonthLong(month)].filter(Boolean).join(' · '))}</span></h2>${closeX()}</div>
     <form novalidate>
-      <div class="field"><span class="lbl">Status</span>
-        <div class="seg">${ORDER.map(k => `<label><input type="radio" name="s" value="${k}"${k === s ? ' checked' : ''}><span class="${k}">${STATUS[k].label}</span></label>`).join('')}</div>
+      <div class="field"><span class="lbl">${esc(t('status'))}</span>
+        <div class="seg">${ORDER.map(k => `<label><input type="radio" name="s" value="${k}"${k === s ? ' checked' : ''}><span class="${k}">${esc(t(k))}</span></label>`).join('')}</div>
       </div>
       <div class="two">
-        <div class="field"><label for="pa">Betrag (ARS)</label><input id="pa" type="text" inputmode="decimal" value="${esc(fmtNum(p.a || c.amount))}"></div>
-        <div class="field"><label for="pd">Eingegangen am</label><input id="pd" type="date" value="${esc(p.d || '')}"></div>
+        <div class="field"><label for="pa">${esc(t('amount'))}</label><input id="pa" type="text" inputmode="decimal" value="${esc(fmtNum(p.a || c.amount))}"></div>
+        <div class="field"><label for="pd">${esc(t('receivedOn'))}</label><input id="pd" type="date" value="${esc(p.d || '')}"></div>
       </div>
-      <div class="field"><label for="pp">Überwiesen von (Name auf dem Kontoauszug)</label>
-        <input id="pp" type="text" list="payerNames" autocomplete="off" value="${esc(p.p || '')}" placeholder="leer = Kunde selbst">
+      <div class="field"><label for="pp">${esc(t('payer'))}</label>
+        <input id="pp" type="text" list="payerNames" autocomplete="off" value="${esc(p.p || '')}" placeholder="${esc(t('payerPh'))}">
         <datalist id="payerNames">${names.map(n => `<option value="${esc(n)}">`).join('')}</datalist>
       </div>
       <label class="check" id="rememberRow" hidden><input type="checkbox" id="remember" checked><span id="rememberText"></span></label>
-      <div class="field"><label for="pn">Notiz zu diesem Monat</label><textarea id="pn" placeholder="z. B. warum die Zahlung unklar ist">${esc(p.n || '')}</textarea></div>
-      ${c.aliases && c.aliases.length ? `<p class="hint">Zahlt üblicherweise über: ${esc(c.aliases.join(', '))}</p>` : ''}
-      ${c.note ? `<p class="hint">Kundennotiz: ${esc(c.note)}</p>` : ''}
-      <div class="field" style="margin-top:12px"><span class="lbl">Letzte Monate</span><div class="hist">${hist.join('')}</div></div>
-      <div class="actions"><button type="button" class="btn" id="editCust">Kunde bearbeiten</button><button type="submit" class="btn primary grow">Speichern</button></div>
+      <div class="field"><label for="pn">${esc(t('monthNote'))}</label><textarea id="pn" placeholder="${esc(t('monthNotePh'))}">${esc(p.n || '')}</textarea></div>
+      ${c.aliases && c.aliases.length ? `<p class="hint">${esc(t('usuallyVia', c.aliases.join(', ')))}</p>` : ''}
+      ${c.note ? `<p class="hint">${esc(t('custNote', c.note))}</p>` : ''}
+      <div class="field" style="margin-top:12px"><span class="lbl">${esc(t('recent'))}</span><div class="hist">${hist.join('')}</div></div>
+      <div class="actions"><button type="button" class="btn" id="editCust">${esc(t('editCustomer'))}</button><button type="submit" class="btn primary grow">${esc(t('save'))}</button></div>
     </form>`);
   const payer = $('#pp', el);
   const refreshRemember = () => {
     const v = payer.value.trim();
     const known = !v || names.some(n => norm(n) === norm(v));
     $('#rememberRow', el).hidden = known;
-    if(!known) $('#rememberText', el).textContent = `„${v}“ als Zahler für ${c.name} merken`;
+    if(!known) $('#rememberText', el).textContent = t('remember', v, c.name);
   };
   payer.addEventListener('input', refreshRemember); refreshRemember();
   $('#editCust', el).onclick = () => { closeModal(el); openCustomer(cid); };
@@ -631,168 +763,162 @@ function openPayment(cid){
   };
 }
 
-/* Kunde anlegen / bearbeiten */
+/* add / edit a customer */
 function openCustomer(cid){
   const c = cid ? state.customers[cid] : null;
   const lot = c ? c.lot : (ui.lot !== 'all' ? ui.lot : (lotsList()[0] || {}).id);
   const el = openModal(`
-    <div class="sheet-head"><h2>${c ? 'Kunde bearbeiten' : 'Neuer Kunde'}</h2>${closeX}</div>
+    <div class="sheet-head"><h2>${esc(t(c ? 'editCustomer' : 'newCustomer'))}</h2>${closeX()}</div>
     <form novalidate>
-      <div class="field"><label for="cn">Name</label><input id="cn" type="text" autocomplete="off" value="${esc(c ? c.name : '')}" required></div>
-      <div class="field"><label for="cl">Parkanlage</label><select id="cl">${lotOptions(lot)}</select></div>
+      <div class="field"><label for="cn">${esc(t('name'))}</label><input id="cn" type="text" autocomplete="off" value="${esc(c ? c.name : '')}" required></div>
+      <div class="field"><label for="cl">${esc(t('lot'))}</label><select id="cl">${lotOptions(lot)}</select></div>
       <div class="two">
-        <div class="field"><label for="cs">Stellplatz</label><input id="cs" type="text" autocomplete="off" value="${esc(c ? c.spot || '' : '')}"></div>
-        <div class="field"><label for="ca">Monatsbetrag (ARS)</label><input id="ca" type="text" inputmode="decimal" value="${esc(c ? fmtNum(c.amount) : '')}"></div>
+        <div class="field"><label for="cs">${esc(t('spaceLbl'))}</label><input id="cs" type="text" autocomplete="off" value="${esc(c ? c.spot || '' : '')}"></div>
+        <div class="field"><label for="ca">${esc(t('monthly'))}</label><input id="ca" type="text" inputmode="decimal" value="${esc(c ? fmtNum(c.amount) : '')}"></div>
       </div>
-      <div class="field"><label for="cz">Zahlt über (andere Namen auf dem Kontoauszug)</label>
-        <input id="cz" type="text" autocomplete="off" value="${esc(c ? (c.aliases || []).join(', ') : '')}" placeholder="z. B. María Gómez, Taller Sur SRL">
-        <div class="hint">Mehrere Namen mit Komma trennen. Die Suche findet den Kunden auch über diese Namen.</div></div>
-      <div class="field"><label for="cp">Telefon</label><input id="cp" type="tel" autocomplete="off" value="${esc(c ? c.phone || '' : '')}"></div>
-      <div class="field"><label for="co">Notiz</label><textarea id="co">${esc(c ? c.note || '' : '')}</textarea></div>
+      <div class="field"><label for="cz">${esc(t('aliases'))}</label>
+        <input id="cz" type="text" autocomplete="off" value="${esc(c ? (c.aliases || []).join(', ') : '')}" placeholder="${esc(t('aliasesPh'))}">
+        <div class="hint">${esc(t('aliasesHint'))}</div></div>
+      <div class="field"><label for="cp">${esc(t('phone'))}</label><input id="cp" type="tel" autocomplete="off" value="${esc(c ? c.phone || '' : '')}"></div>
+      <div class="field"><label for="co">${esc(t('note'))}</label><textarea id="co">${esc(c ? c.note || '' : '')}</textarea></div>
       <div class="two">
-        <div class="field"><label for="cf">Zahlt ab</label><select id="cf">${monthOptions(c ? c.from : ui.month, false)}</select></div>
-        <div class="field"><label for="cu">Letzter Monat</label><select id="cu">${monthOptions(c ? c.until || '' : '', true)}</select></div>
+        <div class="field"><label for="cf">${esc(t('paysFrom'))}</label><select id="cf">${monthOptions(c ? c.from : ui.month, false)}</select></div>
+        <div class="field"><label for="cu">${esc(t('lastMonth'))}</label><select id="cu">${monthOptions(c ? c.until || '' : '', true)}</select></div>
       </div>
       <div id="cErr"></div>
-      <div class="actions">${c ? '<button type="button" class="btn danger" id="delCust">Löschen</button>' : ''}<button type="submit" class="btn primary grow">Speichern</button></div>
+      <div class="actions">${c ? `<button type="button" class="btn danger" id="delCust">${esc(t('del'))}</button>` : ''}<button type="submit" class="btn primary grow">${esc(t('save'))}</button></div>
     </form>`);
   if(!c) setTimeout(() => $('#cn', el).focus(), 50);
   $('form', el).onsubmit = e => {
     e.preventDefault();
     const name = $('#cn', el).value.trim();
     const from = $('#cf', el).value, until = $('#cu', el).value;
-    if(!name){ $('#cErr', el).innerHTML = '<div class="msg err">Bitte einen Namen eintragen.</div>'; return; }
-    if(until && until < from){ $('#cErr', el).innerHTML = '<div class="msg err">„Letzter Monat“ liegt vor „Zahlt ab“.</div>'; return; }
+    if(!name){ $('#cErr', el).innerHTML = `<div class="msg err">${esc(t('errName'))}</div>`; return; }
+    if(until && until < from){ $('#cErr', el).innerHTML = `<div class="msg err">${esc(t('errUntil'))}</div>`; return; }
     const id = c ? c.id : uid();
     state.customers[id] = { id, lot: $('#cl', el).value, name, spot: $('#cs', el).value.trim(), amount: parseAmount($('#ca', el).value),
       aliases: splitNames($('#cz', el).value), phone: $('#cp', el).value.trim(), note: $('#co', el).value.trim(), from, until, t: Date.now() };
     closeModal(el); commit();
   };
   if(c) $('#delCust', el).onclick = async () => {
-    if(!await confirmBox('Kunde löschen?', `${c.name} wird aus allen Monaten entfernt. Wenn der Kunde nur aufhört, trage stattdessen einen „Letzten Monat“ ein – dann bleibt die Historie erhalten.`, 'Löschen', true)) return;
+    if(!await confirmBox(t('delTitle'), t('delText', c.name), t('del'), true)) return;
     state.customers[c.id] = Object.assign({}, c, { deleted:true, t: Date.now() });
     closeModal(el); commit();
   };
 }
 
-/* Mehrere Kunden aus Excel einfügen */
+/* paste several customers from Excel */
 function parseBulk(text){
   return String(text).split(/\r?\n/).map(l => l.trim()).filter(Boolean).map(l => {
     const parts = (l.includes('\t') ? l.split('\t') : l.split(';')).map(x => x.trim());
     return { name: parts[0] || '', spot: parts[1] || '', amount: parseAmount(parts[2]), aliases: splitNames(parts[3]) };
-  }).filter((r, i) => r.name && !(i === 0 && /^(name|nombre|kunde|cliente)$/i.test(r.name)));
+  }).filter((r, i) => r.name && !(i === 0 && /^(name|nombre|kunde|cliente|customer)$/i.test(r.name)));
 }
 function openBulk(){
   const lot = ui.lot !== 'all' ? ui.lot : (lotsList()[0] || {}).id;
   const el = openModal(`
-    <div class="sheet-head"><h2>Liste aus Excel einfügen</h2>${closeX}</div>
-    <p class="hint" style="margin-bottom:12px">Markiere in Excel die Spalten in dieser Reihenfolge und füge sie hier ein – eine Zeile pro Kunde:<br><b>Name · Stellplatz · Monatsbetrag · Zahlt über</b><br>Nur der Name ist Pflicht.</p>
+    <div class="sheet-head"><h2>${esc(t('bulkTitle'))}</h2>${closeX()}</div>
+    <p class="hint" style="margin-bottom:12px">${esc(t('bulkIntro'))}<br><b>${esc(t('bulkCols'))}</b><br>${esc(t('bulkReq'))}</p>
     <div class="two">
-      <div class="field"><label for="bl">Parkanlage</label><select id="bl">${lotOptions(lot)}</select></div>
-      <div class="field"><label for="bf">Zahlt ab</label><select id="bf">${monthOptions(ui.month, false)}</select></div>
+      <div class="field"><label for="bl">${esc(t('lot'))}</label><select id="bl">${lotOptions(lot)}</select></div>
+      <div class="field"><label for="bf">${esc(t('paysFrom'))}</label><select id="bf">${monthOptions(ui.month, false)}</select></div>
     </div>
-    <div class="field"><label for="bt">Zeilen</label><textarea id="bt" style="min-height:170px" placeholder="Juan Pérez&#9;12&#9;45.000&#9;María Gómez"></textarea><div class="hint" id="bInfo">Noch nichts eingefügt.</div></div>
-    <div class="actions"><button type="button" class="btn primary grow" id="bGo" disabled>Übernehmen</button></div>`);
+    <div class="field"><label for="bt">${esc(t('rows'))}</label><textarea id="bt" style="min-height:170px" placeholder="Juan Pérez&#9;12&#9;45.000&#9;María Gómez"></textarea><div class="hint" id="bInfo">${esc(t('bulkNone'))}</div></div>
+    <div class="actions"><button type="button" class="btn primary grow" id="bGo" disabled>${esc(t('bulkGo'))}</button></div>`);
   const ta = $('#bt', el);
-  const upd = () => { const n = parseBulk(ta.value).length; $('#bInfo', el).textContent = n ? n + (n === 1 ? ' Kunde erkannt.' : ' Kunden erkannt.') : 'Noch nichts eingefügt.'; $('#bGo', el).disabled = !n; };
+  const upd = () => { const n = parseBulk(ta.value).length; $('#bInfo', el).textContent = !n ? t('bulkNone') : n === 1 ? t('bulk1') : t('bulkN', n); $('#bGo', el).disabled = !n; };
   ta.addEventListener('input', upd);
   $('#bGo', el).onclick = () => {
-    const rows = parseBulk(ta.value), lotId = $('#bl', el).value, from = $('#bf', el).value, t = Date.now();
-    for(const r of rows){ const id = uid(); state.customers[id] = { id, lot: lotId, name: r.name, spot: r.spot, amount: r.amount, aliases: r.aliases, phone:'', note:'', from, until:'', t }; }
+    const rows = parseBulk(ta.value), lotId = $('#bl', el).value, from = $('#bf', el).value, ts = Date.now();
+    for(const r of rows){ const id = uid(); state.customers[id] = { id, lot: lotId, name: r.name, spot: r.spot, amount: r.amount, aliases: r.aliases, phone:'', note:'', from, until:'', t: ts }; }
     closeModal(el); closeModal(); ui.lot = lotId; saveUi(); commit();
-    toast(rows.length + (rows.length === 1 ? ' Kunde angelegt.' : ' Kunden angelegt.'));
+    toast(rows.length === 1 ? t('created1') : t('createdN', rows.length));
   };
 }
 
-/* ---------- Einstellungen ---------- */
+/* ---------- settings ---------- */
 function openSettings(focusSync){
-  const el = openModal(`<div class="sheet-head"><h2>Einstellungen</h2>${closeX}</div><div id="setBody"></div>`);
+  const el = openModal(`<div class="sheet-head"><h2>${esc(t('settings'))}</h2>${closeX()}</div><div id="setBody"></div>`);
   const draw = () => {
     const lots = lotsList();
     $('#setBody', el).innerHTML = `
       <div class="sec" style="border-top:0;padding-top:0;margin-top:0">
-        <h3>Parkanlagen</h3>
-        ${lots.map(l => `<div class="lotrow"><input type="text" data-lotname="${esc(l.id)}" value="${esc(l.name)}" aria-label="Name der Parkanlage"><button type="button" class="btn danger" data-lotdel="${esc(l.id)}" aria-label="Parkanlage entfernen" title="Entfernen">✕</button></div>`).join('')}
-        <button type="button" class="btn small" id="lotAdd">+ Parkanlage</button>
+        <h3>${esc(t('aLots'))}</h3>
+        ${lots.map(l => `<div class="lotrow"><input type="text" data-lotname="${esc(l.id)}" value="${esc(lotLabel(l))}" aria-label="${esc(t('lotNameAria'))}"><button type="button" class="btn danger" data-lotdel="${esc(l.id)}" aria-label="${esc(t('remove'))}" title="${esc(t('remove'))}">✕</button></div>`).join('')}
+        <button type="button" class="btn small" id="lotAdd">${esc(t('addLot'))}</button>
       </div>
 
       <div class="sec" id="syncSec">
-        <h3>Geräte-Sync</h3>
+        <h3>${esc(t('syncTitle'))}</h3>
         ${cfg ? `
-          <p>Verbunden mit <code>${esc(cfg.repo)}</code>.${sync.last ? ' Zuletzt synchronisiert um ' + new Date(sync.last).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}) + ' Uhr.' : ''}</p>
+          <p>${esc(t('connectedTo'))} <code>${esc(cfg.repo)}</code>.${sync.last ? ' ' + esc(t('lastSync', fmtTime(sync.last))) + '.' : ''}</p>
           ${sync.status === 'error' ? `<div class="msg err">${esc(sync.msg)}</div>` : ''}
           <div class="actions" style="margin-top:0">
-            <button type="button" class="btn small" id="syncNow">Jetzt synchronisieren</button>
-            <button type="button" class="btn small" id="pair">Weiteres Gerät verbinden</button>
-            <button type="button" class="btn small danger" id="unlink">Trennen</button>
+            <button type="button" class="btn small" id="syncNow">${esc(t('syncNow'))}</button>
+            <button type="button" class="btn small" id="pair">${esc(t('pair'))}</button>
+            <button type="button" class="btn small danger" id="unlink">${esc(t('unlink'))}</button>
           </div>
           <div id="pairBox"></div>
         ` : `
-          <p>Damit PC und iPhone denselben Stand zeigen, speichert die App deine Daten in deinem <b>privaten</b> GitHub-Repo. Du brauchst dafür einmalig einen Zugangsschlüssel (Token).</p>
+          <p>${t('syncIntro_html')}</p>
           <details>
-            <summary>So erstellst du den Token (2 Minuten)</summary>
-            <ol>
-              <li>Öffne <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">github.com → Settings → Fine-grained tokens → Generate new token</a>.</li>
-              <li><b>Token name:</b> z. B. <code>Parkinglot</code>. <b>Expiration:</b> „No expiration“ (oder das längste Angebot).</li>
-              <li><b>Repository access:</b> „Only select repositories“ → dein Daten-Repo auswählen.</li>
-              <li><b>Permissions → Repository permissions → Contents:</b> „Read and write“.</li>
-              <li>„Generate token“ klicken, den Token (beginnt mit <code>github_pat_</code>) kopieren und unten einfügen.</li>
-            </ol>
+            <summary>${esc(t('tokenHow'))}</summary>
+            <ol>${t('tokenSteps_html')}</ol>
           </details>
-          <div class="field"><label for="sRepo">Daten-Repo (Besitzer/Name)</label><input id="sRepo" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" value="${esc(DEFAULT_REPO)}"></div>
-          <div class="field"><label for="sTok">Token</label><input id="sTok" type="password" autocomplete="off" placeholder="github_pat_…"><div class="hint">Der Token bleibt auf diesem Gerät gespeichert und wird nur an GitHub gesendet.</div></div>
+          <div class="field"><label for="sRepo">${esc(t('repoLbl'))}</label><input id="sRepo" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" value="${esc(DEFAULT_REPO)}"></div>
+          <div class="field"><label for="sTok">Token</label><input id="sTok" type="password" autocomplete="off" placeholder="github_pat_…"><div class="hint">${esc(t('tokenHint'))}</div></div>
           <div id="sMsg"></div>
-          <button type="button" class="btn primary" id="connect">Verbinden</button>
+          <button type="button" class="btn primary" id="connect">${esc(t('connect'))}</button>
         `}
       </div>
 
       <div class="sec">
-        <h3>Kunden &amp; Daten</h3>
-        <div class="field"><label for="sSort">Sortierung der Listen</label><select id="sSort"><option value="name"${ui.sort === 'name' ? ' selected' : ''}>nach Name</option><option value="spot"${ui.sort === 'spot' ? ' selected' : ''}>nach Stellplatz</option></select></div>
+        <h3>${esc(t('dataTitle'))}</h3>
+        <div class="field"><label for="sSort">${esc(t('sortLbl'))}</label><select id="sSort"><option value="name"${ui.sort === 'name' ? ' selected' : ''}>${esc(t('sortName'))}</option><option value="spot"${ui.sort === 'spot' ? ' selected' : ''}>${esc(t('sortSpot'))}</option></select></div>
         <div class="actions" style="margin-top:0">
-          <button type="button" class="btn small" id="bulk">Liste aus Excel einfügen</button>
-          <button type="button" class="btn small" id="csv">Monat als CSV (Excel)</button>
-          <button type="button" class="btn small" id="backup">Sicherung speichern</button>
-          <button type="button" class="btn small" id="restore">Sicherung laden</button>
+          <button type="button" class="btn small" id="bulk">${esc(t('bulkTitle'))}</button>
+          <button type="button" class="btn small" id="csv">${esc(t('csvBtn'))}</button>
+          <button type="button" class="btn small" id="backup">${esc(t('backupBtn'))}</button>
+          <button type="button" class="btn small" id="restore">${esc(t('restoreBtn'))}</button>
           <input type="file" id="restoreFile" accept="application/json,.json" hidden>
         </div>
       </div>`;
 
     $$('[data-lotname]', el).forEach(inp => inp.onchange = () => {
       const l = state.lots[inp.dataset.lotname], v = inp.value.trim();
-      if(!v){ inp.value = l.name; return; }
-      if(v !== l.name){ state.lots[l.id] = Object.assign({}, l, { name: v, t: Date.now() }); commit(); }
+      if(!v){ inp.value = lotLabel(l); return; }
+      if(v !== lotLabel(l)){ state.lots[l.id] = Object.assign({}, l, { name: v, t: Date.now() }); commit(); }
     });
     $$('[data-lotdel]', el).forEach(b => b.onclick = async () => {
       const l = state.lots[b.dataset.lotdel];
       const n = Object.values(state.customers).filter(c => !c.deleted && c.lot === l.id).length;
-      if(n){ toast(`„${l.name}“ hat noch ${n} Kunden – bitte zuerst verschieben oder löschen.`); return; }
-      if(!await confirmBox('Parkanlage entfernen?', `„${l.name}“ wird aus der Auswahl entfernt.`, 'Entfernen', true)) return;
+      if(n){ toast(t('lotHasCust', lotLabel(l), n)); return; }
+      if(!await confirmBox(t('lotDelTitle'), t('lotDelText', lotLabel(l)), t('remove'), true)) return;
       state.lots[l.id] = Object.assign({}, l, { deleted:true, t: Date.now() }); commit(); draw();
     });
     $('#lotAdd', el).onclick = () => {
       const id = 'lot_' + uid(), order = Math.max(0, ...Object.values(state.lots).map(l => l.order || 0)) + 1;
-      state.lots[id] = { id, name: 'Parkanlage ' + (lotsList().length + 1), order, t: Date.now() }; commit(); draw();
+      state.lots[id] = { id, name: t('lotN', lotsList().length + 1), order, t: Date.now() }; commit(); draw();
       const inp = $(`[data-lotname="${id}"]`, el); if(inp){ inp.focus(); inp.select(); }
     };
     $('#sSort', el).onchange = e => { ui.sort = e.target.value; saveUi(); renderLists(); };
     $('#bulk', el).onclick = openBulk;
     $('#csv', el).onclick = exportCsv;
-    $('#backup', el).onclick = () => download('parkinglot-sicherung-' + todayISO() + '.json', JSON.stringify(state), 'application/json');
+    $('#backup', el).onclick = () => download('parkinglot-backup-' + todayISO() + '.json', JSON.stringify(state), 'application/json');
     $('#restore', el).onclick = () => $('#restoreFile', el).click();
     $('#restoreFile', el).onchange = async e => {
       const f = e.target.files[0]; if(!f) return;
       try{
         const data = JSON.parse(await f.text());
         if(!data || typeof data.customers !== 'object') throw new Error('x');
-        state = mergeState(state, normalize(data)); commit(); draw(); toast('Sicherung eingelesen.');
-      }catch(err){ toast('Diese Datei ist keine gültige Sicherung.'); }
+        state = mergeState(state, normalize(data)); commit(); draw(); toast(t('restored'));
+      }catch(err){ toast(t('restoreBad')); }
     };
 
     if(cfg){
       $('#syncNow', el).onclick = async () => { await runSync(); draw(); };
       $('#unlink', el).onclick = async () => {
-        if(!await confirmBox('Sync trennen?', 'Dieses Gerät synchronisiert dann nicht mehr. Die Daten bleiben hier und im Repo erhalten.', 'Trennen', true)) return;
+        if(!await confirmBox(t('unlinkTitle'), t('unlinkText'), t('unlink'), true)) return;
         cfg = null; store.del(LS.cfg); clearTimeout(sync.timer); setSync('local'); render(); draw();
       };
       $('#pair', el).onclick = () => showPairing($('#pairBox', el));
@@ -800,12 +926,12 @@ function openSettings(focusSync){
       $('#connect', el).onclick = async () => {
         const repo = $('#sRepo', el).value.trim().replace(/^https?:\/\/github\.com\//i,'').replace(/\.git$/,'').replace(/\/+$/,'');
         const token = $('#sTok', el).value.trim(), msg = $('#sMsg', el), btn = $('#connect', el);
-        if(!/^[\w.-]+\/[\w.-]+$/.test(repo)){ msg.innerHTML = '<div class="msg err">Bitte das Repo als <code>Besitzer/Name</code> eintragen.</div>'; return; }
-        if(!token){ msg.innerHTML = '<div class="msg err">Bitte den Token einfügen.</div>'; return; }
-        btn.disabled = true; msg.innerHTML = '<div class="msg">Prüfe Verbindung …</div>';
+        if(!/^[\w.-]+\/[\w.-]+$/.test(repo)){ msg.innerHTML = `<div class="msg err">${esc(t('errRepoFmt'))}</div>`; return; }
+        if(!token){ msg.innerHTML = `<div class="msg err">${esc(t('errNoToken'))}</div>`; return; }
+        btn.disabled = true; msg.innerHTML = `<div class="msg">${esc(t('checking'))}</div>`;
         const err = await connect(repo, token);
         if(err){ btn.disabled = false; msg.innerHTML = `<div class="msg err">${esc(err)}</div>`; }
-        else { draw(); toast('Geräte-Sync ist eingerichtet.'); }
+        else { draw(); toast(t('syncReady')); }
       };
     }
   };
@@ -821,15 +947,15 @@ function download(name, text, type){
 }
 function exportCsv(){
   const cell = v => { let s = String(v ?? ''); if(/^[=+\-@\t\r]/.test(s)) s = "'" + s; return '"' + s.replace(/"/g,'""') + '"'; };
-  const rows = [['Parkanlage','Stellplatz','Name','Monatsbetrag','Status','Gezahlt','Eingegangen am','Überwiesen von','Notiz']];
+  const rows = [t('csvHead').split(';')];
   for(const c of sortCustomers(customersFor(ui.lot, ui.month))){
     const p = payOf(c.id, ui.month) || {}, s = statusOf(c.id, ui.month);
-    rows.push([lotName(c.lot), c.spot, c.name, String(c.amount || 0).replace('.',','), STATUS[s].label, s === 'paid' ? String(p.a || c.amount || 0).replace('.',',') : '', p.d || '', p.p || '', p.n || '']);
+    rows.push([lotName(c.lot), c.spot, c.name, String(c.amount || 0).replace('.',','), t(s), s === 'paid' ? String(p.a || c.amount || 0).replace('.',',') : '', p.d || '', p.p || '', p.n || '']);
   }
   download('parkinglot-' + ui.month + '.csv', '\ufeff' + rows.map(r => r.map(cell).join(';')).join('\r\n'), 'text/csv;charset=utf-8');
 }
 
-/* ---------- Synchronisierung über GitHub ---------- */
+/* ---------- sync through GitHub ---------- */
 class SyncError extends Error {}
 function b64enc(str){
   const bytes = new TextEncoder().encode(str); let bin = '';
@@ -848,11 +974,11 @@ function gh(conf, path, opts){
 }
 async function httpErr(res){
   let m = ''; try{ m = (await res.json()).message || ''; }catch(e){}
-  if(res.status === 401) return new SyncError('Der Token ist ungültig oder abgelaufen. Bitte in den Einstellungen einen neuen eintragen.');
-  if(res.status === 403 && /rate limit/i.test(m)) return new SyncError('GitHub nimmt gerade keine weiteren Anfragen an. Bitte in ein paar Minuten erneut versuchen.');
-  if(res.status === 403) return new SyncError('Keine Schreibrechte: Der Token braucht „Contents: Read and write“ für das Daten-Repo.');
-  if(res.status === 404) return new SyncError('Repo nicht gefunden oder der Token hat keinen Zugriff darauf.');
-  return new SyncError('GitHub-Fehler ' + res.status + (m ? ': ' + m : ''));
+  if(res.status === 401) return new SyncError(t('eToken'));
+  if(res.status === 403 && /rate limit/i.test(m)) return new SyncError(t('eRate'));
+  if(res.status === 403) return new SyncError(t('ePerm'));
+  if(res.status === 404) return new SyncError(t('eRepo'));
+  return new SyncError(t('eHttp', res.status) + (m ? ': ' + m : ''));
 }
 async function fetchRemote(conf){
   const res = await gh(conf, `/repos/${conf.repo}/contents/${DATA_FILE}`);
@@ -864,7 +990,7 @@ async function fetchRemote(conf){
   if(!res.ok) throw await httpErr(res);
   const j = await res.json();
   let content = j.content;
-  if(!content && j.sha && j.size > 0){           /* Dateien über 1 MB */
+  if(!content && j.sha && j.size > 0){           /* files over 1 MB */
     const b = await gh(conf, `/repos/${conf.repo}/git/blobs/${j.sha}`);
     if(!b.ok) throw await httpErr(b);
     content = (await b.json()).content;
@@ -872,12 +998,12 @@ async function fetchRemote(conf){
   if(!content || !String(content).trim()) return { sha: j.sha, data:null };
   let data;
   try{ data = JSON.parse(b64dec(content)); }
-  catch(e){ throw new SyncError('Die Datei data.json im Repo ist beschädigt. Es wurde nichts überschrieben.'); }
-  if(!data || typeof data !== 'object' || Array.isArray(data)) throw new SyncError('Die Datei data.json im Repo hat ein unbekanntes Format. Es wurde nichts überschrieben.');
+  catch(e){ throw new SyncError(t('eCorrupt')); }
+  if(!data || typeof data !== 'object' || Array.isArray(data)) throw new SyncError(t('eFormat'));
   return { sha: j.sha, data: normalize(data) };
 }
 function putRemote(conf, data, sha){
-  const body = { message: 'Daten aktualisiert', content: b64enc(JSON.stringify(data)) };
+  const body = { message: 'Update data', content: b64enc(JSON.stringify(data)) };
   if(sha) body.sha = sha;
   return gh(conf, `/repos/${conf.repo}/contents/${DATA_FILE}`, { method:'PUT', body: JSON.stringify(body) });
 }
@@ -904,7 +1030,7 @@ async function runSync(){
       else if(res.status === 409 || res.status === 422) await sleep(350 * (i + 1));
       else throw await httpErr(res);
     }
-    if(!done) throw new SyncError('Speichern hat mehrfach nicht geklappt, weil ein anderes Gerät gleichzeitig geschrieben hat. Wird erneut versucht.');
+    if(!done) throw new SyncError(t('eConflict'));
     sync.last = Date.now();
     setSync(sync.again ? 'pending' : 'ok');
   }catch(e){
@@ -914,17 +1040,17 @@ async function runSync(){
     if(sync.again && cfg){ sync.again = false; sync.timer = setTimeout(runSync, 400); }
   }
 }
-/* Prüft Repo + Token und richtet den Sync ein. Gibt eine Fehlermeldung zurück oder ''. */
+/* Checks repository + token and sets up sync. Returns an error message or ''. */
 async function connect(repo, token){
   const conf = { repo, token };
   try{
     const r = await gh(conf, `/repos/${repo}`);
     if(!r.ok) return (await httpErr(r)).message;
     const info = await r.json();
-    if(info.private === false) return 'Dieses Repo ist öffentlich – deine Kundendaten wären für jeden sichtbar. Bitte ein privates Repo verwenden.';
+    if(info.private === false) return t('ePublic');
     await fetchRemote(conf);
   }catch(e){
-    return e instanceof SyncError ? e.message : 'Keine Verbindung zu GitHub. Bitte Internetverbindung prüfen.';
+    return e instanceof SyncError ? e.message : t('eNet');
   }
   cfg = conf; store.set(LS.cfg, cfg);
   await runSync();
@@ -933,17 +1059,17 @@ async function connect(repo, token){
   return '';
 }
 
-/* Weiteres Gerät: Link/QR-Code, der Repo + Token enthält (steht nur hinter dem #, geht nie an einen Server) */
+/* Another device: link / QR code holding repository + token (only after the #, never sent to a server) */
 const b64url = s => b64enc(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
 const unb64url = s => b64dec(s.replace(/-/g,'+').replace(/_/g,'/'));
 function showPairing(box){
   const link = location.origin + location.pathname + '#k=' + b64url(cfg.repo + '\n' + cfg.token);
   box.innerHTML = `
-    <div class="msg">Scanne den Code mit der Kamera des anderen Geräts oder schicke dir den Link selbst. <b>Nicht weitergeben</b> – er enthält deinen Zugangsschlüssel.</div>
+    <div class="msg">${t('pairMsg_html')}</div>
     <div class="qr" id="qrBox" hidden></div>
-    <div class="actions" style="margin-top:0"><button type="button" class="btn small" id="pairCopy">Link kopieren</button>${navigator.share ? '<button type="button" class="btn small" id="pairShare">Teilen …</button>' : ''}</div>`;
+    <div class="actions" style="margin-top:0"><button type="button" class="btn small" id="pairCopy">${esc(t('copyLink'))}</button>${navigator.share ? `<button type="button" class="btn small" id="pairShare">${esc(t('share'))}</button>` : ''}</div>`;
   $('#pairCopy', box).onclick = async () => {
-    try{ await navigator.clipboard.writeText(link); toast('Link kopiert.'); }
+    try{ await navigator.clipboard.writeText(link); toast(t('linkCopied')); }
     catch(e){ box.insertAdjacentHTML('beforeend', `<textarea readonly style="margin-top:10px">${esc(link)}</textarea>`); $('#pairCopy', box).disabled = true; }
   };
   if(navigator.share) $('#pairShare', box).onclick = () => navigator.share({ title:'Angel Parkinglot', url: link }).catch(() => {});
@@ -964,12 +1090,13 @@ async function checkPairingLink(){
   try{ [repo, token] = unb64url(m[1]).split('\n'); }catch(e){ return; }
   if(!repo || !token || !/^[\w.-]+\/[\w.-]+$/.test(repo)) return;
   if(cfg && cfg.repo === repo && cfg.token === token) return;
-  if(!await confirmBox('Gerät verbinden?', `Dieses Gerät wird mit dem Daten-Repo ${repo} verbunden und zeigt danach denselben Stand wie deine anderen Geräte.`, 'Verbinden')) return;
+  if(!await confirmBox(t('pairTitle'), t('pairText', repo), t('connect'))) return;
   const err = await connect(repo, token);
-  toast(err || 'Dieses Gerät ist jetzt verbunden.');
+  toast(err || t('paired'));
 }
 
-/* ---------- Ereignisse ---------- */
+/* ---------- events ---------- */
+$('#langSwitch').addEventListener('click', e => { const b = e.target.closest('[data-lang]'); if(b) setLang(b.dataset.lang); });
 $('#tabs').addEventListener('click', e => { const b = e.target.closest('[data-lot]'); if(!b) return; ui.lot = b.dataset.lot; saveUi(); render(); });
 $('#prev').onclick = () => { ui.month = addMonth(ui.month, -1); render(); };
 $('#next').onclick = () => { ui.month = addMonth(ui.month, 1); render(); };
@@ -988,9 +1115,10 @@ $('#lists').addEventListener('click', e => {
   if(b.dataset.act === 'open') openPayment(id); else quickStatus(id, b.dataset.act);
 });
 document.addEventListener('keydown', e => { if(e.key === 'Escape' && modals.length) closeModal(modals[modals.length-1]); });
+let sessionMonth = curMonth();
 document.addEventListener('visibilitychange', () => {
   if(document.visibilityState !== 'visible') return;
-  if(sessionMonth !== curMonth()){            /* Monatswechsel, während die App offen war */
+  if(sessionMonth !== curMonth()){            /* month changed while the app was open */
     sessionMonth = curMonth();
     if(!modals.length){ ui.month = sessionMonth; render(); }
   }
@@ -998,13 +1126,13 @@ document.addEventListener('visibilitychange', () => {
 });
 window.addEventListener('online', runSync);
 window.addEventListener('offline', () => { if(cfg) setSync('offline'); });
-window.addEventListener('storage', e => {                 /* zweiter Tab im selben Browser */
+window.addEventListener('storage', e => {                 /* second tab in the same browser */
   if(e.key === LS.data && e.newValue){ try{ state = mergeState(state, normalize(JSON.parse(e.newValue))); render(); }catch(err){} }
   if(e.key === LS.cfg){ cfg = store.get(LS.cfg, null); setSync(cfg ? 'pending' : 'local'); render(); if(cfg) runSync(); }
 });
-let sessionMonth = curMonth();
 setInterval(() => { if(cfg && document.visibilityState === 'visible' && !sync.busy) runSync(); }, 45000);
 
+applyStatic();
 render();
 checkPairingLink().then(() => { if(cfg) runSync(); });
 </script>
