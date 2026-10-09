@@ -26,7 +26,11 @@ Die Oberfläche gibt es auf **Spanisch und Englisch**; umgeschaltet wird mit dem
 - Name passt nur ungefähr oder der Betrag ist zu niedrig → Vorschlag **uneindeutig**, Claudes Begründung wird als Notiz gespeichert
 - kein passender Kunde, Datum außerhalb des Monats oder schon einmal eingelesen → wird nicht eingetragen, lässt sich aber von Hand zuordnen
 
-Dafür braucht die App einen eigenen **Anthropic-API-Schlüssel** (https://platform.claude.com/settings/keys, Guthaben unter „Billing“). Die Abrechnung läuft nach Verbrauch über das Anthropic-Konto. Der Schlüssel wird nur im Browser des Geräts gespeichert; der QR-Code für ein weiteres Gerät überträgt ihn mit. Beim Einlesen gehen die Dateien und die Kundenliste (Namen, Zahlernamen, Beträge) an Anthropic, sonst nirgendwohin.
+Dafür braucht die App einen eigenen **Anthropic-API-Schlüssel** (https://platform.claude.com/settings/keys, Guthaben unter „Billing“). Die Abrechnung läuft nach Verbrauch über das Anthropic-Konto.
+
+Der Schlüssel wird einmal eingetragen und zusammen mit den Daten abgeglichen: Er liegt in `data.json` im privaten Daten-Repo und kommt so von selbst auf alle verbundenen Geräte, ebenso die Modellwahl. Entfernen wirkt genauso auf allen Geräten. In Sicherungsdateien steht er nicht. Weil er im Verlauf des Repos erhalten bleibt, sollte ein nicht mehr benutzter Schlüssel auch in der Anthropic-Konsole widerrufen werden – und das Daten-Repo muss privat bleiben.
+
+Beim Einlesen gehen die Dateien und die Kundenliste (Namen, Zahlernamen, Beträge) an Anthropic, sonst nirgendwohin.
 
 ## Speicherung auf mehreren Geräten
 

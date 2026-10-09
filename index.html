@@ -446,9 +446,11 @@ const I18N = {
     '<li>Abrí <a href="https://platform.claude.com/settings/keys" target="_blank" rel="noopener">platform.claude.com → API keys</a> e iniciá sesión (o creá una cuenta).</li><li>En <a href="https://platform.claude.com/settings/billing" target="_blank" rel="noopener">Billing</a> cargá saldo.</li><li>Hacé clic en «Create Key», copiá la clave (empieza con <code>sk-ant-</code>) y pegala abajo.</li>',
     '<li>Open <a href="https://platform.claude.com/settings/keys" target="_blank" rel="noopener">platform.claude.com → API keys</a> and sign in (or create an account).</li><li>Add credit under <a href="https://platform.claude.com/settings/billing" target="_blank" rel="noopener">Billing</a>.</li><li>Click “Create Key”, copy the key (it starts with <code>sk-ant-</code>) and paste it below.</li>'],
   aiKeyLbl:['Clave de API de Anthropic','Anthropic API key'],
-  aiKeyHint:['La clave queda guardada solo en este dispositivo y se envía únicamente a Anthropic.','The key is stored on this device only and is sent only to Anthropic.'],
+  aiKeyHint:['La clave se guarda con tus datos, también en tu repositorio privado, y llega sola a todos los dispositivos conectados. Solo se envía a Anthropic.','The key is stored with your data, including your private repository, and reaches every connected device by itself. It is sent only to Anthropic.'],
   aiSave:['Guardar clave','Save key'], aiSaved:['Clave guardada.','Key saved.'], aiRemove:['Quitar clave','Remove key'],
-  aiHasKey:['Hay una clave guardada en este dispositivo.','A key is stored on this device.'],
+  aiHasKey:['Hay una clave guardada. Vale para todos los dispositivos conectados.','A key is stored. It applies to all connected devices.'],
+  aiRemoveTitle:['¿Quitar la clave?','Remove the key?'],
+  aiRemoveText:['Se quitará de todos los dispositivos conectados. En el historial de tu repositorio privado sigue figurando: si ya no la usás, anulala también en la consola de Anthropic.','It will be removed from all connected devices. It remains in the history of your private repository: if you no longer use it, revoke it in the Anthropic console as well.'],
   aiModel:['Modelo','Model'], aiAuto:['Automático (recomendado)','Automatic (recommended)'],
   eAiKey:['La clave de API de Anthropic no es válida.','The Anthropic API key is invalid.'],
   eAiBusy:['Claude está sobrecargado o alcanzaste tu límite. Probá de nuevo en un momento.','Claude is overloaded or you reached your rate limit. Please try again in a moment.'],
@@ -518,18 +520,19 @@ const splitNames = s => String(s ?? '').split(/[,;\n]/).map(x => x.trim()).filte
    lots:      { id: {id,name,order,deleted?,t} }
    customers: { id: {id,lot,name,spot,amount,aliases[],phone,note,from,until,deleted?,t} }
    payments:  { "customerId|YYYY-MM": {s:'paid'|'unpaid'|'unclear', a,d,p,n, t} }
+   settings:  { ai: {key,model,t} } - the Anthropic API key, shared by all connected devices
    t = timestamp of the last change; when merging, the newer record wins.
    The three built-in lots keep their internal name until renamed (t = 0) and are shown translated. */
 function emptyState(){
   return { v:1,
     lots:{ lot1:{id:'lot1',name:'Parkanlage 1',order:1,t:0}, lot2:{id:'lot2',name:'Parkanlage 2',order:2,t:0}, lot3:{id:'lot3',name:'Parkanlage 3',order:3,t:0} },
-    customers:{}, payments:{} };
+    customers:{}, payments:{}, settings:{} };
 }
 function normalize(s){
   const base = emptyState();
-  const out = { v:1, lots:{}, customers:{}, payments:{} };
+  const out = { v:1, lots:{}, customers:{}, payments:{}, settings:{} };
   if(s && typeof s === 'object'){
-    for(const k of ['lots','customers','payments']) if(s[k] && typeof s[k] === 'object' && !Array.isArray(s[k])) out[k] = s[k];
+    for(const k of ['lots','customers','payments','settings']) if(s[k] && typeof s[k] === 'object' && !Array.isArray(s[k])) out[k] = s[k];
   }
   for(const id in base.lots) if(!out.lots[id]) out.lots[id] = base.lots[id];
   return out;
@@ -552,7 +555,7 @@ function mergeMap(a, b){
   return out;
 }
 function mergeState(a, b){
-  return { v:1, lots:mergeMap(a.lots, b.lots), customers:mergeMap(a.customers, b.customers), payments:mergeMap(a.payments, b.payments) };
+  return { v:1, lots:mergeMap(a.lots, b.lots), customers:mergeMap(a.customers, b.customers), payments:mergeMap(a.payments, b.payments), settings:mergeMap(a.settings, b.settings) };
 }
 
 let state = normalize(store.get(LS.data, null));
@@ -623,7 +626,7 @@ function quickStatus(cid, s){
 }
 
 /* ---------- rendering ---------- */
-function render(){ renderTabs(); renderMonth(); renderLists(); renderSync(); }
+function render(){ ai = aiFromState(); renderTabs(); renderMonth(); renderLists(); renderSync(); }
 
 function applyStatic(){
   document.documentElement.lang = ui.lang;
@@ -975,7 +978,15 @@ const AI_URL = 'https://api.anthropic.com/v1';
 const AI_FALLBACK_MODEL = 'claude-sonnet-5-5';
 const AI_MAX_FILES = 10, AI_MAX_BYTES = 20 * 1024 * 1024;
 class AiError extends Error {}
-let ai = store.get(LS.ai, null);            /* { key, model } – stays on this device */
+/* The API key is part of the synced data (settings.ai), so every connected device has it. */
+function aiFromState(){ const a = state.settings && state.settings.ai; return a && a.key ? { key: a.key, model: a.model || '' } : null; }
+function setAi(key, model){ state.settings.ai = { key: key || '', model: key ? model || '' : '', t: Date.now() }; aiModels = null; commit(); }
+{ /* a key saved by an earlier version on this device only moves into the shared data once */
+  const old = store.get(LS.ai, null);
+  if(old && old.key && !aiFromState()){ state.settings.ai = { key: old.key, model: old.model || '', t: Date.now() }; store.set(LS.data, state); store.set(LS.dirty, true); }
+  if(old) store.del(LS.ai);
+}
+let ai = aiFromState();
 let aiModels = null;
 const aiHeaders = () => ({ 'x-api-key': ai.key, 'anthropic-version':'2023-06-01', 'anthropic-dangerous-direct-browser-access':'true' });
 async function listAiModels(){
@@ -1169,7 +1180,7 @@ function bindAiKeyForm(root, onSaved){
   $('#aiSave', root).onclick = () => {
     const key = $('#aiKey', root).value.trim();
     if(!key){ $('#aiKey', root).focus(); return; }
-    ai = { key, model:'' }; aiModels = null; store.set(LS.ai, ai);
+    setAi(key, '');
     toast(t('aiSaved')); onSaved();
   };
 }
@@ -1387,14 +1398,14 @@ function openSettings(focusSync){
       const inp = $(`[data-lotname="${id}"]`, el); if(inp){ inp.focus(); inp.select(); }
     };
     if(ai){
-      $('#aiRemove', el).onclick = () => { ai = null; aiModels = null; store.del(LS.ai); draw(); };
-      $('#aiModel', el).onchange = e => { ai.model = e.target.value; store.set(LS.ai, ai); };
+      $('#aiRemove', el).onclick = async () => { if(await confirmBox(t('aiRemoveTitle'), t('aiRemoveText'), t('aiRemove'), true)){ setAi('', ''); draw(); } };
+      $('#aiModel', el).onchange = e => { const key = ai.key, model = e.target.value, list = aiModels; setAi(key, model); aiModels = list; };
       listAiModels().then(list => { const sel = $('#aiModel', el); if(!sel || !ai) return; for(const m of list) if(m.id !== ai.model) sel.add(new Option(m.name, m.id)); });
     }else bindAiKeyForm($('#aiSec', el), draw);
     $('#sSort', el).onchange = e => { ui.sort = e.target.value; saveUi(); renderLists(); };
     $('#bulk', el).onclick = openBulk;
     $('#csv', el).onclick = exportCsv;
-    $('#backup', el).onclick = () => download('parkinglot-backup-' + todayISO() + '.json', JSON.stringify(state), 'application/json');
+    $('#backup', el).onclick = () => download('parkinglot-backup-' + todayISO() + '.json', JSON.stringify(Object.assign({}, state, { settings:{} })), 'application/json');     /* never put the API key into a file */
     $('#restore', el).onclick = () => $('#restoreFile', el).click();
     $('#reload', el).onclick = () => location.reload();
     $('#restoreFile', el).onchange = async e => {
@@ -1402,7 +1413,8 @@ function openSettings(focusSync){
       try{
         const data = JSON.parse(await f.text());
         if(!data || typeof data.customers !== 'object') throw new Error('x');
-        state = mergeState(state, normalize(data)); commit(); draw(); toast(t('restored'));
+        const inc = normalize(data); inc.settings = {};
+        state = mergeState(state, inc); commit(); draw(); toast(t('restored'));
       }catch(err){ toast(t('restoreBad')); }
     };
 
@@ -1564,7 +1576,7 @@ async function connect(repo, token){
 const b64url = s => b64enc(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
 const unb64url = s => b64dec(s.replace(/-/g,'+').replace(/_/g,'/'));
 function showPairing(box){
-  const link = location.origin + location.pathname + '#k=' + b64url(cfg.repo + '\n' + cfg.token + (ai ? '\n' + ai.key : ''));
+  const link = location.origin + location.pathname + '#k=' + b64url(cfg.repo + '\n' + cfg.token);
   box.innerHTML = `
     <div class="msg">${t('pairMsg_html')}</div>
     <div class="qr" id="qrBox" hidden></div>
@@ -1594,7 +1606,7 @@ function parsePairing(text){
 }
 /* Returns 'same', 'declined', 'ok', or an error message. */
 async function usePairing(p, ask){
-  const takeAiKey = () => { if(p.aiKey && !ai){ ai = { key: p.aiKey, model:'' }; store.set(LS.ai, ai); } };
+  const takeAiKey = () => { if(p.aiKey && !aiFromState()) setAi(p.aiKey, ''); };     /* links made by earlier versions carried the key */
   if(cfg && cfg.repo === p.repo && cfg.token === p.token){ takeAiKey(); return 'same'; }
   if(ask && !await confirmBox(t('pairTitle'), t('pairText', p.repo), t('connect'))) return 'declined';
   const err = await connect(p.repo, p.token);
