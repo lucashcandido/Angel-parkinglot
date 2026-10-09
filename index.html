@@ -13,7 +13,7 @@
 <meta name="apple-mobile-web-app-title" content="Parkinglot">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="apple-touch-icon" href="icon-180.png">
-<link rel="icon" type="image/png" href="icon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="manifest" href="manifest.webmanifest">
 <style>
 :root{
@@ -90,6 +90,10 @@ h1,h2,h3,p{margin:0}
 .bar .p{background:var(--paid)} .bar .c{background:var(--unclear)} .bar .u{background:var(--unpaid);opacity:.55}
 .banner{margin-top:12px;padding:11px 14px;border-radius:12px;background:var(--unclear-soft);font-size:14px;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
 .banner.err{background:var(--unpaid-soft)}
+.banner.info{background:var(--accent-soft);flex-wrap:nowrap;align-items:flex-start}
+.banner.info .icon-btn{margin:-6px -8px -6px 0}
+.scan{border-radius:14px;overflow:hidden;background:#000;aspect-ratio:1/1;margin-top:10px}
+.scan video{width:100%;height:100%;object-fit:cover;display:block}
 
 .toolbar{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0 10px}
 .toolbar input{flex:1 1 240px;min-width:0}
@@ -294,7 +298,9 @@ code{background:var(--soft);border-radius:5px;padding:1px 5px;font-size:13.5px;o
    devices see the same state. Interface languages: Spanish and English.
    ===================================================================== */
 
-const LS = { data:'apl.data.v1', cfg:'apl.cfg.v1', ui:'apl.ui.v1', dirty:'apl.dirty.v1', ai:'apl.ai.v1' };
+const LS = { data:'apl.data.v1', cfg:'apl.cfg.v1', ui:'apl.ui.v1', dirty:'apl.dirty.v1', ai:'apl.ai.v1', a2hs:'apl.a2hs.v1' };
+const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const STANDALONE = navigator.standalone === true || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
 const DATA_FILE = 'data.json';
 const DEFAULT_REPO = 'lucashcandido/Angel-parkinglot-data';
 const API = 'https://api.github.com';
@@ -401,6 +407,16 @@ const I18N = {
   eConflict:['No se pudo guardar varias veces porque otro dispositivo estaba escribiendo al mismo tiempo. Se volverá a intentar.','Saving failed several times because another device was writing at the same time. It will be retried.'],
   ePublic:['Este repositorio es público: tus datos de clientes quedarían a la vista de cualquiera. Usá un repositorio privado.','This repository is public – your customer data would be visible to anyone. Please use a private repository.'],
   eNet:['Sin conexión con GitHub. Revisá tu conexión a internet.','No connection to GitHub. Please check your internet connection.'],
+  linkTitle:['¿Ya conectaste otro dispositivo?','Already connected another device?'],
+  linkText:['En ese dispositivo abrí Ajustes → «Conectar otro dispositivo» y escaneá acá el código QR, o pegá el enlace.','On that device open Settings → “Connect another device”, then scan the QR code here or paste the link.'],
+  scanQr:['Escanear código QR','Scan QR code'], linkLbl:['Enlace de conexión','Connection link'], linkGo:['Conectar con enlace','Connect with link'],
+  errLink:['Este enlace de conexión no es válido.','This connection link is not valid.'],
+  firstTitle:['Primera conexión: con token','First connection: with a token'],
+  scanHint:['Apuntá la cámara al código QR que muestra el otro dispositivo.','Point the camera at the QR code shown on the other device.'],
+  scanOther:['Ese código QR no es de esta app.','That QR code is not from this app.'],
+  scanNoCam:['No se pudo usar la cámara. Permití el acceso o pegá el enlace de conexión.','The camera could not be used. Allow access or paste the connection link instead.'],
+  a2hs:['Para tenerla como app en el iPhone: tocá Compartir y elegí «Agregar a inicio». La app instalada guarda sus datos aparte; conectala ahí desde Ajustes con «Escanear código QR».','To get it as an app on your iPhone: tap Share and choose “Add to Home Screen”. The installed app keeps its own data; connect it there from Settings with “Scan QR code”.'],
+  reload:['Recargar la app','Reload app'],
   stmtBtn:['Extracto bancario','Bank statement'], stmtSub:['Pagos de {0}','Payments for {0}'],
   stmtIntro:['Subí el PDF o capturas de pantalla de tu banco. Claude lee los ingresos y los asigna a tus clientes; antes de guardar ves una vista previa.','Add the PDF or screenshots from your bank. Claude reads the incoming transfers and assigns them to your customers; you get a preview before anything is saved.'],
   stmtPick:['Elegir PDF o capturas','Choose PDF or screenshots'],
@@ -714,6 +730,7 @@ function renderLists(){
   let banner = '';
   if(!cfg) banner = `<div class="banner"><span>${esc(t('bannerLocal'))}</span><button type="button" class="btn small" data-open="sync">${esc(t('bannerSetup'))}</button></div>`;
   else if(sync.status === 'error') banner = `<div class="banner err"><span>${esc(sync.msg || t('bannerErr'))}</span><button type="button" class="btn small" data-open="sync">${esc(t('settings'))}</button></div>`;
+  if(IS_IOS && !STANDALONE && !store.get(LS.a2hs, false)) banner += `<div class="banner info"><span>${esc(t('a2hs'))}</span><button type="button" class="icon-btn" data-dismiss="a2hs" aria-label="${esc(t('aClose'))}" title="${esc(t('aClose'))}">✕</button></div>`;
   $('#banner').innerHTML = banner;
 
   /* list switch (phone) */
@@ -1313,6 +1330,14 @@ function openSettings(focusSync){
           <div id="pairBox"></div>
         ` : `
           <p>${t('syncIntro_html')}</p>
+          <div class="box">
+            <p><b>${esc(t('linkTitle'))}</b> ${esc(t('linkText'))}</p>
+            <button type="button" class="btn small" id="scanQr">${esc(t('scanQr'))}</button>
+            <div class="field" style="margin-top:12px"><label for="sLink">${esc(t('linkLbl'))}</label><input id="sLink" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://…#k=…"></div>
+            <div id="lMsg"></div>
+            <button type="button" class="btn small" id="linkGo">${esc(t('linkGo'))}</button>
+          </div>
+          <p><b>${esc(t('firstTitle'))}</b></p>
           <details>
             <summary>${esc(t('tokenHow'))}</summary>
             <ol>${t('tokenSteps_html')}</ol>
@@ -1339,6 +1364,7 @@ function openSettings(focusSync){
           <button type="button" class="btn small" id="csv">${esc(t('csvBtn'))}</button>
           <button type="button" class="btn small" id="backup">${esc(t('backupBtn'))}</button>
           <button type="button" class="btn small" id="restore">${esc(t('restoreBtn'))}</button>
+          <button type="button" class="btn small" id="reload">${esc(t('reload'))}</button>
           <input type="file" id="restoreFile" accept="application/json,.json" hidden>
         </div>
       </div>`;
@@ -1370,6 +1396,7 @@ function openSettings(focusSync){
     $('#csv', el).onclick = exportCsv;
     $('#backup', el).onclick = () => download('parkinglot-backup-' + todayISO() + '.json', JSON.stringify(state), 'application/json');
     $('#restore', el).onclick = () => $('#restoreFile', el).click();
+    $('#reload', el).onclick = () => location.reload();
     $('#restoreFile', el).onchange = async e => {
       const f = e.target.files[0]; if(!f) return;
       try{
@@ -1387,6 +1414,16 @@ function openSettings(focusSync){
       };
       $('#pair', el).onclick = () => showPairing($('#pairBox', el));
     }else{
+      const pairWith = async p => {
+        const msg = $('#lMsg', el);
+        if(!p){ if(msg) msg.innerHTML = `<div class="msg err">${esc(t('errLink'))}</div>`; return; }
+        if(msg) msg.innerHTML = `<div class="msg">${esc(t('checking'))}</div>`;
+        const r = await usePairing(p, false);
+        if(r === 'ok' || r === 'same'){ draw(); toast(t('paired')); }
+        else if($('#lMsg', el)) $('#lMsg', el).innerHTML = `<div class="msg err">${esc(r)}</div>`;
+      };
+      $('#linkGo', el).onclick = () => pairWith(parsePairing($('#sLink', el).value));
+      $('#scanQr', el).onclick = () => openScanner(pairWith);
       $('#connect', el).onclick = async () => {
         const repo = $('#sRepo', el).value.trim().replace(/^https?:\/\/github\.com\//i,'').replace(/\.git$/,'').replace(/\/+$/,'');
         const token = $('#sTok', el).value.trim(), msg = $('#sMsg', el), btn = $('#connect', el);
@@ -1546,19 +1583,81 @@ function showPairing(box){
   if(window.qrcode) drawQr();
   else { const s = document.createElement('script'); s.src = 'vendor/qrcode.js'; s.onload = drawQr; document.head.appendChild(s); }
 }
-async function checkPairingLink(){
-  const m = /^#k=([\w-]+)$/.exec(location.hash);
-  if(!m) return;
-  history.replaceState(null, '', location.pathname + location.search);
+/* Pairing data travels as a link (#k=...): opened directly, pasted, or scanned from the QR code. */
+function parsePairing(text){
+  const m = /(?:#k=|^)([\w-]{16,})\s*$/.exec(String(text || '').trim());
+  if(!m) return null;
   let repo, token, aiKey;
-  try{ [repo, token, aiKey] = unb64url(m[1]).split('\n'); }catch(e){ return; }
-  if(!repo || !token || !/^[\w.-]+\/[\w.-]+$/.test(repo)) return;
-  const takeAiKey = () => { if(aiKey && !ai){ ai = { key: aiKey, model:'' }; store.set(LS.ai, ai); } };
-  if(cfg && cfg.repo === repo && cfg.token === token){ takeAiKey(); return; }
-  if(!await confirmBox(t('pairTitle'), t('pairText', repo), t('connect'))) return;
-  const err = await connect(repo, token);
-  if(!err) takeAiKey();
-  toast(err || t('paired'));
+  try{ [repo, token, aiKey] = unb64url(m[1]).split('\n'); }catch(e){ return null; }
+  if(!repo || !token || !/^[\w.-]+\/[\w.-]+$/.test(repo)) return null;
+  return { repo, token, aiKey: aiKey || '' };
+}
+/* Returns 'same', 'declined', 'ok', or an error message. */
+async function usePairing(p, ask){
+  const takeAiKey = () => { if(p.aiKey && !ai){ ai = { key: p.aiKey, model:'' }; store.set(LS.ai, ai); } };
+  if(cfg && cfg.repo === p.repo && cfg.token === p.token){ takeAiKey(); return 'same'; }
+  if(ask && !await confirmBox(t('pairTitle'), t('pairText', p.repo), t('connect'))) return 'declined';
+  const err = await connect(p.repo, p.token);
+  if(err) return err;
+  takeAiKey();
+  return 'ok';
+}
+async function checkPairingLink(){
+  if(!/^#k=/.test(location.hash)) return;
+  const p = parsePairing(location.hash);
+  history.replaceState(null, '', location.pathname + location.search);
+  if(!p) return;
+  const r = await usePairing(p, true);
+  if(r !== 'same' && r !== 'declined') toast(r === 'ok' ? t('paired') : r);
+}
+
+const loading = {};
+function loadScript(src, ready){
+  if(ready()) return Promise.resolve();
+  return loading[src] || (loading[src] = new Promise((resolve, reject) => {
+    const el = document.createElement('script');
+    el.src = src;
+    el.onload = () => resolve();
+    el.onerror = () => { delete loading[src]; reject(new Error('load')); };
+    document.head.appendChild(el);
+  }));
+}
+/* Reads the pairing QR code with the camera - the way to connect the app once it sits on the home screen. */
+function openScanner(onResult){
+  const el = openModal(`<div class="sheet-head"><h2>${esc(t('scanQr'))}</h2>${closeX()}</div>
+    <p class="hint" id="scMsg">${esc(t('scanHint'))}</p>
+    <div class="scan"><video id="scVideo" playsinline muted autoplay></video></div>`);
+  const msg = $('#scMsg', el), video = $('#scVideo', el), cv = document.createElement('canvas');
+  let stream = null, timer = null, done = false;
+  const stop = () => { done = true; clearInterval(timer); if(stream) stream.getTracks().forEach(tr => tr.stop()); };
+  const fail = () => { stop(); msg.textContent = t('scanNoCam'); msg.className = 'msg err'; $('.scan', el).hidden = true; };
+  const tick = () => {
+    if(done) return;
+    if(!document.body.contains(el)){ stop(); return; }
+    if(!video.videoWidth || !window.jsQR) return;
+    const k = Math.min(1, 1000 / Math.max(video.videoWidth, video.videoHeight));
+    cv.width = Math.round(video.videoWidth * k); cv.height = Math.round(video.videoHeight * k);
+    const cx = cv.getContext('2d', { willReadFrequently:true });
+    cx.drawImage(video, 0, 0, cv.width, cv.height);
+    let hit = null;
+    try{ hit = window.jsQR(cx.getImageData(0, 0, cv.width, cv.height).data, cv.width, cv.height, { inversionAttempts:'dontInvert' }); }catch(e){}
+    if(!hit || !hit.data) return;
+    const p = parsePairing(hit.data);
+    if(!p){ msg.textContent = t('scanOther'); return; }
+    stop(); closeModal(el); onResult(p);
+  };
+  (async () => {
+    if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return fail();
+    try{
+      await loadScript('vendor/jsQR.js', () => !!window.jsQR);
+      stream = await navigator.mediaDevices.getUserMedia({ audio:false, video:{ facingMode:{ ideal:'environment' }, width:{ ideal:1280 }, height:{ ideal:720 } } });
+      if(done || !document.body.contains(el)){ stop(); return; }
+      video.srcObject = stream;
+      await video.play().catch(() => {});
+      timer = setInterval(tick, 250);
+    }catch(e){ fail(); }
+  })();
+  el.closest('.ov').addEventListener('click', e => { if(e.target.closest('[data-close]')) stop(); });
 }
 
 /* ---------- events ---------- */
@@ -1573,7 +1672,10 @@ $('#btnImport').onclick = openImport;
 $('#btnSettings').onclick = () => openSettings(false);
 $('#syncPill').onclick = () => { if(cfg && sync.status !== 'error') runSync(); else openSettings(true); };
 $('#switch').addEventListener('click', e => { const b = e.target.closest('[data-list]'); if(!b) return; ui.list = b.dataset.list; saveUi(); renderLists(); });
-$('#banner').addEventListener('click', e => { if(e.target.closest('[data-open="sync"]')) openSettings(true); });
+$('#banner').addEventListener('click', e => {
+  if(e.target.closest('[data-open="sync"]')) openSettings(true);
+  if(e.target.closest('[data-dismiss="a2hs"]')){ store.set(LS.a2hs, true); renderLists(); }
+});
 $('#lists').addEventListener('click', e => {
   const o = e.target.closest('[data-open]');
   if(o){ if(o.dataset.open === 'add') openCustomer(null); else if(o.dataset.open === 'bulk') openBulk(); return; }
@@ -1602,6 +1704,7 @@ setInterval(() => { if(cfg && document.visibilityState === 'visible' && !sync.bu
 applyStatic();
 render();
 checkPairingLink().then(() => { if(cfg) runSync(); });
+if('serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('sw.js').catch(() => {});
 </script>
 </body>
 </html>

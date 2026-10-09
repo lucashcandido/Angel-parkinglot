@@ -39,13 +39,23 @@ Dieses Repo enthält **nur den Programmcode**. Die Kundendaten liegen getrennt i
    - **Permissions → Repository permissions → Contents:** „Read and write“
    - **Expiration:** „No expiration“ oder das längste Angebot
 2. App öffnen → Zahnrad → **Sincronización entre dispositivos / Device sync** → Token einfügen → **Conectar / Connect**.
-3. Zweites Gerät: auf dem ersten Gerät **Conectar otro dispositivo / Connect another device** wählen und den QR-Code mit der iPhone-Kamera scannen.
-4. Auf dem iPhone in Safari: Teilen → **„Zum Home-Bildschirm“**, dann startet die App wie eine normale App.
+3. Weiteres Gerät im Browser: auf dem ersten Gerät **Conectar otro dispositivo / Connect another device** wählen und den QR-Code mit der Kamera scannen.
+
+### Als App auf dem iPhone (Home-Bildschirm)
+
+1. Die Adresse der App auf dem iPhone in **Safari** öffnen.
+2. Teilen-Symbol → **„Zum Home-Bildschirm“** → „Hinzufügen“.
+3. Die App über das neue Symbol öffnen. Sie hat einen eigenen, von Safari getrennten Speicher und ist deshalb zunächst nicht verbunden.
+4. In der App: Zahnrad → **Escanear código QR / Scan QR code** und den QR-Code scannen, den der PC unter „Conectar otro dispositivo“ zeigt. Alternativ den Verbindungs-Link einfügen.
+
+Die App startet danach auch ohne Internet (die Daten des letzten Abgleichs bleiben sichtbar, Änderungen werden später synchronisiert).
 
 Der Token wird nur im Browser des jeweiligen Geräts gespeichert und nur an `api.github.com` gesendet. Den Kopplungs-Link bzw. QR-Code nicht weitergeben – er enthält den Token.
 
 ## Technik
 
 - `index.html` – die komplette App (HTML, CSS, JavaScript), keine externen Abhängigkeiten zur Laufzeit
+- `sw.js` – hält die App-Dateien für den Start ohne Internet vor (Netz zuerst, gespeicherte Kopie als Rückfall)
+- `vendor/jsQR.js` – QR-Code-Erkennung mit der Kamera ([jsQR](https://github.com/cozmo/jsQR) 1.4.0, Apache-2.0-Lizenz)
 - `vendor/qrcode.js` – QR-Code-Erzeugung ([qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator) 1.4.4, MIT-Lizenz, © Kazuhiko Arase)
 - `manifest.webmanifest`, `icon-*.png` – Symbol für den Home-Bildschirm
