@@ -11,6 +11,7 @@ Die Oberfläche gibt es auf **Spanisch und Englisch**; umgeschaltet wird mit dem
 - Parkanlage per Klick wählen (oder „Alle“), Namen der Anlagen frei änderbar
 - Monatsansicht mit den drei Listen, Blättern zu früheren und späteren Monaten
 - Ein Tipp auf ✓ / ? / ✕ ändert den Status, mit „Deshacer / Undo“ zum Zurücknehmen
+- **Kennzeichen** (Patente / Licence plate) pro Kunde: steht als Schild direkt neben dem Namen, ist durchsuchbar (auch ohne Leerzeichen) und sortierbar; mehrere Kennzeichen mit Komma trennen
 - Pro Kunde hinterlegbar, **über welche anderen Namen er zahlt** – die Suche findet ihn dann auch über den Namen auf dem Kontoauszug
 - **Ein Klick auf den Kunden** öffnet ein einziges Fenster für alles: Zahlung des Monats (Status, Betrag, Datum, „überwiesen von“, Notiz), Status früherer Monate und sämtliche Kundendaten – gespeichert wird mit einem Knopf
 - Ein neuer Zahlername lässt sich dabei mit einem Haken dauerhaft merken

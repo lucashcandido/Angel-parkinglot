@@ -130,6 +130,8 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 .row-note{display:block;font-size:13.5px;margin-top:2px;overflow-wrap:anywhere}
 .badge{display:inline-block;font-size:11.5px;font-weight:650;border-radius:6px;padding:1px 6px;vertical-align:1px;margin-left:4px;background:var(--soft);color:var(--muted)}
 .badge.warn{background:var(--unpaid-soft);color:var(--unpaid)}
+.plate{display:inline-block;font:700 12.5px/1.25 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.06em;white-space:nowrap;border:1.5px solid var(--text);border-radius:5px;padding:1px 6px;margin-left:6px;vertical-align:1px;background:var(--card);color:var(--text)}
+.sheet-head .plate{font-size:13.5px;margin:0 6px 0 0}
 .row-actions{display:flex;align-items:center;gap:6px;padding:0 10px 0 4px}
 .ib{width:44px;height:44px;border-radius:12px;border:1px solid var(--line);background:var(--card);display:grid;place-items:center;font-size:19px;font-weight:800;line-height:1}
 .ib.ok{color:var(--paid);border-color:var(--paid);background:var(--paid-soft)}
@@ -280,7 +282,7 @@ const I18N = {
   tabCount:['{0} / {1} pagados','{0} / {1} paid'],
   aLots:['Estacionamientos','Parking lots'], aSettings:['Ajustes','Settings'], aPrev:['Mes anterior','Previous month'], aNext:['Mes siguiente','Next month'],
   aSearch:['Buscar','Search'], aClose:['Cerrar','Close'],
-  searchPh:['Buscar: nombre, pagador, lugar…','Search: name, payer, space…'],
+  searchPh:['Buscar: nombre, patente, pagador…','Search: name, plate, payer…'],
   addCustomer:['+ Cliente','+ Customer'],
   curMonth:['Mes actual','Current month'], toNow:['Ir al mes actual','Go to current month'],
   sumPaid:['{0} de {1} pagaron','{0} of {1} paid'],
@@ -318,7 +320,9 @@ const I18N = {
   payFor:['Pago de {0}','Payment for {0}'], otherMonths:['Meses anteriores','Earlier months'],
   tapMonth:['Tocá un mes para cambiar su estado.','Tap a month to change its status.'],
   custData:['Datos del cliente','Customer details'], editCustomer:['Editar cliente','Edit customer'], newCustomer:['Nuevo cliente','New customer'],
-  name:['Nombre','Name'], lot:['Estacionamiento','Parking lot'], spaceLbl:['Lugar','Space'], monthly:['Monto mensual (ARS)','Monthly amount (ARS)'],
+  name:['Nombre','Name'], plate:['Patente','Licence plate'], platePh:['p. ej. AB 123 CD','e.g. AB 123 CD'],
+  plateHint:['Varias patentes separadas por coma.','Separate several plates with commas.'],
+  lot:['Estacionamiento','Parking lot'], spaceLbl:['Lugar','Space'], monthly:['Monto mensual (ARS)','Monthly amount (ARS)'],
   aliases:['Paga a través de (otros nombres en el extracto bancario)','Pays via (other names on the bank statement)'],
   aliasesPh:['p. ej. María Gómez, Taller Sur SRL','e.g. María Gómez, Taller Sur SRL'],
   aliasesHint:['Separar varios nombres con coma. La búsqueda también encuentra al cliente por estos nombres.','Separate several names with commas. Search also finds the customer by these names.'],
@@ -327,7 +331,7 @@ const I18N = {
   delTitle:['¿Eliminar cliente?','Delete customer?'],
   delText:['{0} se quitará de todos los meses. Si el cliente solo deja de alquilar, es mejor cargar un «Último mes»: así se conserva el historial.','{0} will be removed from all months. If the customer is simply leaving, set a “Last month” instead – that keeps the history.'],
   bulkIntro:['Seleccioná en Excel las columnas en este orden y pegalas acá, una fila por cliente:','Select the columns in Excel in this order and paste them here – one row per customer:'],
-  bulkCols:['Nombre · Lugar · Monto mensual · Paga a través de','Name · Space · Monthly amount · Pays via'],
+  bulkCols:['Nombre · Patente · Lugar · Monto mensual · Paga a través de','Name · Licence plate · Space · Monthly amount · Pays via'],
   bulkReq:['Solo el nombre es obligatorio.','Only the name is required.'],
   rows:['Filas','Rows'], bulkNone:['Todavía no pegaste nada.','Nothing pasted yet.'],
   bulk1:['1 cliente detectado.','1 customer recognised.'], bulkN:['{0} clientes detectados.','{0} customers recognised.'],
@@ -352,10 +356,10 @@ const I18N = {
   syncReady:['La sincronización quedó configurada.','Device sync is set up.'],
   unlinkTitle:['¿Desconectar la sincronización?','Disconnect sync?'],
   unlinkText:['Este dispositivo dejará de sincronizar. Los datos se conservan acá y en el repositorio.','This device will stop syncing. The data stays here and in the repository.'],
-  dataTitle:['Clientes y datos','Customers & data'], sortLbl:['Orden de las listas','List order'], sortName:['por nombre','by name'], sortSpot:['por lugar','by space'],
+  dataTitle:['Clientes y datos','Customers & data'], sortLbl:['Orden de las listas','List order'], sortName:['por nombre','by name'], sortSpot:['por lugar','by space'], sortPlate:['por patente','by licence plate'],
   csvBtn:['Mes en CSV (Excel)','Month as CSV (Excel)'], backupBtn:['Guardar copia de seguridad','Save backup'], restoreBtn:['Cargar copia de seguridad','Load backup'],
   restored:['Copia de seguridad cargada.','Backup loaded.'], restoreBad:['Este archivo no es una copia de seguridad válida.','This file is not a valid backup.'],
-  csvHead:['Estacionamiento;Lugar;Nombre;Monto mensual;Estado;Pagado;Recibido el;Transferido por;Nota','Parking lot;Space;Name;Monthly amount;Status;Paid;Received on;Transferred by;Note'],
+  csvHead:['Estacionamiento;Lugar;Nombre;Patente;Monto mensual;Estado;Pagado;Recibido el;Transferido por;Nota','Parking lot;Space;Name;Licence plate;Monthly amount;Status;Paid;Received on;Transferred by;Note'],
   pairMsg_html:['Escaneá el código con la cámara del otro dispositivo o enviate el enlace a vos mismo. <b>No lo compartas</b>: contiene tu clave de acceso.','Scan the code with the other device’s camera or send the link to yourself. <b>Do not share it</b> – it contains your access key.'],
   copyLink:['Copiar enlace','Copy link'], share:['Compartir…','Share…'], linkCopied:['Enlace copiado.','Link copied.'],
   pairTitle:['¿Conectar este dispositivo?','Connect this device?'],
@@ -570,11 +574,16 @@ function renderMonth(){
     : `<button type="button" class="link" id="toNow">${esc(t('toNow'))}</button>`;
 }
 
+const plates = c => splitNames(c.plate);
+const cleanPlate = v => splitNames(String(v ?? '').toUpperCase()).map(x => x.replace(/\s+/g,' ')).join(', ');
+const plateKey = v => norm(v).replace(/[^a-z0-9]/g,'');
+const platesHtml = c => plates(c).map(x => `<span class="plate">${esc(x)}</span>`).join('');
 function searchText(c, p){
-  return norm([c.name, (c.aliases || []).join(' '), c.spot, c.phone, c.note, p && p.p, p && p.n, lotName(c.lot)].filter(Boolean).join(' '));
+  return norm([c.name, c.plate, (c.aliases || []).join(' '), c.spot, c.phone, c.note, p && p.p, p && p.n, lotName(c.lot)].filter(Boolean).join(' '));
 }
 function sortCustomers(list){
   const coll = new Intl.Collator(ui.lang, { numeric:true, sensitivity:'base' });
+  if(ui.sort === 'plate') return list.sort((a, b) => coll.compare(plateKey(a.plate) || '\uffff', plateKey(b.plate) || '\uffff') || coll.compare(a.name, b.name));
   return list.sort((a, b) => ui.sort === 'spot'
     ? (coll.compare(a.spot || '\uffff', b.spot || '\uffff') || coll.compare(a.name, b.name))
     : (coll.compare(a.name, b.name) || coll.compare(a.spot || '', b.spot || '')));
@@ -604,14 +613,14 @@ function rowHtml(c, s, p){
   else acts = btn('unpaid','back','↩',t('actBack'));
   return `<li class="row" data-id="${esc(c.id)}">
     <button type="button" class="row-main" data-act="open" title="${esc(t('editCustomer'))}">
-      <span class="row-name">${esc(c.name)}${badges}</span>
+      <span class="row-name">${esc(c.name)}${platesHtml(c)}${badges}</span>
       <span class="row-sub">${bits.join(' · ')}</span>${alias}${note}
     </button>
     <div class="row-actions">${acts}</div></li>`;
 }
 
 function renderLists(){
-  const month = ui.month, q = norm($('#search').value);
+  const month = ui.month, q = norm($('#search').value), qPlate = plateKey(q);
   const all = customersFor(ui.lot, month);
   const groups = { paid:[], unpaid:[], unclear:[] }, totals = { paid:0, unpaid:0, unclear:0 }, counts = { paid:0, unpaid:0, unclear:0 };
   let expected = 0, received = 0;
@@ -619,7 +628,7 @@ function renderLists(){
     const p = payOf(c.id, month), s = statusOf(c.id, month);
     const amt = (s === 'paid' && p && p.a) ? p.a : (c.amount || 0);
     counts[s]++; totals[s] += amt; expected += c.amount || 0; if(s === 'paid') received += amt;
-    if(!q || searchText(c, p).includes(q)) groups[s].push(c);
+    if(!q || searchText(c, p).includes(q) || (qPlate.length > 1 && plateKey(c.plate).includes(qPlate))) groups[s].push(c);
   }
   const n = all.length;
 
@@ -761,12 +770,16 @@ function openCustomer(cid){
       <h3 class="sech">${esc(t('custData'))}</h3>`;
   const el = openModal(`
     <form novalidate>
-    <div class="sheet-head"><h2>${c ? esc(c.name) + `<span class="sub">${esc([lotName(c.lot), c.spot && t('space', c.spot)].filter(Boolean).join(' · '))}</span>` : esc(t('newCustomer'))}</h2>${closeX()}</div>
+    <div class="sheet-head"><h2>${c ? esc(c.name) + `<span class="sub">${plates(c).map(x => `<span class="plate">${esc(x)}</span>`).join('')}${esc([lotName(c.lot), c.spot && t('space', c.spot)].filter(Boolean).join(' · '))}</span>` : esc(t('newCustomer'))}</h2>${closeX()}</div>
     <div class="fs-body">${paySection}
       <div class="field"><label for="cn">${esc(t('name'))}</label><input id="cn" type="text" autocomplete="off" value="${esc(c ? c.name : '')}" required></div>
-      <div class="field"><label for="cl">${esc(t('lot'))}</label><select id="cl">${lotOptions(lot)}</select></div>
       <div class="two">
+        <div class="field"><label for="ck">${esc(t('plate'))}</label><input id="ck" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" style="text-transform:uppercase" value="${esc(c ? c.plate || '' : '')}" placeholder="${esc(t('platePh'))}"></div>
         <div class="field"><label for="cs">${esc(t('spaceLbl'))}</label><input id="cs" type="text" autocomplete="off" value="${esc(c ? c.spot || '' : '')}"></div>
+      </div>
+      <div class="hint" style="margin:-6px 0 12px">${esc(t('plateHint'))}</div>
+      <div class="two">
+        <div class="field"><label for="cl">${esc(t('lot'))}</label><select id="cl">${lotOptions(lot)}</select></div>
         <div class="field"><label for="ca">${esc(t('monthly'))}</label><input id="ca" type="text" inputmode="decimal" value="${esc(c ? fmtNum(c.amount) : '')}"></div>
       </div>
       <div class="field"><label for="cz">${esc(t('aliases'))}</label>
@@ -831,8 +844,8 @@ function openCustomer(cid){
         setPayment(id, m, ns === 'unpaid' ? { s: ns, n: o.n } : { s: ns, a: o.a || (ns === 'paid' ? amount : 0), d: o.d, p: o.p, n: o.n });
       }
     }
-    const next = { id, lot: f('cl').value, name, spot: f('cs').value.trim(), amount, aliases, phone: f('cp').value.trim(), note: f('co').value.trim(), from, until };
-    const prev = c && { id: c.id, lot: c.lot, name: c.name, spot: c.spot || '', amount: c.amount || 0, aliases: c.aliases || [], phone: c.phone || '', note: c.note || '', from: c.from || '', until: c.until || '' };
+    const next = { id, lot: f('cl').value, name, plate: cleanPlate(f('ck').value), spot: f('cs').value.trim(), amount, aliases, phone: f('cp').value.trim(), note: f('co').value.trim(), from, until };
+    const prev = c && { id: c.id, lot: c.lot, name: c.name, plate: c.plate || '', spot: c.spot || '', amount: c.amount || 0, aliases: c.aliases || [], phone: c.phone || '', note: c.note || '', from: c.from || '', until: c.until || '' };
     if(!prev || canon(prev) !== canon(next)) state.customers[id] = Object.assign(next, { t: Date.now() });
     closeModal(el); commit();
   };
@@ -847,7 +860,7 @@ function openCustomer(cid){
 function parseBulk(text){
   return String(text).split(/\r?\n/).map(l => l.trim()).filter(Boolean).map(l => {
     const parts = (l.includes('\t') ? l.split('\t') : l.split(';')).map(x => x.trim());
-    return { name: parts[0] || '', spot: parts[1] || '', amount: parseAmount(parts[2]), aliases: splitNames(parts[3]) };
+    return { name: parts[0] || '', plate: cleanPlate(parts[1]), spot: parts[2] || '', amount: parseAmount(parts[3]), aliases: splitNames(parts[4]) };
   }).filter((r, i) => r.name && !(i === 0 && /^(name|nombre|kunde|cliente|customer)$/i.test(r.name)));
 }
 function openBulk(){
@@ -859,14 +872,14 @@ function openBulk(){
       <div class="field"><label for="bl">${esc(t('lot'))}</label><select id="bl">${lotOptions(lot)}</select></div>
       <div class="field"><label for="bf">${esc(t('paysFrom'))}</label><select id="bf">${monthOptions(ui.month, false)}</select></div>
     </div>
-    <div class="field"><label for="bt">${esc(t('rows'))}</label><textarea id="bt" style="min-height:170px" placeholder="Juan Pérez&#9;12&#9;45.000&#9;María Gómez"></textarea><div class="hint" id="bInfo">${esc(t('bulkNone'))}</div></div>
+    <div class="field"><label for="bt">${esc(t('rows'))}</label><textarea id="bt" style="min-height:170px" placeholder="Juan Pérez&#9;AB 123 CD&#9;12&#9;45.000&#9;María Gómez"></textarea><div class="hint" id="bInfo">${esc(t('bulkNone'))}</div></div>
     <div class="actions"><button type="button" class="btn primary grow" id="bGo" disabled>${esc(t('bulkGo'))}</button></div>`);
   const ta = $('#bt', el);
   const upd = () => { const n = parseBulk(ta.value).length; $('#bInfo', el).textContent = !n ? t('bulkNone') : n === 1 ? t('bulk1') : t('bulkN', n); $('#bGo', el).disabled = !n; };
   ta.addEventListener('input', upd);
   $('#bGo', el).onclick = () => {
     const rows = parseBulk(ta.value), lotId = $('#bl', el).value, from = $('#bf', el).value, ts = Date.now();
-    for(const r of rows){ const id = uid(); state.customers[id] = { id, lot: lotId, name: r.name, spot: r.spot, amount: r.amount, aliases: r.aliases, phone:'', note:'', from, until:'', t: ts }; }
+    for(const r of rows){ const id = uid(); state.customers[id] = { id, lot: lotId, name: r.name, plate: r.plate, spot: r.spot, amount: r.amount, aliases: r.aliases, phone:'', note:'', from, until:'', t: ts }; }
     closeModal(el); closeModal(); ui.lot = lotId; saveUi(); commit();
     toast(rows.length === 1 ? t('created1') : t('createdN', rows.length));
   };
@@ -910,7 +923,7 @@ function openSettings(focusSync){
 
       <div class="sec">
         <h3>${esc(t('dataTitle'))}</h3>
-        <div class="field"><label for="sSort">${esc(t('sortLbl'))}</label><select id="sSort"><option value="name"${ui.sort === 'name' ? ' selected' : ''}>${esc(t('sortName'))}</option><option value="spot"${ui.sort === 'spot' ? ' selected' : ''}>${esc(t('sortSpot'))}</option></select></div>
+        <div class="field"><label for="sSort">${esc(t('sortLbl'))}</label><select id="sSort"><option value="name"${ui.sort === 'name' ? ' selected' : ''}>${esc(t('sortName'))}</option><option value="spot"${ui.sort === 'spot' ? ' selected' : ''}>${esc(t('sortSpot'))}</option><option value="plate"${ui.sort === 'plate' ? ' selected' : ''}>${esc(t('sortPlate'))}</option></select></div>
         <div class="actions" style="margin-top:0">
           <button type="button" class="btn small" id="bulk">${esc(t('bulkTitle'))}</button>
           <button type="button" class="btn small" id="csv">${esc(t('csvBtn'))}</button>
@@ -986,7 +999,7 @@ function exportCsv(){
   const rows = [t('csvHead').split(';')];
   for(const c of sortCustomers(customersFor(ui.lot, ui.month))){
     const p = payOf(c.id, ui.month) || {}, s = statusOf(c.id, ui.month);
-    rows.push([lotName(c.lot), c.spot, c.name, String(c.amount || 0).replace('.',','), t(s), s === 'paid' ? String(p.a || c.amount || 0).replace('.',',') : '', p.d || '', p.p || '', p.n || '']);
+    rows.push([lotName(c.lot), c.spot, c.name, c.plate || '', String(c.amount || 0).replace('.',','), t(s), s === 'paid' ? String(p.a || c.amount || 0).replace('.',',') : '', p.d || '', p.p || '', p.n || '']);
   }
   download('parkinglot-' + ui.month + '.csv', '\ufeff' + rows.map(r => r.map(cell).join(';')).join('\r\n'), 'text/csv;charset=utf-8');
 }
