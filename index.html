@@ -185,6 +185,16 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 .hist{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
 .chip{font-size:12.5px;border-radius:8px;padding:3px 8px;font-weight:600}
 .chip.paid{background:var(--paid-soft);color:var(--paid)} .chip.unpaid{background:var(--unpaid-soft);color:var(--unpaid)} .chip.unclear{background:var(--unclear-soft);color:var(--unclear)}
+.sech{font-size:15.5px;margin:18px 0 10px;padding-top:14px;border-top:1px solid var(--line)}
+.sech.first{border-top:0;padding-top:0;margin-top:2px}
+button.chip{border:1px solid transparent;min-height:36px;padding:5px 10px;font-size:13px}
+button.chip.paid{border-color:var(--paid)} button.chip.unpaid{border-color:var(--unpaid)} button.chip.unclear{border-color:var(--unclear)}
+.sheet.fixed{display:flex;flex-direction:column;overflow:hidden;padding:0}
+.sheet.fixed form{display:flex;flex-direction:column;flex:1;min-height:0}
+.sheet.fixed .sheet-head{padding:16px 16px 0;margin-bottom:6px}
+.fs-body{flex:1;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch;padding:6px 16px 14px}
+.fs-foot{margin:0;padding:12px 16px calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--line)}
+@media (min-width:640px){.sheet.fixed .sheet-head{padding:20px 20px 0}.fs-body{padding:6px 20px 16px}.fs-foot{padding:12px 20px 16px}}
 .sec{border-top:1px solid var(--line);padding-top:14px;margin-top:16px}
 .sec h3{font-size:16px;margin-bottom:8px}
 .sec p{font-size:14.5px;margin-bottom:10px}
@@ -305,8 +315,9 @@ const I18N = {
   payerPh:['vacío = el cliente','empty = the customer'],
   remember:['Recordar a «{0}» como pagador de {1}','Remember “{0}” as a payer for {1}'],
   monthNote:['Nota de este mes','Note for this month'], monthNotePh:['p. ej. por qué el pago es dudoso','e.g. why the payment is unclear'],
-  usuallyVia:['Suele pagar a través de: {0}','Usually pays via: {0}'], custNote:['Nota del cliente: {0}','Customer note: {0}'],
-  recent:['Últimos meses','Recent months'], editCustomer:['Editar cliente','Edit customer'], newCustomer:['Nuevo cliente','New customer'],
+  payFor:['Pago de {0}','Payment for {0}'], otherMonths:['Meses anteriores','Earlier months'],
+  tapMonth:['Tocá un mes para cambiar su estado.','Tap a month to change its status.'],
+  custData:['Datos del cliente','Customer details'], editCustomer:['Editar cliente','Edit customer'], newCustomer:['Nuevo cliente','New customer'],
   name:['Nombre','Name'], lot:['Estacionamiento','Parking lot'], spaceLbl:['Lugar','Space'], monthly:['Monto mensual (ARS)','Monthly amount (ARS)'],
   aliases:['Paga a través de (otros nombres en el extracto bancario)','Pays via (other names on the bank statement)'],
   aliasesPh:['p. ej. María Gómez, Taller Sur SRL','e.g. María Gómez, Taller Sur SRL'],
@@ -495,13 +506,18 @@ function priorOpen(c, month){
   }
   return n;
 }
-function setPayment(cid, month, rec){
-  const clean = { s: rec.s, t: Date.now() };
+function setPayment(cid, month, rec){                 /* leaves the record untouched when nothing changed */
+  const clean = { s: rec.s };
   if(rec.a) clean.a = rec.a;
   if(rec.d) clean.d = rec.d;
   if(rec.p) clean.p = rec.p;
   if(rec.n) clean.n = rec.n;
-  state.payments[payKey(cid, month)] = clean;
+  const key = payKey(cid, month), old = state.payments[key];
+  const bare = o => canon(Object.assign({}, o, { t: undefined }));
+  if(old ? bare(old) === bare(clean) : (clean.s === 'unpaid' && Object.keys(clean).length === 1)) return false;
+  clean.t = Date.now();
+  state.payments[key] = clean;
+  return true;
 }
 function quickStatus(cid, s){
   const c = state.customers[cid]; if(!c) return;
@@ -587,7 +603,7 @@ function rowHtml(c, s, p){
   else if(s === 'unclear') acts = btn('paid','ok','✓',t('actPaid')) + btn('unpaid','no','✕',t('actUnpaid'));
   else acts = btn('unpaid','back','↩',t('actBack'));
   return `<li class="row" data-id="${esc(c.id)}">
-    <button type="button" class="row-main" data-act="open">
+    <button type="button" class="row-main" data-act="open" title="${esc(t('editCustomer'))}">
       <span class="row-name">${esc(c.name)}${badges}</span>
       <span class="row-sub">${bits.join(' · ')}</span>${alias}${note}
     </button>
@@ -677,10 +693,10 @@ function toast(text, actionLabel, action){
 
 /* ---------- dialogs ---------- */
 const modals = [];
-function openModal(html){
+function openModal(html, cls){
   const ov = document.createElement('div');
   ov.className = 'ov';
-  ov.innerHTML = `<div class="sheet" role="dialog" aria-modal="true">${html}</div>`;
+  ov.innerHTML = `<div class="sheet${cls ? ' ' + cls : ''}" role="dialog" aria-modal="true">${html}</div>`;
   document.body.appendChild(ov);
   modals.push(ov);
   document.body.classList.add('noscroll');
@@ -712,15 +728,22 @@ function monthOptions(selected, withNone){
 }
 const lotOptions = sel => lotsList().map(l => `<option value="${esc(l.id)}"${l.id === sel ? ' selected' : ''}>${esc(lotLabel(l))}</option>`).join('');
 
-/* a customer's payment in the selected month */
-function openPayment(cid){
-  const c = state.customers[cid]; if(!c) return;
-  const month = ui.month, p = payOf(cid, month) || {}, s = statusOf(cid, month);
-  const hist = []; for(let i = 5; i >= 0; i--){ const m = addMonth(month, -i); if(c.from && m < c.from) continue; hist.push(`<span class="chip ${statusOf(cid, m)}">${esc(fmtMonthShort(m))}</span>`); }
-  const names = [c.name].concat(c.aliases || []);
-  const el = openModal(`
-    <div class="sheet-head"><h2>${esc(c.name)}<span class="sub">${esc([lotName(c.lot), c.spot && t('space', c.spot), fmtMonthLong(month)].filter(Boolean).join(' · '))}</span></h2>${closeX()}</div>
-    <form novalidate>
+/* one sheet for everything about a customer: this month's payment, earlier months, customer details */
+function openCustomer(cid){
+  const c = cid ? state.customers[cid] : null;
+  const month = ui.month;
+  const lot = c ? c.lot : (ui.lot !== 'all' ? ui.lot : (lotsList()[0] || {}).id);
+  const p = c ? (payOf(cid, month) || {}) : {}, s = c ? statusOf(cid, month) : 'unpaid';
+  const hist = {};                       /* earlier month -> status as shown; changed ones are saved */
+  const mark = { paid:'✓', unpaid:'✕', unclear:'?' };
+  let histHtml = '';
+  if(c) for(let i = 12; i >= 1; i--){
+    const m = addMonth(month, -i); if(c.from && m < c.from) continue;
+    hist[m] = statusOf(cid, m);
+    histHtml += `<button type="button" class="chip ${hist[m]}" data-m="${m}">${esc(fmtMonthShort(m))} <b>${mark[hist[m]]}</b></button>`;
+  }
+  const paySection = !c ? '' : `
+      <h3 class="sech first">${esc(t('payFor', fmtMonthLong(month)))}</h3>
       <div class="field"><span class="lbl">${esc(t('status'))}</span>
         <div class="seg">${ORDER.map(k => `<label><input type="radio" name="s" value="${k}"${k === s ? ' checked' : ''}><span class="${k}">${esc(t(k))}</span></label>`).join('')}</div>
       </div>
@@ -730,46 +753,16 @@ function openPayment(cid){
       </div>
       <div class="field"><label for="pp">${esc(t('payer'))}</label>
         <input id="pp" type="text" list="payerNames" autocomplete="off" value="${esc(p.p || '')}" placeholder="${esc(t('payerPh'))}">
-        <datalist id="payerNames">${names.map(n => `<option value="${esc(n)}">`).join('')}</datalist>
+        <datalist id="payerNames">${[c.name].concat(c.aliases || []).map(n => `<option value="${esc(n)}">`).join('')}</datalist>
       </div>
       <label class="check" id="rememberRow" hidden><input type="checkbox" id="remember" checked><span id="rememberText"></span></label>
       <div class="field"><label for="pn">${esc(t('monthNote'))}</label><textarea id="pn" placeholder="${esc(t('monthNotePh'))}">${esc(p.n || '')}</textarea></div>
-      ${c.aliases && c.aliases.length ? `<p class="hint">${esc(t('usuallyVia', c.aliases.join(', ')))}</p>` : ''}
-      ${c.note ? `<p class="hint">${esc(t('custNote', c.note))}</p>` : ''}
-      <div class="field" style="margin-top:12px"><span class="lbl">${esc(t('recent'))}</span><div class="hist">${hist.join('')}</div></div>
-      <div class="actions"><button type="button" class="btn" id="editCust">${esc(t('editCustomer'))}</button><button type="submit" class="btn primary grow">${esc(t('save'))}</button></div>
-    </form>`);
-  const payer = $('#pp', el);
-  const refreshRemember = () => {
-    const v = payer.value.trim();
-    const known = !v || names.some(n => norm(n) === norm(v));
-    $('#rememberRow', el).hidden = known;
-    if(!known) $('#rememberText', el).textContent = t('remember', v, c.name);
-  };
-  payer.addEventListener('input', refreshRemember); refreshRemember();
-  $('#editCust', el).onclick = () => { closeModal(el); openCustomer(cid); };
-  $('form', el).onsubmit = e => {
-    e.preventDefault();
-    const st = ($('input[name=s]:checked', el) || {}).value || 'unpaid';
-    const pv = payer.value.trim();
-    let a = parseAmount($('#pa', el).value), d = $('#pd', el).value;
-    if(st === 'paid'){ if(!a) a = c.amount; if(!d) d = todayISO(); }
-    if(st === 'unpaid' && !d && !pv) a = 0;
-    setPayment(cid, month, { s: st, a, d, p: pv, n: $('#pn', el).value.trim() });
-    if(pv && !$('#rememberRow', el).hidden && $('#remember', el).checked){
-      c.aliases = (c.aliases || []).concat(pv); c.t = Date.now();
-    }
-    closeModal(el); commit();
-  };
-}
-
-/* add / edit a customer */
-function openCustomer(cid){
-  const c = cid ? state.customers[cid] : null;
-  const lot = c ? c.lot : (ui.lot !== 'all' ? ui.lot : (lotsList()[0] || {}).id);
+      ${histHtml ? `<h3 class="sech">${esc(t('otherMonths'))}</h3><div class="hist" id="hist">${histHtml}</div><p class="hint">${esc(t('tapMonth'))}</p>` : ''}
+      <h3 class="sech">${esc(t('custData'))}</h3>`;
   const el = openModal(`
-    <div class="sheet-head"><h2>${esc(t(c ? 'editCustomer' : 'newCustomer'))}</h2>${closeX()}</div>
     <form novalidate>
+    <div class="sheet-head"><h2>${c ? esc(c.name) + `<span class="sub">${esc([lotName(c.lot), c.spot && t('space', c.spot)].filter(Boolean).join(' · '))}</span>` : esc(t('newCustomer'))}</h2>${closeX()}</div>
+    <div class="fs-body">${paySection}
       <div class="field"><label for="cn">${esc(t('name'))}</label><input id="cn" type="text" autocomplete="off" value="${esc(c ? c.name : '')}" required></div>
       <div class="field"><label for="cl">${esc(t('lot'))}</label><select id="cl">${lotOptions(lot)}</select></div>
       <div class="two">
@@ -782,25 +775,68 @@ function openCustomer(cid){
       <div class="field"><label for="cp">${esc(t('phone'))}</label><input id="cp" type="tel" autocomplete="off" value="${esc(c ? c.phone || '' : '')}"></div>
       <div class="field"><label for="co">${esc(t('note'))}</label><textarea id="co">${esc(c ? c.note || '' : '')}</textarea></div>
       <div class="two">
-        <div class="field"><label for="cf">${esc(t('paysFrom'))}</label><select id="cf">${monthOptions(c ? c.from : ui.month, false)}</select></div>
+        <div class="field"><label for="cf">${esc(t('paysFrom'))}</label><select id="cf">${monthOptions(c ? c.from : month, false)}</select></div>
         <div class="field"><label for="cu">${esc(t('lastMonth'))}</label><select id="cu">${monthOptions(c ? c.until || '' : '', true)}</select></div>
       </div>
       <div id="cErr"></div>
-      <div class="actions">${c ? `<button type="button" class="btn danger" id="delCust">${esc(t('del'))}</button>` : ''}<button type="submit" class="btn primary grow">${esc(t('save'))}</button></div>
-    </form>`);
-  if(!c) setTimeout(() => $('#cn', el).focus(), 50);
+    </div>
+    <div class="actions fs-foot">${c ? `<button type="button" class="btn danger" id="delCust">${esc(t('del'))}</button>` : ''}<button type="submit" class="btn primary grow">${esc(t('save'))}</button></div>
+    </form>`, 'fixed');
+  const f = id => $('#' + id, el);
+  if(!c) setTimeout(() => f('cn').focus(), 50);
+
+  let paTouched = false;
+  const knownNames = () => [f('cn').value.trim()].concat(splitNames(f('cz').value));
+  const refreshRemember = () => {
+    const v = f('pp').value.trim();
+    const known = !v || knownNames().some(n => norm(n) === norm(v));
+    f('rememberRow').hidden = known;
+    if(!known) f('rememberText').textContent = t('remember', v, f('cn').value.trim() || c.name);
+  };
+  if(c){
+    f('pa').addEventListener('input', () => { paTouched = true; });
+    for(const id of ['pp','cn','cz']) f(id).addEventListener('input', refreshRemember);
+    refreshRemember();
+    const next = { unpaid:'paid', paid:'unclear', unclear:'unpaid' };
+    if(f('hist')) f('hist').addEventListener('click', e => {
+      const b = e.target.closest('[data-m]'); if(!b) return;
+      hist[b.dataset.m] = next[hist[b.dataset.m]];
+      b.className = 'chip ' + hist[b.dataset.m];
+      $('b', b).textContent = mark[hist[b.dataset.m]];
+      b.setAttribute('aria-label', fmtMonthLong(b.dataset.m) + ': ' + t(hist[b.dataset.m]));
+    });
+    $$('#hist [data-m]', el).forEach(b => b.setAttribute('aria-label', fmtMonthLong(b.dataset.m) + ': ' + t(hist[b.dataset.m])));
+  }
+
   $('form', el).onsubmit = e => {
     e.preventDefault();
-    const name = $('#cn', el).value.trim();
-    const from = $('#cf', el).value, until = $('#cu', el).value;
-    if(!name){ $('#cErr', el).innerHTML = `<div class="msg err">${esc(t('errName'))}</div>`; return; }
-    if(until && until < from){ $('#cErr', el).innerHTML = `<div class="msg err">${esc(t('errUntil'))}</div>`; return; }
-    const id = c ? c.id : uid();
-    state.customers[id] = { id, lot: $('#cl', el).value, name, spot: $('#cs', el).value.trim(), amount: parseAmount($('#ca', el).value),
-      aliases: splitNames($('#cz', el).value), phone: $('#cp', el).value.trim(), note: $('#co', el).value.trim(), from, until, t: Date.now() };
+    const fail = key => { f('cErr').innerHTML = `<div class="msg err">${esc(t(key))}</div>`; f('cErr').scrollIntoView({ block:'center' }); };
+    const name = f('cn').value.trim(), from = f('cf').value, until = f('cu').value;
+    if(!name) return fail('errName');
+    if(until && until < from) return fail('errUntil');
+    const id = c ? c.id : uid(), amount = parseAmount(f('ca').value);
+    const aliases = splitNames(f('cz').value);
+    if(c){
+      const st = ($('input[name=s]:checked', el) || {}).value || 'unpaid';
+      const pv = f('pp').value.trim();
+      let a = parseAmount(f('pa').value), d = f('pd').value;
+      if(!paTouched && !p.a) a = amount;                 /* follow a changed monthly amount */
+      if(st === 'paid'){ if(!a) a = amount; if(!d) d = todayISO(); }
+      if(st === 'unpaid' && !d && !pv) a = 0;
+      setPayment(id, month, { s: st, a, d, p: pv, n: f('pn').value.trim() });
+      if(pv && !f('rememberRow').hidden && f('remember').checked) aliases.push(pv);
+      for(const m in hist){
+        const ns = hist[m]; if(ns === statusOf(id, m)) continue;
+        const o = payOf(id, m) || {};
+        setPayment(id, m, ns === 'unpaid' ? { s: ns, n: o.n } : { s: ns, a: o.a || (ns === 'paid' ? amount : 0), d: o.d, p: o.p, n: o.n });
+      }
+    }
+    const next = { id, lot: f('cl').value, name, spot: f('cs').value.trim(), amount, aliases, phone: f('cp').value.trim(), note: f('co').value.trim(), from, until };
+    const prev = c && { id: c.id, lot: c.lot, name: c.name, spot: c.spot || '', amount: c.amount || 0, aliases: c.aliases || [], phone: c.phone || '', note: c.note || '', from: c.from || '', until: c.until || '' };
+    if(!prev || canon(prev) !== canon(next)) state.customers[id] = Object.assign(next, { t: Date.now() });
     closeModal(el); commit();
   };
-  if(c) $('#delCust', el).onclick = async () => {
+  if(c) f('delCust').onclick = async () => {
     if(!await confirmBox(t('delTitle'), t('delText', c.name), t('del'), true)) return;
     state.customers[c.id] = Object.assign({}, c, { deleted:true, t: Date.now() });
     closeModal(el); commit();
@@ -1112,7 +1148,7 @@ $('#lists').addEventListener('click', e => {
   if(o){ if(o.dataset.open === 'add') openCustomer(null); else if(o.dataset.open === 'bulk') openBulk(); return; }
   const b = e.target.closest('[data-act]'); if(!b) return;
   const id = b.closest('.row').dataset.id;
-  if(b.dataset.act === 'open') openPayment(id); else quickStatus(id, b.dataset.act);
+  if(b.dataset.act === 'open') openCustomer(id); else quickStatus(id, b.dataset.act);
 });
 document.addEventListener('keydown', e => { if(e.key === 'Escape' && modals.length) closeModal(modals[modals.length-1]); });
 let sessionMonth = curMonth();

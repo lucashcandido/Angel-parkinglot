@@ -12,7 +12,8 @@ Die Oberfläche gibt es auf **Spanisch und Englisch**; umgeschaltet wird mit dem
 - Monatsansicht mit den drei Listen, Blättern zu früheren und späteren Monaten
 - Ein Tipp auf ✓ / ? / ✕ ändert den Status, mit „Deshacer / Undo“ zum Zurücknehmen
 - Pro Kunde hinterlegbar, **über welche anderen Namen er zahlt** – die Suche findet ihn dann auch über den Namen auf dem Kontoauszug
-- Pro Zahlung: Betrag, Datum, „überwiesen von“ und Notiz; ein neuer Zahlername lässt sich mit einem Haken dauerhaft merken
+- **Ein Klick auf den Kunden** öffnet ein einziges Fenster für alles: Zahlung des Monats (Status, Betrag, Datum, „überwiesen von“, Notiz), Status früherer Monate und sämtliche Kundendaten – gespeichert wird mit einem Knopf
+- Ein neuer Zahlername lässt sich dabei mit einem Haken dauerhaft merken
 - Hinweis, wenn bei einem Kunden noch Vormonate offen sind
 - Kundenliste direkt aus Excel einfügen, Monat als CSV exportieren, Sicherung als Datei
 
