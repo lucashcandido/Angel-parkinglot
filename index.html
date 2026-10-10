@@ -243,6 +243,7 @@ button.chip.paid{border-color:var(--paid)} button.chip.unpaid{border-color:var(-
 @media (max-width:560px){.tx .two{grid-template-columns:1fr;gap:0}}
 .tx .check{margin-top:-2px}
 .tx-sum{font-weight:650}
+.newc{border-top:1px dashed var(--line);margin-top:2px;padding-top:10px}
 .sheet.fixed .sheet-head{padding:16px 16px 0;margin-bottom:6px}
 .fs-body{flex:1;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch;padding:6px 16px 14px}
 .fs-foot{margin:0;padding:12px 16px calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--line)}
@@ -475,6 +476,8 @@ const I18N = {
   stmtRemember:['Recordar «{0}» como pagador','Remember “{0}” as payer'],
  
   stmtMissing:['{0} de {1} clientes siguen sin pago en {2}.','{0} of {1} customers still have no payment in {2}.'],
+  dataCreate:['+ Crear cliente nuevo','+ Create new customer'],
+  dataNoName:['Sin nombre ({0}, {1})','No name ({0}, {1})'], dataNoNamePh:['Se puede completar después','Can be filled in later'],
   dataCust:['Clientes','Customers'], dataPay:['Ingresos del banco','Bank transfers'],
   dataNew:['nuevo','new'], dataExists:['ya existe','already exists'],
   dataDo:['Qué hacer','What to do'], dataAdd:['Agregar','Add'], dataUpdate:['Actualizar','Update'], dataSkip:['No importar','Do not import'],
@@ -1584,6 +1587,27 @@ function applyPeople(people){
   return { n, undo };
 }
 
+/* Transfers for which "create new customer" was chosen in the preview: the customer is made from the few fields given there,
+   then the transfer is recorded like any other. Without a name the customer gets a placeholder name to complete later. */
+function createFromTransfers(items, month){
+  const made = [];
+  for(const it of items){
+    if(it.cid !== '__new') continue;
+    if(it.action === 'skip'){ it.cid = ''; continue; }
+    const nw = it.nw || {};
+    const lot = state.lots[nw.lot] && !state.lots[nw.lot].deleted ? nw.lot : (lotsList()[0] || {}).id;
+    const name = String(nw.name || '').replace(/\s+/g, ' ').trim() || t('dataNoName', fmtMoney(it.amount), it.date ? fmtDate(it.date) : t('noDate'));
+    let c = Object.values(state.customers).find(x => !x.deleted && nameKey(x.name) === nameKey(name));        /* same name → the same customer */
+    if(!c){
+      const id = uid();
+      c = state.customers[id] = { id, lot, name, plate: cleanPlate(nw.plate), spot:'', amount: parseAmount(nw.amount), aliases:[], phone: String(nw.phone || '').trim(), note:'', from: month, until:'', t: Date.now() };
+      made.push(c);
+    }
+    it.cid = c.id; it.remember = true;
+  }
+  return { n: made.length, undo: () => { for(const c of made) state.customers[c.id] = Object.assign({}, state.customers[c.id], { deleted:true, t: Date.now() }); } };
+}
+
 function openImport(){
   const month = ui.month;
   const coll = new Intl.Collator(ui.lang, { numeric:true, sensitivity:'base' });
@@ -1645,7 +1669,7 @@ function openImport(){
   function drawReview(){
     const keep = body.scrollTop;
     const lotOpts = sel => lotsList().map(l => `<option value="${esc(l.id)}"${l.id === sel ? ' selected' : ''}>${esc(lotLabel(l))}</option>`).join('');
-    const custOpts = sel => `<option value="">${esc(t('stmtNoneCust'))}</option>` + custs.map(c => `<option value="${esc(c.id)}"${c.id === sel ? ' selected' : ''}>${esc(c.name + ' · ' + lotName(c.lot) + (c.amount ? ' · ' + fmtMoney(c.amount) : ''))}</option>`).join('');
+    const custOpts = sel => `<option value="">${esc(t('stmtNoneCust'))}</option><option value="__new"${sel === '__new' ? ' selected' : ''}>${esc(t('dataCreate'))}</option>` + custs.map(c => `<option value="${esc(c.id)}"${c.id === sel ? ' selected' : ''}>${esc(c.name + ' · ' + lotName(c.lot) + (c.amount ? ' · ' + fmtMoney(c.amount) : ''))}</option>`).join('');
     const personCard = (r, i) => {
       const old = state.customers[r.cid];
       const bits = [r.spot && t('space', r.spot), r.amount && fmtMoney(r.amount), r.phone, r.aliases.length && t('paysVia', r.aliases.join(', ')),
@@ -1670,6 +1694,17 @@ function openImport(){
           <div class="field"><label>${esc(t('stmtCust'))}</label><select data-f="cid">${custOpts(it.cid)}</select></div>
           <div class="field"><label>${esc(t('stmtAct'))}</label><select data-f="action"${it.cid ? '' : ' disabled'}>${['paid','unclear','skip'].map(k => `<option value="${k}"${k === act ? ' selected' : ''}>${esc(k === 'skip' ? t('stmtSkip') : t(k))}</option>`).join('')}</select></div>
         </div>
+        ${it.cid === '__new' ? `<div class="newc">
+          <div class="field"><label>${esc(t('name'))}</label><input type="text" data-n="name" autocomplete="off" value="${esc(it.nw.name)}" placeholder="${esc(t('dataNoNamePh'))}"></div>
+          <div class="two">
+            <div class="field"><label>${esc(t('lot'))}</label><select data-n="lot">${lotOpts(it.nw.lot)}</select></div>
+            <div class="field"><label>${esc(t('monthly'))}</label><input type="text" data-n="amount" inputmode="decimal" autocomplete="off" value="${esc(it.nw.amount)}"></div>
+          </div>
+          <div class="two">
+            <div class="field"><label>${esc(t('plate'))}</label><input type="text" data-n="plate" autocomplete="off" autocapitalize="characters" style="text-transform:uppercase" value="${esc(it.nw.plate)}"></div>
+            <div class="field"><label>${esc(t('phone'))}</label><input type="tel" data-n="phone" autocomplete="off" value="${esc(it.nw.phone)}"></div>
+          </div>
+        </div>` : ''}
         ${showRemember ? `<label class="check"><input type="checkbox" data-f="remember"${it.remember ? ' checked' : ''}><span>${esc(t('stmtRemember', it.payer))}</span></label>` : ''}
       </div>`;
     };
@@ -1690,9 +1725,9 @@ function openImport(){
     body.scrollTop = keep;
     $('#imBack', foot).onclick = () => { step = 'pick'; items = people = null; draw(); };
     $('#imApply', foot).onclick = () => {
-      const a = applyPeople(people), b = applyImport(items, month);
+      const a = applyPeople(people), made = createFromTransfers(items, month), b = applyImport(items, month);
       closeModal(el); commit();
-      toast(t('dataApplied', a.n, b.n), t('undo'), () => { b.undo(); a.undo(); commit(); });
+      toast(t('dataApplied', a.n + made.n, b.n), t('undo'), () => { b.undo(); made.undo(); a.undo(); commit(); });
     };
   }
   function draw(){ if(!alive()) return; if(step === 'busy') drawBusy(); else if(step === 'review') drawReview(); else drawPick(); }
@@ -1717,7 +1752,13 @@ function openImport(){
     draw();
   }
 
+  const typed = e => {
+    const key = e.target.dataset && e.target.dataset.n, card = e.target.closest('.tx[data-i]');
+    if(key && card && items && items[+card.dataset.i].nw) items[+card.dataset.i].nw[key] = e.target.value;
+  };
+  body.addEventListener('input', typed);
   body.addEventListener('change', e => {
+    if(e.target.dataset && e.target.dataset.n){ typed(e); return; }
     const f = e.target.dataset && e.target.dataset.f, card = e.target.closest('.tx');
     if(!f || !card || !items) return;
     if(card.dataset.p !== undefined){
@@ -1728,7 +1769,10 @@ function openImport(){
     }
     const it = items[+card.dataset.i];
     if(f === 'remember'){ it.remember = e.target.checked; return; }
-    if(f === 'cid'){ it.cid = e.target.value; it.conf = 'sure'; it.action = it.cid ? (it.dup ? 'skip' : 'paid') : 'skip'; }
+    if(f === 'cid'){
+      it.cid = e.target.value; it.conf = 'sure'; it.action = it.cid ? (it.dup ? 'skip' : 'paid') : 'skip';
+      if(it.cid === '__new' && !it.nw) it.nw = { name: it.payer || '', lot: defaultLot, amount: fmtNum(it.amount), plate:'', phone:'' };
+    }
     if(f === 'action') it.action = e.target.value;
     drawReview();
   });

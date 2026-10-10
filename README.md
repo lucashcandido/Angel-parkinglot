@@ -28,6 +28,7 @@ Die Oberfläche gibt es auf **Spanisch und Englisch**; umgeschaltet wird mit dem
 - Name passt eindeutig und der Betrag reicht → Vorschlag **bezahlt**
 - Name passt nur ungefähr oder der Betrag ist zu niedrig → Vorschlag **uneindeutig**, Claudes Begründung wird als Notiz gespeichert
 - kein passender Kunde, Datum außerhalb des Monats oder schon einmal eingelesen → wird nicht eingetragen, lässt sich aber von Hand zuordnen
+- zu einem Eingang ohne passenden Kunden lässt sich in der Vorschau direkt ein **neuer Kunde anlegen** (Name, Parkanlage, Monatsbetrag, optional Kennzeichen und Telefon); ohne Namen bekommt er einen Platzhalternamen zum späteren Ergänzen
 
 **Bestehende Listen** (Excel `.xlsx`, LibreOffice `.ods` oder `.csv`): Claude liest die Kunden heraus – Name, Kennzeichen, Stellplatz, Monatsbetrag, Telefon, „zahlt über“ – und, falls die Liste Monatsspalten hat, welche Monate bezahlt sind.
 
