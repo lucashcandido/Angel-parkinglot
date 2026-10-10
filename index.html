@@ -819,9 +819,9 @@ function renderTabs(){
   const cell = (id, name) => {
     const cs = customersFor(id, ui.month);
     const paid = cs.filter(c => statusOf(c.id, ui.month) === 'paid').length;
-    return `<button type="button" class="tab${ui.lot === id ? ' on' : ''}" data-lot="${esc(id)}" aria-pressed="${ui.lot === id}"><b>${esc(name)}</b><small>${esc(t('tabCount', paid, cs.length))}</small></button>`;
+    return `<button type="button" class="tab${ui.lot === id ? ' on' : ''}" data-lot="${esc(id)}" aria-pressed="${ui.lot === id}"${id === NO_LOT ? ` title="${esc(t('lotNone'))}" aria-label="${esc(t('lotNone'))}"` : ''}><b>${esc(name)}</b><small>${esc(t('tabCount', paid, cs.length))}</small></button>`;
   };
-  $('#tabs').innerHTML = lots.map(l => cell(l.id, lotLabel(l))).join('') + (lots.length > 1 ? cell('all', t('all')) : '');
+  $('#tabs').innerHTML = lots.map(l => cell(l.id, l.id === NO_LOT ? '?' : lotLabel(l))).join('') + (lots.length > 1 ? cell('all', t('all')) : '');
   $('#btnDup').hidden = !(ui.lot === 'all' || lots.length < 2);        /* the check covers all parking lots, so it lives under "All" */
 }
 
