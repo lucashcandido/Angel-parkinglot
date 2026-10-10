@@ -19,13 +19,22 @@ Die Oberfläche gibt es auf **Spanisch und Englisch**; umgeschaltet wird mit dem
 - Hinweis, wenn bei einem Kunden noch Vormonate offen sind
 - Kundenliste direkt aus Excel einfügen, Monat als CSV exportieren, Sicherung als Datei
 
-## Kontoauszüge mit Claude einlesen
+## Daten mit Claude einlesen (Knopf „Datos / Data“)
 
-Über **Extracto bancario / Bank statement** lädt man ein PDF oder Screenshots der Bank hoch. Claude liest die Zahlungseingänge und ordnet sie den Kunden zu. Vor dem Speichern zeigt die App eine Vorschau, in der jede Zuordnung geändert werden kann:
+Über **Datos / Data** lädt man Dateien hoch, und Claude pflegt sie ein. Vor dem Speichern zeigt die App immer eine Vorschau, in der sich jede Zeile ändern oder auslassen lässt; danach gibt es „Rückgängig“.
+
+**Kontoauszüge** (PDF oder Screenshots): Claude liest die Zahlungseingänge und ordnet sie den Kunden zu.
 
 - Name passt eindeutig und der Betrag reicht → Vorschlag **bezahlt**
 - Name passt nur ungefähr oder der Betrag ist zu niedrig → Vorschlag **uneindeutig**, Claudes Begründung wird als Notiz gespeichert
 - kein passender Kunde, Datum außerhalb des Monats oder schon einmal eingelesen → wird nicht eingetragen, lässt sich aber von Hand zuordnen
+
+**Bestehende Excel-Listen** (`.xlsx` oder `.csv`): Claude liest die Kunden heraus – Name, Kennzeichen, Stellplatz, Monatsbetrag, Telefon, „zahlt über“ – und, falls die Liste Monatsspalten hat, welche Monate bezahlt sind.
+
+- Kunden, die es schon gibt (gleicher Name oder gleiches Kennzeichen), werden ergänzt statt doppelt angelegt
+- neue Kunden kommen in die Parkanlage, die das Blatt nennt, sonst in die gerade geöffnete; in der Vorschau änderbar
+- ein Monat, der in der App schon als bezahlt steht, wird nicht überschrieben
+- alte `.xls`-Dateien bitte in Excel als `.xlsx` speichern
 
 Dafür braucht die App einen eigenen **Anthropic-API-Schlüssel** (https://platform.claude.com/settings/keys, Guthaben unter „Billing“). Die Abrechnung läuft nach Verbrauch über das Anthropic-Konto.
 
