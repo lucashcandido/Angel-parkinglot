@@ -39,7 +39,9 @@ Die Oberfläche gibt es auf **Spanisch und Englisch**; umgeschaltet wird mit dem
 
 **Bestehende Listen** (Excel `.xlsx`, LibreOffice `.ods` oder `.csv`): Claude liest die Kunden heraus – Name, Kennzeichen, Stellplatz, Monatsbetrag, Telefon, „zahlt über“ – und, falls die Liste Monatsspalten hat, welche Monate bezahlt sind (steht dort ein Betrag unter dem Monatsbetrag, wird der Monat als teilweise bezahlt eingetragen).
 
-- Kunden, die es schon gibt (gleicher Name oder gleiches Kennzeichen), werden ergänzt statt doppelt angelegt
+- **Gelber Marker = bezahlt:** Zeilen oder Monatszellen, die in der Liste gelb markiert sind, gelten als bezahlt – bei Excel- und LibreOffice-Dateien wird die Zellfarbe aus der Datei gelesen, bei Fotos und Screenshots erkennt Claude sie im Bild. Hat die Liste keine Monatsspalten, gilt der Monat, den die Liste nennt, sonst der in der App angezeigte Monat. (CSV-Dateien enthalten keine Farben.)
+- **Dieselbe Liste mehrmals hochladen ist gefahrlos:** Kunden werden zuerst am Kennzeichen, dann am Namen wiedererkannt, auch bei leicht anderer Schreibweise („nombre parecido“, in der Vorschau sichtbar und dort als neuer Kunde abtrennbar). Die Vorschau zeigt nur, was sich wirklich ändert („3 nuevos · 1 con cambios · 12 ya estaban cargados“); ist nichts neu, gibt es nichts zu speichern
+- Aus Fotos, Screenshots und PDFs werden bei bestehenden Kunden nur leere Felder ergänzt (ein verlesener Buchstabe überschreibt nichts); aus Excel-/ODS-/CSV-Dateien gelten die getippten Werte
 - neue Kunden kommen in die Parkanlage, die das Blatt nennt, sonst in die gerade geöffnete; in der Vorschau änderbar
 - ein Monat, der in der App schon als bezahlt steht, wird nicht überschrieben
 - alte `.xls`-Dateien bitte als `.xlsx`, `.ods` oder `.csv` speichern
