@@ -9,6 +9,7 @@ Die Oberfläche gibt es auf **Spanisch und Englisch**; umgeschaltet wird mit dem
 ## Was die App kann
 
 - Parkanlage per Klick wählen (oder „Alle“), Namen der Anlagen frei änderbar
+- Lässt sich ein Kunde noch keiner Parkanlage zuordnen, wählt man als Ort **„? Sin asignar / Not assigned“**. Solche Kunden bekommen einen eigenen Reiter „?“, zählen unter „Alle“ mit und sind dort rot markiert, bis man ihnen eine Anlage gibt
 - Monatsansicht mit den vier Listen, Blättern zu früheren und späteren Monaten
 - **Teilzahlungen:** Bei jedem Kunden steht, wie viel vom Monatsbetrag schon da ist („$ 20.000 de $ 45.000 · faltan $ 25.000“ mit Balken). Im Kundenfenster trägt man unter „Monto pagado“ ein, was bisher insgesamt gezahlt wurde – liegt es unter dem Monatsbetrag, wird der Monat von selbst „Parcial“, ab dem vollen Betrag „Pagado“. Ein teilweise bezahlter Monat zählt weiter als offen
 - Ein Tipp auf ✓ / ? / ✕ ändert den Status, mit „Deshacer / Undo“ zum Zurücknehmen

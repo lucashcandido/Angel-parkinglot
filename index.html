@@ -362,7 +362,7 @@ const I18N = {
   progOf:['{0} de {1}','{0} of {1}'], progLeft:['faltan {0}','{0} missing'], sumPartial:['{0} en parte','{0} in part'],
   emptyPartial:['Nadie pagó en partes.','No partial payments.'],
   errPartial:['Ingresá cuánto pagó hasta ahora.','Enter how much has been paid so far.'],
-  all:['Todos','All'],
+  all:['Todos','All'], lotNone:['? Sin asignar','? Not assigned'],
   lotN:['Estacionamiento {0}','Parking lot {0}'],
   tabCount:['{0} / {1} pagados','{0} / {1} paid'],
   aLots:['Estacionamientos','Parking lots'], aSettings:['Ajustes','Settings'], aPrev:['Mes anterior','Previous month'], aNext:['Mes siguiente','Next month'],
@@ -618,9 +618,10 @@ const splitNames = s => String(s ?? '').split(/[,;\n]/).map(x => x.trim()).filte
    settings:  { ai: {key,model,t} } - the Anthropic API key, shared by all connected devices; nodup: {pairs[],t} - customer pairs that are not duplicates
    t = timestamp of the last change; when merging, the newer record wins.
    The three built-in lots keep their internal name until renamed (t = 0) and are shown translated. */
+const NO_LOT = 'none';              /* the place "?" for customers that cannot be assigned to a parking lot yet */
 function emptyState(){
   return { v:1,
-    lots:{ lot1:{id:'lot1',name:'Parkanlage 1',order:1,t:0}, lot2:{id:'lot2',name:'Parkanlage 2',order:2,t:0}, lot3:{id:'lot3',name:'Parkanlage 3',order:3,t:0} },
+    lots:{ lot1:{id:'lot1',name:'Parkanlage 1',order:1,t:0}, lot2:{id:'lot2',name:'Parkanlage 2',order:2,t:0}, lot3:{id:'lot3',name:'Parkanlage 3',order:3,t:0}, [NO_LOT]:{id:NO_LOT,name:'?',order:0,t:0} },
     customers:{}, payments:{}, settings:{} };
 }
 function normalize(s){
@@ -630,6 +631,8 @@ function normalize(s){
     for(const k of ['lots','customers','payments','settings']) if(s[k] && typeof s[k] === 'object' && !Array.isArray(s[k])) out[k] = s[k];
   }
   for(const id in base.lots) if(!out.lots[id]) out.lots[id] = base.lots[id];
+  const q = out.lots[NO_LOT];          /* "?" always exists; a device with an older version may have renamed or removed it */
+  if(q.deleted || q.name !== '?') out.lots[NO_LOT] = Object.assign({}, base.lots[NO_LOT], { t: (q.t || 0) + 1 });
   return out;
 }
 function canon(o){
@@ -669,8 +672,9 @@ function commit(){
 }
 
 /* ---------- queries ---------- */
-const lotLabel = l => (!l.t && /^Parkanlage \d+$/.test(l.name)) ? t('lotN', l.order) : l.name;
-const lotsList = () => Object.values(state.lots).filter(l => !l.deleted).sort((a,b) => (a.order||0) - (b.order||0) || a.name.localeCompare(b.name));
+const lotLabel = l => l.id === NO_LOT ? t('lotNone') : (!l.t && /^Parkanlage \d+$/.test(l.name)) ? t('lotN', l.order) : l.name;
+const hasNoLot = () => Object.values(state.customers).some(c => !c.deleted && c.lot === NO_LOT);
+const lotsList = () => Object.values(state.lots).filter(l => !l.deleted && l.id !== NO_LOT).sort((a,b) => (a.order||0) - (b.order||0) || a.name.localeCompare(b.name));
 const lotName = id => (state.lots[id] && !state.lots[id].deleted) ? lotLabel(state.lots[id]) : '';
 function customersFor(lot, month){
   return Object.values(state.customers).filter(c =>
@@ -761,7 +765,7 @@ function waText(c, month, template){
   const owed = c.id ? openMonths(c, month) : [];
   if(!c.amount) text = text.replace(/\s+(?:de|por)\s+\{monto\}/gi, '');
   const map = { nombre: c.name, monto: c.amount ? fmtMoney(c.amount) : '', pagado: fmtMoney(got), falta: fmtMoney(Math.max(0, (c.amount || 0) - got)), mes: monthsInSpanish([month]), meses: monthsInSpanish(owed.length ? owed : [month]),
-    lugar: c.spot || '', patente: c.plate || '', estacionamiento: lotName(c.lot) };
+    lugar: c.spot || '', patente: c.plate || '', estacionamiento: c.lot === NO_LOT ? '' : lotName(c.lot) };
   return text.replace(/\{(\w+)\}/g, (m, k) => k in map ? map[k] : m).replace(/[ \t]{2,}/g, ' ').trim();
 }
 const waUrl = (number, text) => 'https://wa.me/' + number + (text ? '?text=' + encodeURIComponent(text) : '');
@@ -810,6 +814,7 @@ function setLang(l){
 
 function renderTabs(){
   const lots = lotsList();
+  if(hasNoLot()) lots.push(state.lots[NO_LOT]);          /* "?" gets its own tab as soon as someone is in it */
   if(ui.lot !== 'all' && !lots.some(l => l.id === ui.lot)) ui.lot = lots[0] ? lots[0].id : 'all';
   const cell = (id, name) => {
     const cs = customersFor(id, ui.month);
@@ -861,7 +866,7 @@ function rowHtml(c, s, p){
   const alias = (c.aliases && c.aliases.length && !(s === 'paid' && p && p.p)) ? `<span class="row-sub">${esc(t('paysVia', c.aliases.join(', ')))}</span>` : '';
   const note = (p && p.n) ? `<span class="row-note">📝 ${esc(p.n)}</span>` : '';
   const open = s !== 'paid' ? priorOpen(c, ui.month) : 0;
-  const badges = (ui.lot === 'all' ? `<span class="badge">${esc(lotName(c.lot))}</span>` : '') +
+  const badges = (ui.lot === 'all' ? `<span class="badge${c.lot === NO_LOT ? ' warn' : ''}">${esc(lotName(c.lot))}</span>` : '') +
     (open ? `<span class="badge warn">${esc(open === 1 ? t('open1') : t('openN', open))}</span>` : '');
   const btn = (act, cls, sym, label) => `<button type="button" class="ib ${cls}" data-act="${act}" aria-label="${esc(label)}" title="${esc(label)}">${sym}</button>`;
   let wa = '';
@@ -1001,7 +1006,7 @@ function monthOptions(selected, withNone){
   for(const m of Array.from(set).sort()) html += `<option value="${m}"${m === selected ? ' selected' : ''}>${esc(fmtMonthLong(m))}</option>`;
   return html;
 }
-const lotOptions = sel => lotsList().map(l => `<option value="${esc(l.id)}"${l.id === sel ? ' selected' : ''}>${esc(lotLabel(l))}</option>`).join('');
+const lotOptions = sel => lotsList().concat(state.lots[NO_LOT]).map(l => `<option value="${esc(l.id)}"${l.id === sel ? ' selected' : ''}>${esc(lotLabel(l))}</option>`).join('');
 
 /* one sheet for everything about a customer: this month's payment, earlier months, customer details */
 function openCustomer(cid){
@@ -1945,7 +1950,7 @@ function openImport(){
   }
   function drawReview(){
     const keep = body.scrollTop;
-    const lotOpts = sel => lotsList().map(l => `<option value="${esc(l.id)}"${l.id === sel ? ' selected' : ''}>${esc(lotLabel(l))}</option>`).join('');
+    const lotOpts = lotOptions;
     const custOpts = sel => `<option value="">${esc(t('stmtNoneCust'))}</option><option value="__new"${sel === '__new' ? ' selected' : ''}>${esc(t('dataCreate'))}</option>` + custs.map(c => `<option value="${esc(c.id)}"${c.id === sel ? ' selected' : ''}>${esc(c.name + ' · ' + lotName(c.lot) + (c.amount ? ' · ' + fmtMoney(c.amount) : ''))}</option>`).join('');
     const personCard = (r, i) => {
       const old = state.customers[r.cid];
