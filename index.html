@@ -456,14 +456,14 @@ const I18N = {
   useLocal:['Usar sin sincronizar (solo este dispositivo)','Use without sync (this device only)'],
   reload:['Recargar la app','Reload app'],
   stmtBtn:['Datos','Data'], stmtSub:['Mes mostrado: {0}','Month shown: {0}'],
-  stmtIntro:['Subí extractos del banco (PDF o capturas) o tus planillas de Excel con clientes y pagos. Claude lee los archivos y carga los datos por vos; antes de guardar ves una vista previa.','Add bank statements (PDF or screenshots) or your Excel lists of customers and payments. Claude reads the files and enters the data for you; you get a preview before anything is saved.'],
+  stmtIntro:['Subí extractos del banco (PDF o capturas) o tus planillas con clientes y pagos (Excel .xlsx, LibreOffice .ods o .csv). Claude lee los archivos y carga los datos por vos; antes de guardar ves una vista previa.','Add bank statements (PDF or screenshots) or your lists of customers and payments (Excel .xlsx, LibreOffice .ods or .csv). Claude reads the files and enters the data for you; you get a preview before anything is saved.'],
   stmtPick:['Elegir archivos','Choose files'],
   stmtDrop:['También podés arrastrar archivos acá o pegar una captura (Ctrl+V).','You can also drag files here or paste a screenshot (Ctrl+V).'],
   stmtPrivacy:['Los archivos y tu lista de clientes (nombres, patentes, pagadores, montos) se envían a Anthropic para el análisis. No se guardan en la app ni en GitHub.','The files and your customer list (names, plates, payers, amounts) are sent to Anthropic for the analysis. They are not stored in the app or on GitHub.'],
   stmtAnalyze:['Analizar con Claude','Analyse with Claude'],
   stmtWorking:['Claude está leyendo los archivos… Con planillas grandes puede tardar unos minutos.','Claude is reading the files… Large lists can take a few minutes.'],
  
-  stmtBadFile:['«{0}» no es un PDF, una imagen ni una planilla (.xlsx o .csv).','“{0}” is not a PDF, an image or a spreadsheet (.xlsx or .csv).'],
+  stmtBadFile:['«{0}» no es un PDF, una imagen ni una planilla (.xlsx, .ods o .csv).','“{0}” is not a PDF, an image or a spreadsheet (.xlsx, .ods or .csv).'],
   stmtTooBig:['«{0}» es demasiado grande (máx. 20 MB).','“{0}” is too large (max. 20 MB).'],
   stmtTooMany:['Como máximo 10 archivos por análisis.','At most 10 files per analysis.'],
   stmtImgFail:['No se pudo leer la imagen «{0}».','Could not read the image “{0}”.'],
@@ -483,7 +483,7 @@ const I18N = {
   dataApply:['Guardar ({0})','Save ({0})'], dataApplied:['Guardado: {0} clientes, {1} pagos.','Saved: {0} customers, {1} payments.'],
   dataProgress:['Recibiendo datos… {0} KB','Receiving data… {0} KB'],
   dataOldBrowser:['Este navegador no puede abrir archivos de Excel. Guardá la planilla como CSV o actualizá el navegador.','This browser cannot open Excel files. Save the sheet as CSV or update the browser.'],
-  dataXls:['«{0}» es un Excel antiguo (.xls). Abrilo en Excel y guardalo como .xlsx.','“{0}” is an old Excel file (.xls). Open it in Excel and save it as .xlsx.'],
+  dataXls:['«{0}» es un Excel antiguo (.xls). Abrilo y guardalo como .xlsx, .ods o .csv.','“{0}” is an old Excel file (.xls). Open it and save it as .xlsx, .ods or .csv.'],
   dataBadSheet:['No se pudo leer «{0}».','Could not read “{0}”.'],
   back:['Atrás','Back'], stop:['Cancelar análisis','Cancel analysis'], noDate:['sin fecha','no date'],
   aiTitle:['Claude (lectura de archivos)','Claude (reading files)'],
@@ -1226,18 +1226,56 @@ async function xlsxText(file){
   }
   return out;
 }
+/* All sheets of an .ods file (LibreOffice / OpenOffice) as tab-separated text. Also a zip of XML, with its own layout. */
+async function odsText(file){
+  const zip = unzip(await file.arrayBuffer());
+  if(!zip['content.xml']) throw new Error('ods');
+  const doc = new DOMParser().parseFromString(new TextDecoder().decode(await zip['content.xml']()), 'application/xml');
+  const all = (node, tag) => Array.from(node.getElementsByTagNameNS('*', tag));
+  const attr = (node, name) => { for(const a of Array.from(node.attributes)) if(a.localName === name) return a.value; return ''; };
+  const cellText = c => all(c, 'p').filter(n => !n.closest('annotation')).map(n => n.textContent).join(' ');
+  let out = '';
+  for(const table of all(doc, 'table')){
+    const lines = [];
+    for(const row of all(table, 'table-row')){
+      const cells = [];
+      let at = 0;
+      for(const c of Array.from(row.children)){
+        if(c.localName !== 'table-cell' && c.localName !== 'covered-table-cell') continue;
+        const span = Math.max(1, +attr(c, 'number-columns-repeated') || 1), type = attr(c, 'value-type');
+        let val;
+        if(type === 'date'){ const d = attr(c, 'date-value'); val = /T00:00(:00)?/.test(d) || d.length <= 10 ? d.slice(0, 10) : d.slice(0, 16).replace('T', ' '); }
+        else if(type === 'float' || type === 'currency' || type === 'percentage'){ const n = Number(attr(c, 'value')); val = isFinite(n) && attr(c, 'value') !== '' ? String(Math.round(n * 1e6) / 1e6) : cellText(c); }
+        else if(type === 'boolean') val = attr(c, 'boolean-value') === 'true' ? 'TRUE' : 'FALSE';
+        else val = cellText(c);
+        val = String(val).replace(/[\t\r\n]+/g, ' ').trim();
+        if(val) for(let i = 0; i < span && at + i <= 60; i++) cells[at + i] = val;
+        at += span;
+        if(at > 60) break;
+      }
+      const line = Array.from(cells, x => x ?? '').join('\t').replace(/\t+$/, '');
+      if(!line.trim()) continue;
+      const times = Math.min(200, Math.max(1, +attr(row, 'number-rows-repeated') || 1));
+      for(let i = 0; i < times && lines.length < 3000; i++) lines.push(line);
+      if(lines.length >= 3000) break;
+    }
+    if(lines.length) out += '\n### Sheet "' + attr(table, 'name') + '"\n' + lines.join('\n') + '\n';
+  }
+  return out;
+}
 async function plainText(file){
   const buf = await file.arrayBuffer();
   let s = new TextDecoder('utf-8').decode(buf);
   if(s.includes(String.fromCharCode(0xFFFD))) s = new TextDecoder('windows-1252').decode(buf);       /* CSV saved by an older Excel */
   return s.charCodeAt(0) === 0xFEFF ? s.slice(1) : s;
 }
-/* pdf | image | xlsx | text | xls (old Excel, not readable here) | '' */
+/* pdf | image | xlsx | ods | text | xls (old Excel, not readable here) | '' */
 function fileKind(f){
   const n = (f.name || '').toLowerCase(), ty = f.type || '';
   if(ty === 'application/pdf' || n.endsWith('.pdf')) return 'pdf';
   if(/\.(csv|tsv|txt)$/.test(n)) return 'text';
   if(/\.(xlsx|xlsm)$/.test(n) || ty === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') return 'xlsx';
+  if(n.endsWith('.ods') || ty === 'application/vnd.oasis.opendocument.spreadsheet') return 'ods';
   if(n.endsWith('.xls') || ty === 'application/vnd.ms-excel') return 'xls';
   if(/^image\//.test(ty)) return 'image';
   return ty.startsWith('text/') ? 'text' : '';
@@ -1248,9 +1286,9 @@ const AI_TEXT_LIMIT = 180000;
 async function fileBlocks(file){
   const kind = fileKind(file);
   if(kind === 'pdf') return [{ type:'document', source:{ type:'base64', media_type:'application/pdf', data: bytesToB64(new Uint8Array(await file.arrayBuffer())) } }];
-  if(kind === 'xlsx' || kind === 'text'){
+  if(kind === 'xlsx' || kind === 'ods' || kind === 'text'){
     let text;
-    try{ text = kind === 'xlsx' ? await xlsxText(file) : await plainText(file); }
+    try{ text = kind === 'xlsx' ? await xlsxText(file) : kind === 'ods' ? await odsText(file) : await plainText(file); }
     catch(e){ if(e instanceof AiError) throw e; throw new AiError(t('dataBadSheet', file.name)); }
     if(!text.trim()) throw new AiError(t('dataBadSheet', file.name));
     return [{ type:'text', text: 'Spreadsheet file "' + file.name + '" (tab-separated; numbers use "." as decimal separator)' + (text.length > AI_TEXT_LIMIT ? ' - only the first part is included' : '') + ':\n' + text.slice(0, AI_TEXT_LIMIT) }];
@@ -1559,7 +1597,7 @@ function openImport(){
       <p>${esc(t('stmtIntro'))}</p>
       ${ai ? '' : `<div class="box" id="imKey">${aiKeyFormHtml()}</div>`}
       <div class="drop" id="imDrop">
-        <input type="file" id="imFile" accept="application/pdf,image/*,.xlsx,.xlsm,.csv,.tsv,.txt,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv" multiple hidden>
+        <input type="file" id="imFile" accept="application/pdf,image/*,.xlsx,.xlsm,.ods,.csv,.tsv,.txt,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.oasis.opendocument.spreadsheet,text/csv" multiple hidden>
         <button type="button" class="btn" id="imPick">${esc(t('stmtPick'))}</button>
         <div class="hint">${esc(t('stmtDrop'))}</div>
       </div>

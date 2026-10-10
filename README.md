@@ -29,12 +29,12 @@ Die Oberfläche gibt es auf **Spanisch und Englisch**; umgeschaltet wird mit dem
 - Name passt nur ungefähr oder der Betrag ist zu niedrig → Vorschlag **uneindeutig**, Claudes Begründung wird als Notiz gespeichert
 - kein passender Kunde, Datum außerhalb des Monats oder schon einmal eingelesen → wird nicht eingetragen, lässt sich aber von Hand zuordnen
 
-**Bestehende Excel-Listen** (`.xlsx` oder `.csv`): Claude liest die Kunden heraus – Name, Kennzeichen, Stellplatz, Monatsbetrag, Telefon, „zahlt über“ – und, falls die Liste Monatsspalten hat, welche Monate bezahlt sind.
+**Bestehende Listen** (Excel `.xlsx`, LibreOffice `.ods` oder `.csv`): Claude liest die Kunden heraus – Name, Kennzeichen, Stellplatz, Monatsbetrag, Telefon, „zahlt über“ – und, falls die Liste Monatsspalten hat, welche Monate bezahlt sind.
 
 - Kunden, die es schon gibt (gleicher Name oder gleiches Kennzeichen), werden ergänzt statt doppelt angelegt
 - neue Kunden kommen in die Parkanlage, die das Blatt nennt, sonst in die gerade geöffnete; in der Vorschau änderbar
 - ein Monat, der in der App schon als bezahlt steht, wird nicht überschrieben
-- alte `.xls`-Dateien bitte in Excel als `.xlsx` speichern
+- alte `.xls`-Dateien bitte als `.xlsx`, `.ods` oder `.csv` speichern
 
 Dafür braucht die App einen eigenen **Anthropic-API-Schlüssel** (https://platform.claude.com/settings/keys, Guthaben unter „Billing“). Die Abrechnung läuft nach Verbrauch über das Anthropic-Konto.
 
