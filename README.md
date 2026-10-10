@@ -1,6 +1,6 @@
 # Parkinglot Manager
 
-Zahlungsübersicht für die drei Parkanlagen: pro Monat sieht man, wer **bezahlt** (Pagado / Paid), **nicht bezahlt** (No pagado / Unpaid) oder **uneindeutig** (Dudoso / Unclear) ist. Läuft als eine einzige HTML-Seite im Browser – auf dem PC und auf dem iPhone.
+Zahlungsübersicht für die drei Parkanlagen: pro Monat sieht man, wer **bezahlt** (Pagado / Paid), **teilweise bezahlt** (Parcial / Partial), **nicht bezahlt** (No pagado / Unpaid) oder **uneindeutig** (Dudoso / Unclear) ist. Läuft als eine einzige HTML-Seite im Browser – auf dem PC und auf dem iPhone.
 
 Die Oberfläche gibt es auf **Spanisch und Englisch**; umgeschaltet wird mit dem Knopf **ES | EN** oben rechts. Die Wahl wird pro Gerät gemerkt.
 
@@ -9,9 +9,10 @@ Die Oberfläche gibt es auf **Spanisch und Englisch**; umgeschaltet wird mit dem
 ## Was die App kann
 
 - Parkanlage per Klick wählen (oder „Alle“), Namen der Anlagen frei änderbar
-- Monatsansicht mit den drei Listen, Blättern zu früheren und späteren Monaten
+- Monatsansicht mit den vier Listen, Blättern zu früheren und späteren Monaten
+- **Teilzahlungen:** Bei jedem Kunden steht, wie viel vom Monatsbetrag schon da ist („$ 20.000 de $ 45.000 · faltan $ 25.000“ mit Balken). Im Kundenfenster trägt man unter „Monto pagado“ ein, was bisher insgesamt gezahlt wurde – liegt es unter dem Monatsbetrag, wird der Monat von selbst „Parcial“, ab dem vollen Betrag „Pagado“. Ein teilweise bezahlter Monat zählt weiter als offen
 - Ein Tipp auf ✓ / ? / ✕ ändert den Status, mit „Deshacer / Undo“ zum Zurücknehmen
-- **Zahlungserinnerung per WhatsApp:** Bei jedem offenen Kunden mit Telefonnummer öffnet ein Knopf direkt dessen WhatsApp-Chat mit einem fertigen spanischen Text (Name, Betrag, offene Monate). Der Text ist in den Einstellungen anpassbar; die App merkt sich den Tag der letzten Erinnerung
+- **Zahlungserinnerung per WhatsApp:** Bei jedem offenen Kunden mit Telefonnummer öffnet ein Knopf direkt dessen WhatsApp-Chat mit einem fertigen spanischen Text (Name, Betrag, offene Monate; bei einer Teilzahlung, was eingegangen ist und was noch fehlt). Der Text ist in den Einstellungen anpassbar; die App merkt sich den Tag der letzten Erinnerung
 - **Kennzeichen** (Patente / Licence plate) pro Kunde: steht als Schild direkt neben dem Namen, ist durchsuchbar (auch ohne Leerzeichen) und sortierbar; mehrere Kennzeichen mit Komma trennen
 - Pro Kunde hinterlegbar, **über welche anderen Namen er zahlt** – die Suche findet ihn dann auch über den Namen auf dem Kontoauszug
 - **Ein Klick auf den Kunden** öffnet ein einziges Fenster für alles: Zahlung des Monats (Status, Betrag, Datum, „überwiesen von“, Notiz), Status früherer Monate und sämtliche Kundendaten – gespeichert wird mit einem Knopf
@@ -26,11 +27,12 @@ Die Oberfläche gibt es auf **Spanisch und Englisch**; umgeschaltet wird mit dem
 **Kontoauszüge** (PDF oder Screenshots): Claude liest die Zahlungseingänge und ordnet sie den Kunden zu.
 
 - Name passt eindeutig und der Betrag reicht → Vorschlag **bezahlt**
-- Name passt nur ungefähr oder der Betrag ist zu niedrig → Vorschlag **uneindeutig**, Claudes Begründung wird als Notiz gespeichert
+- Name passt eindeutig, aber der Betrag ist niedriger als der Monatsbetrag → Vorschlag **teilweise bezahlt**; kommt später die zweite Rate, wird sie dazugezählt, und ab dem vollen Betrag steht der Monat auf bezahlt
+- Name passt nur ungefähr → Vorschlag **uneindeutig**, Claudes Begründung wird als Notiz gespeichert
 - kein passender Kunde, Datum außerhalb des Monats oder schon einmal eingelesen → wird nicht eingetragen, lässt sich aber von Hand zuordnen
 - zu einem Eingang ohne passenden Kunden lässt sich in der Vorschau direkt ein **neuer Kunde anlegen** (Name, Parkanlage, Monatsbetrag, optional Kennzeichen und Telefon); ohne Namen bekommt er einen Platzhalternamen zum späteren Ergänzen
 
-**Bestehende Listen** (Excel `.xlsx`, LibreOffice `.ods` oder `.csv`): Claude liest die Kunden heraus – Name, Kennzeichen, Stellplatz, Monatsbetrag, Telefon, „zahlt über“ – und, falls die Liste Monatsspalten hat, welche Monate bezahlt sind.
+**Bestehende Listen** (Excel `.xlsx`, LibreOffice `.ods` oder `.csv`): Claude liest die Kunden heraus – Name, Kennzeichen, Stellplatz, Monatsbetrag, Telefon, „zahlt über“ – und, falls die Liste Monatsspalten hat, welche Monate bezahlt sind (steht dort ein Betrag unter dem Monatsbetrag, wird der Monat als teilweise bezahlt eingetragen).
 
 - Kunden, die es schon gibt (gleicher Name oder gleiches Kennzeichen), werden ergänzt statt doppelt angelegt
 - neue Kunden kommen in die Parkanlage, die das Blatt nennt, sonst in die gerade geöffnete; in der Vorschau änderbar
