@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Angel Parkinglot</title>
+<title>Parkinglot Manager</title>
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com https://api.anthropic.com; manifest-src 'self'; base-uri 'none'; form-action 'none'">
@@ -172,12 +172,16 @@ a.btn{display:inline-flex;align-items:center;gap:8px;text-decoration:none}
   .lists:not(.searching) .col:not(.active){display:none}
 }
 @media (max-width:430px){
-  .top h1{font-size:16px;gap:7px}
+  .top h1{font-size:15.5px;gap:7px}
   .top-in{gap:6px}
   .pill{font-size:12px;padding:6px 9px}
   .pill.ok,.pill.local,.pill.pending,.pill.busy{padding:9px}
   .pill.ok .txt,.pill.local .txt,.pill.pending .txt,.pill.busy .txt{display:none}
   .lang button{padding:0 8px}
+}
+@media (max-width:350px){
+  .top .logo{display:none}
+  .top h1{font-size:14px}
 }
 
 /* dialogs */
@@ -263,7 +267,7 @@ code{background:var(--soft);border-radius:5px;padding:1px 5px;font-size:13.5px;o
 <header class="top">
   <div class="wrap">
     <div class="top-in">
-      <h1><span class="logo">P</span><span>Angel Parkinglot</span></h1>
+      <h1><span class="logo">P</span><span>Parkinglot Manager</span></h1>
       <button id="syncPill" class="pill" type="button"></button>
       <div id="langSwitch" class="lang" role="group" aria-label="Idioma / Language">
         <button type="button" data-lang="es" title="Español">ES</button>
@@ -306,7 +310,7 @@ code{background:var(--soft);border-radius:5px;padding:1px 5px;font-size:13.5px;o
 <script>
 'use strict';
 /* =====================================================================
-   Angel Parkinglot – payment overview for parking lots
+   Parkinglot Manager – payment overview for parking lots
    A single HTML file. Data lives in the browser and (once set up) is
    stored as data.json in a private GitHub repository so that several
    devices see the same state. Interface languages: Spanish and English.
@@ -1577,7 +1581,7 @@ function openSettings(focusSync){
       if($('#acNew', el)) $('#acNew', el).onclick = async () => { if(await confirmBox(t('acNewTitle'), t('acNewText'), t('acNew'))) publish(newCode()); };
       if($('#acCopy', el)) $('#acCopy', el).onclick = () => copyText(showCode(accessCode()), 'codeCopied');
       if($('#acLink', el)) $('#acLink', el).onclick = () => copyText(shareLink(), 'linkCopied');
-      if($('#acShare', el)) $('#acShare', el).onclick = () => navigator.share({ title:'Angel Parkinglot', url: shareLink() }).catch(() => {});
+      if($('#acShare', el)) $('#acShare', el).onclick = () => navigator.share({ title:'Parkinglot Manager', url: shareLink() }).catch(() => {});
     }else{
       $('#connect', el).onclick = async () => {
         const repo = $('#sRepo', el).value.trim().replace(/^https?:\/\/github\.com\//i,'').replace(/\.git$/,'').replace(/\/+$/,'');

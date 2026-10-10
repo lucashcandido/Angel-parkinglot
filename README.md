@@ -1,4 +1,4 @@
-# Angel Parkinglot
+# Parkinglot Manager
 
 Zahlungsübersicht für die drei Parkanlagen: pro Monat sieht man, wer **bezahlt** (Pagado / Paid), **nicht bezahlt** (No pagado / Unpaid) oder **uneindeutig** (Dudoso / Unclear) ist. Läuft als eine einzige HTML-Seite im Browser – auf dem PC und auf dem iPhone.
 
