@@ -1381,7 +1381,7 @@ ${lots.join('\n') || '(none)'}
 Existing customers (number | name | plate | pays via | parking lot | monthly amount in ARS | status in ${month}):
 ${people.join('\n') || '(none yet)'}
 
-Report the result by calling report_data.`;
+Report the result by calling the report_data tool exactly once, with everything in that one call. Do not answer in plain text.`;
 }
 async function aiError(res){
   let m = ''; try{ m = ((await res.json()).error || {}).message || ''; }catch(e){}
@@ -1420,49 +1420,75 @@ function cleanAnswer(input, custs){
   }
   return { items, people };
 }
+/* Models differ in what they accept. What a model refused once is remembered for the rest of the session. */
+const aiLimits = {};
+/* Reads Claude's streamed answer: the arguments of every report_data call, plus any plain text as a fallback. */
+async function readAiStream(res, onProgress){
+  const calls = {}, reader = res.body.getReader(), dec = new TextDecoder();
+  let buf = '', text = '', stop = '', size = 0;
+  for(;;){
+    const { done, value } = await reader.read();
+    if(done) break;
+    buf += dec.decode(value, { stream:true });
+    let nl;
+    while((nl = buf.indexOf('\n')) >= 0){
+      const line = buf.slice(0, nl).trim();
+      buf = buf.slice(nl + 1);
+      if(!line.startsWith('data:')) continue;
+      let ev; try{ ev = JSON.parse(line.slice(5)); }catch(e){ continue; }
+      if(ev.type === 'content_block_start' && ev.content_block && ev.content_block.type === 'tool_use' && ev.content_block.name === AI_TOOL.name) calls[ev.index] = '';
+      else if(ev.type === 'content_block_delta' && ev.delta){
+        if(ev.delta.type === 'input_json_delta' && ev.index in calls){ calls[ev.index] += ev.delta.partial_json || ''; size += (ev.delta.partial_json || '').length; if(onProgress) onProgress(size); }
+        else if(ev.delta.type === 'text_delta') text += ev.delta.text || '';
+      }
+      else if(ev.type === 'message_delta' && ev.delta && ev.delta.stop_reason) stop = ev.delta.stop_reason;
+      else if(ev.type === 'error') throw new AiError(/overloaded/i.test((ev.error || {}).type || '') ? t('eAiBusy') : t('eAiHttp', '') + ': ' + ((ev.error || {}).message || ''));
+    }
+  }
+  if(stop === 'max_tokens') throw new AiError(t('eAiCut'));
+  const merged = { transfers:[], customers:[] };
+  let any = false;
+  const take = raw => {
+    let o; try{ o = JSON.parse(raw); }catch(e){ return; }
+    if(!o || typeof o !== 'object') return;
+    any = true;
+    if(Array.isArray(o.transfers)) merged.transfers.push(...o.transfers);
+    if(Array.isArray(o.customers)) merged.customers.push(...o.customers);
+  };
+  for(const k of Object.keys(calls)) take(calls[k]);
+  if(!any){                                            /* the model answered in text instead of calling the tool */
+    const a = text.indexOf('{'), b = text.lastIndexOf('}');
+    if(a >= 0 && b > a) take(text.slice(a, b + 1));
+  }
+  if(!any) throw new AiError(t('eAiFormat'));
+  return merged;
+}
 /* Sends the files to Claude and returns { items, people }. The answer is streamed, so long lists do not time out. */
 async function analyseFiles(files, custs, month, signal, onProgress){
   const content = [];
   for(const f of files) content.push(...await fileBlocks(f));
   content.push({ type:'text', text: aiPrompt(custs, month) });
   const model = await pickAiModel();
-  const ask = max => fetch(AI_URL + '/messages', { method:'POST', signal,
+  const lim = aiLimits[model] || (aiLimits[model] = { max: 32000, force: true });
+  const ask = () => fetch(AI_URL + '/messages', { method:'POST', signal,
     headers: Object.assign({ 'content-type':'application/json' }, aiHeaders()),
-    body: JSON.stringify({ model, max_tokens: max, stream: true, tools:[AI_TOOL], tool_choice:{ type:'tool', name: AI_TOOL.name }, messages:[{ role:'user', content }] }) });
-  let res, json = '', stop = '';
+    body: JSON.stringify({ model, max_tokens: lim.max, stream: true, tools:[AI_TOOL], tool_choice: lim.force ? { type:'tool', name: AI_TOOL.name } : { type:'auto' }, messages:[{ role:'user', content }] }) });
   try{
-    res = await ask(32000);
-    if(!res.ok){
+    let res;
+    for(let tries = 0; ; tries++){
+      res = await ask();
+      if(res.ok) break;
       const err = await aiError(res);
-      if(err.status !== 400 || !/max_tokens/i.test(err.detail || '')) throw err;
-      res = await ask(8000);                                   /* a model with a smaller answer limit */
-      if(!res.ok) throw await aiError(res);
+      if(err.status !== 400 || tries >= 2) throw err;
+      if(lim.force && /tool_choice/i.test(err.detail || '')) lim.force = false;          /* newer models decide themselves when to call a tool */
+      else if(lim.max > 8000 && /max_tokens/i.test(err.detail || '')) lim.max = 8000;     /* a model with a smaller answer limit */
+      else throw err;
     }
-    const reader = res.body.getReader(), dec = new TextDecoder();
-    let buf = '';
-    for(;;){
-      const { done, value } = await reader.read();
-      if(done) break;
-      buf += dec.decode(value, { stream:true });
-      let nl;
-      while((nl = buf.indexOf('\n')) >= 0){
-        const line = buf.slice(0, nl).trim();
-        buf = buf.slice(nl + 1);
-        if(!line.startsWith('data:')) continue;
-        let ev; try{ ev = JSON.parse(line.slice(5)); }catch(e){ continue; }
-        if(ev.type === 'content_block_delta' && ev.delta && ev.delta.type === 'input_json_delta'){ json += ev.delta.partial_json || ''; if(onProgress) onProgress(json.length); }
-        else if(ev.type === 'message_delta' && ev.delta && ev.delta.stop_reason) stop = ev.delta.stop_reason;
-        else if(ev.type === 'error') throw new AiError(/overloaded/i.test((ev.error || {}).type || '') ? t('eAiBusy') : t('eAiHttp', '') + ': ' + ((ev.error || {}).message || ''));
-      }
-    }
+    return cleanAnswer(await readAiStream(res, onProgress), custs);
   }catch(e){
     if(e instanceof AiError || (e && e.name === 'AbortError')) throw e;
     throw new AiError(t('eAiNet'));
   }
-  if(stop === 'max_tokens') throw new AiError(t('eAiCut'));
-  let input;
-  try{ input = JSON.parse(json); }catch(e){ throw new AiError(t('eAiFormat')); }
-  return cleanAnswer(input, custs);
 }
 
 function importedKeys(month){
