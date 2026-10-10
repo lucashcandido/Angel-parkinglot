@@ -52,7 +52,10 @@ h1,h2,h3,p{margin:0}
 .top h1 span:last-child{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .logo{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:8px;background:var(--accent);color:var(--on-accent);font-weight:800;font-size:16px;flex:none}
 .pill{border:1px solid var(--line);background:var(--soft);border-radius:999px;padding:6px 11px;font-size:13px;display:flex;align-items:center;gap:6px;white-space:nowrap;flex:none}
-.pill .dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.pill .dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none}
+.pill .txt{display:grid}
+.pill .txt>*{grid-area:1/1}
+.pill .ghost{visibility:hidden}
 .pill.ok .dot{background:var(--paid)} .pill.error .dot{background:var(--unpaid)}
 .pill.pending .dot,.pill.offline .dot,.pill.local .dot{background:var(--unclear)}
 .pill.busy .dot{background:var(--accent);animation:pulse 1s infinite}
@@ -172,8 +175,8 @@ a.btn{display:inline-flex;align-items:center;gap:8px;text-decoration:none}
   .top h1{font-size:16px;gap:7px}
   .top-in{gap:6px}
   .pill{font-size:12px;padding:6px 9px}
-  .pill.ok,.pill.local{padding:9px}
-  .pill.ok .txt,.pill.local .txt{display:none}
+  .pill.ok,.pill.local,.pill.pending,.pill.busy{padding:9px}
+  .pill.ok .txt,.pill.local .txt,.pill.pending .txt,.pill.busy .txt{display:none}
   .lang button{padding:0 8px}
 }
 
@@ -218,7 +221,7 @@ button.chip.paid{border-color:var(--paid)} button.chip.unpaid{border-color:var(-
 .files li{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:10px;padding:2px 2px 2px 12px;margin-bottom:6px;font-size:14.5px}
 .files li span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .files small{color:var(--muted)}
-.busy{text-align:center;padding:36px 8px}
+.im-busy{text-align:center;padding:36px 8px}
 .spin{display:inline-block;width:34px;height:34px;border:3px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:spin .9s linear infinite;margin-bottom:12px}
 @keyframes spin{to{transform:rotate(360deg)}}
 .tx{border:1px solid var(--line);border-left:5px solid var(--muted);border-radius:12px;padding:10px 12px 0;margin-bottom:10px}
@@ -864,7 +867,8 @@ const SYNC_KEY = { local:'sLocal', ok:'sOk', busy:'sBusy', pending:'sPending', o
 function renderSync(){
   const el = $('#syncPill'), label = t(SYNC_KEY[sync.status]);
   el.className = 'pill ' + sync.status;
-  el.innerHTML = `<span class="dot"></span><span class="txt">${esc(label)}</span>`;
+  const ghosts = ['ok','pending','busy'].map(k => `<span class="ghost" aria-hidden="true">${esc(t(SYNC_KEY[k]))}</span>`).join('');     /* reserve the widest of the three */
+  el.innerHTML = `<span class="dot"></span><span class="txt"><span>${esc(label)}</span>${ghosts}</span>`;
   el.setAttribute('aria-label', label);
   el.title = sync.status === 'ok' && sync.last ? t('lastSync', fmtTime(sync.last)) : (sync.msg || label);
 }
@@ -1343,7 +1347,7 @@ function openImport(){
     $('#imGo', foot).onclick = run;
   }
   function drawBusy(){
-    body.innerHTML = `<div class="busy"><span class="spin" aria-hidden="true"></span><p>${esc(t('stmtWorking'))}</p></div>`;
+    body.innerHTML = `<div class="im-busy"><span class="spin" aria-hidden="true"></span><p>${esc(t('stmtWorking'))}</p></div>`;
     foot.innerHTML = `<button type="button" class="btn grow" id="imStop">${esc(t('stop'))}</button>`;
     $('#imStop', foot).onclick = () => { if(ctl) ctl.abort(); step = 'pick'; draw(); };
   }
