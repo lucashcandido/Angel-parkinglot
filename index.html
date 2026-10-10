@@ -150,6 +150,11 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 .ib.q{color:var(--unclear);border-color:var(--unclear);background:var(--unclear-soft)}
 .ib.no{color:var(--unpaid);border-color:var(--unpaid);background:var(--unpaid-soft)}
 .ib.back{color:var(--muted)}
+.ib.wa{color:#17914e;text-decoration:none}
+.ib.wa.bad{color:var(--muted);border-style:dashed}
+a.btn{display:inline-flex;align-items:center;gap:8px;text-decoration:none}
+.btn.wa{color:#17914e;border-color:#17914e}
+@media (prefers-color-scheme: dark){.ib.wa,.btn.wa{color:#4ade80}.btn.wa{border-color:#4ade80}}
 .empty{padding:18px 14px;color:var(--muted);font-size:14px}
 .welcome{padding:22px 18px;text-align:center}
 .welcome p{color:var(--muted);margin:6px 0 14px}
@@ -364,7 +369,18 @@ const I18N = {
   aliases:['Paga a través de (otros nombres en el extracto bancario)','Pays via (other names on the bank statement)'],
   aliasesPh:['p. ej. María Gómez, Taller Sur SRL','e.g. María Gómez, Taller Sur SRL'],
   aliasesHint:['Separar varios nombres con coma. La búsqueda también encuentra al cliente por estos nombres.','Separate several names with commas. Search also finds the customer by these names.'],
-  phone:['Teléfono','Phone'], note:['Nota','Note'], paysFrom:['Paga desde','Pays from'], lastMonth:['Último mes','Last month'], ongoing:['– sigue vigente –','– ongoing –'],
+  phone:['Teléfono (WhatsApp)','Phone (WhatsApp)'], phoneHint:['Con código de área, p. ej. 11 5555-0000','With area code, e.g. 11 5555-0000'],
+  waBtn:['Recordar por WhatsApp','Remind via WhatsApp'], waOpen:['Abrir WhatsApp','Open WhatsApp'],
+  waBad:['Revisá el teléfono de {0}: falta el código de área o el número está incompleto.','Check the phone number of {0}: the area code is missing or the number is incomplete.'],
+  waNoPhone:['Cargá primero el teléfono.','Enter the phone number first.'],
+  reminded:['recordado el {0}','reminded on {0}'],
+  waTextLbl:['Mensaje de recordatorio (se envía siempre en español)','Reminder message (always sent in Spanish)'],
+  waHint:['Se completan solos: {nombre} {monto} {mes} {meses} {lugar} {patente} {estacionamiento}','Filled in automatically: {nombre} {monto} {mes} {meses} {lugar} {patente} {estacionamiento}'],
+  waPreview:['Vista previa','Preview'],
+  waArea:['Código de área por defecto','Default area code'],
+  waAreaHint:['Se usa cuando un teléfono está cargado sin código de área (p. ej. 11).','Used when a phone number was entered without an area code (e.g. 11).'],
+  waReset:['Restablecer el texto','Reset the text'],
+  note:['Nota','Note'], paysFrom:['Paga desde','Pays from'], lastMonth:['Último mes','Last month'], ongoing:['– sigue vigente –','– ongoing –'],
   errName:['Ingresá un nombre.','Please enter a name.'], errUntil:['«Último mes» es anterior a «Paga desde».','“Last month” is before “Pays from”.'],
   delTitle:['¿Eliminar cliente?','Delete customer?'],
   delText:['{0} se quitará de todos los meses. Si el cliente solo deja de alquilar, es mejor cargar un «Último mes»: así se conserva el historial.','{0} will be removed from all months. If the customer is simply leaving, set a “Last month” instead – that keeps the history.'],
@@ -616,12 +632,73 @@ function setPayment(cid, month, rec){                 /* leaves the record untou
   if(rec.n) clean.n = rec.n;
   if(rec.x && rec.x.length) clean.x = rec.x;      /* transfers already imported from a statement */
   const key = payKey(cid, month), old = state.payments[key];
+  if(old && old.r && clean.s !== 'paid') clean.r = old.r;        /* the reminder date stays until it is paid */
   const bare = o => canon(Object.assign({}, o, { t: undefined }));
   if(old ? bare(old) === bare(clean) : (clean.s === 'unpaid' && Object.keys(clean).length === 1)) return false;
   clean.t = Date.now();
   state.payments[key] = clean;
   return true;
 }
+/* ---------- WhatsApp reminder ----------
+   Opens the chat of the customer's number with a prepared Spanish text (wa.me link). */
+const WA_DEFAULT = 'Hola {nombre}, ¿cómo estás? Te escribimos del estacionamiento para recordarte que está pendiente el pago mensual de {monto} correspondiente a {meses}. Si ya lo hiciste, por favor envianos el comprobante. ¡Muchas gracias!';
+const WA_ICON = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 11.6a8.5 8.5 0 0 1-12.6 7.4L3.5 20.5l1.5-4.3A8.5 8.5 0 1 1 20.5 11.6z"/><path d="M9.2 8.6c-.3 2.6 3.2 6 5.9 5.9"/></svg>';
+const waSettings = () => { const w = (state.settings && state.settings.wa) || {}; return { text: w.text || '', area: w.area || '' }; };
+/* Turns a number as people write it in Argentina into what WhatsApp expects: 54 9 + area code + number, without 0 and 15.
+   Returns '' when it cannot be completed (no area code). Numbers of other countries need a leading +. */
+function waNumber(phone, area){
+  const raw = String(phone ?? '').trim();
+  let d = raw.replace(/\D/g,'');
+  if(!d) return '';
+  const intl = raw.startsWith('+') || d.startsWith('00');
+  if(d.startsWith('00')) d = d.slice(2);
+  if(intl && !d.startsWith('54')) return d.length >= 8 ? d : '';
+  if(d.startsWith('54') && (intl || d.length >= 12)) d = d.slice(2);
+  if(d.startsWith('9') && d.length === 11) d = d.slice(1);
+  d = d.replace(/^0+/, '');
+  if(d.length === 12) for(const a of [2, 3, 4]) if(d.substr(a, 2) === '15'){ d = d.slice(0, a) + d.slice(a + 2); break; }
+  if(d.length === 10 && d.startsWith('15')) d = d.slice(2);
+  if(d.length < 10){
+    if(d.startsWith('15') && d.length >= 8) d = d.slice(2);
+    const ac = String(area ?? '').replace(/\D/g,'').replace(/^0+/, '');
+    if(!ac || ac.length + d.length !== 10) return '';
+    d = ac + d;
+  }
+  return d.length === 10 ? '549' + d : '';
+}
+/* the months a customer still owes, up to the month shown */
+function openMonths(c, month){
+  const out = [];
+  for(let i = 12; i >= 0; i--){
+    const m = addMonth(month, -i);
+    if(c.from && m < c.from) continue;
+    if(statusOf(c.id, m) !== 'paid') out.push(m);
+  }
+  return out;
+}
+function monthsInSpanish(list){
+  const name = m => { const [y, mo] = m.split('-').map(Number); return new Intl.DateTimeFormat('es-AR', { month:'long' }).format(new Date(y, mo - 1, 1)); };
+  const join = a => a.length > 1 ? a.slice(0, -1).join(', ') + ' y ' + a[a.length - 1] : a[0] || '';
+  const years = new Set(list.map(m => m.slice(0, 4)));
+  return years.size === 1 ? join(list.map(name)) + ' de ' + list[0].slice(0, 4) : join(list.map(m => name(m) + ' de ' + m.slice(0, 4)));
+}
+function waText(c, month, template){
+  let text = template || waSettings().text || WA_DEFAULT;
+  const owed = c.id ? openMonths(c, month) : [];
+  if(!c.amount) text = text.replace(/\s+(?:de|por)\s+\{monto\}/gi, '');
+  const map = { nombre: c.name, monto: c.amount ? fmtMoney(c.amount) : '', mes: monthsInSpanish([month]), meses: monthsInSpanish(owed.length ? owed : [month]),
+    lugar: c.spot || '', patente: c.plate || '', estacionamiento: lotName(c.lot) };
+  return text.replace(/\{(\w+)\}/g, (m, k) => k in map ? map[k] : m).replace(/[ \t]{2,}/g, ' ').trim();
+}
+const waUrl = (number, text) => 'https://wa.me/' + number + (text ? '?text=' + encodeURIComponent(text) : '');
+/* remembers the day of the last reminder, so the other person sees it too */
+function markReminded(cid, month){
+  const key = payKey(cid, month), old = state.payments[key] || { s:'unpaid' };
+  if(old.s === 'paid' || old.r === todayISO()) return;
+  state.payments[key] = Object.assign({}, old, { r: todayISO(), t: Date.now() });
+  commit();
+}
+
 function quickStatus(cid, s){
   const c = state.customers[cid]; if(!c) return;
   const month = ui.month, key = payKey(cid, month);
@@ -700,6 +777,7 @@ function rowHtml(c, s, p){
   }else{
     if(c.amount) bits.push(esc(fmtMoney(c.amount)));
     if(p && p.p) bits.push(esc(t('maybeFrom', p.p)));
+    if(p && p.r) bits.push(esc(t('reminded', fmtDate(p.r))));
   }
   const alias = (c.aliases && c.aliases.length && !(s === 'paid' && p && p.p)) ? `<span class="row-sub">${esc(t('paysVia', c.aliases.join(', ')))}</span>` : '';
   const note = (p && p.n) ? `<span class="row-note">📝 ${esc(p.n)}</span>` : '';
@@ -707,6 +785,12 @@ function rowHtml(c, s, p){
   const badges = (ui.lot === 'all' ? `<span class="badge">${esc(lotName(c.lot))}</span>` : '') +
     (open ? `<span class="badge warn">${esc(open === 1 ? t('open1') : t('openN', open))}</span>` : '');
   const btn = (act, cls, sym, label) => `<button type="button" class="ib ${cls}" data-act="${act}" aria-label="${esc(label)}" title="${esc(label)}">${sym}</button>`;
+  let wa = '';
+  if(s !== 'paid' && c.phone){
+    const num = waNumber(c.phone, waSettings().area);
+    wa = num ? `<a class="ib wa" data-act="wa" href="${esc(waUrl(num, waText(c, ui.month)))}" target="_blank" rel="noopener" aria-label="${esc(t('waBtn'))}" title="${esc(t('waBtn'))}">${WA_ICON}</a>`
+             : `<button type="button" class="ib wa bad" data-act="wa-bad" aria-label="${esc(t('waBtn'))}" title="${esc(t('waBtn'))}">${WA_ICON}</button>`;
+  }
   let acts = '';
   if(s === 'unpaid') acts = btn('paid','ok','✓',t('actPaid')) + btn('unclear','q','?',t('actUnclear'));
   else if(s === 'unclear') acts = btn('paid','ok','✓',t('actPaid')) + btn('unpaid','no','✕',t('actUnpaid'));
@@ -716,7 +800,7 @@ function rowHtml(c, s, p){
       <span class="row-name">${esc(c.name)}${platesHtml(c)}${badges}</span>
       <span class="row-sub">${bits.join(' · ')}</span>${alias}${note}
     </button>
-    <div class="row-actions">${acts}</div></li>`;
+    <div class="row-actions">${wa}${acts}</div></li>`;
 }
 
 function renderLists(){
@@ -887,7 +971,8 @@ function openCustomer(cid){
       <div class="field"><label for="cz">${esc(t('aliases'))}</label>
         <input id="cz" type="text" autocomplete="off" value="${esc(c ? (c.aliases || []).join(', ') : '')}" placeholder="${esc(t('aliasesPh'))}">
         <div class="hint">${esc(t('aliasesHint'))}</div></div>
-      <div class="field"><label for="cp">${esc(t('phone'))}</label><input id="cp" type="tel" autocomplete="off" value="${esc(c ? c.phone || '' : '')}"></div>
+      <div class="field"><label for="cp">${esc(t('phone'))}</label><input id="cp" type="tel" autocomplete="off" value="${esc(c ? c.phone || '' : '')}"><div class="hint">${esc(t('phoneHint'))}</div></div>
+      ${c ? `<p style="margin:-2px 0 12px"><a class="btn small wa" id="waGo" href="#" target="_blank" rel="noopener">${WA_ICON}<span>${esc(t(s !== 'paid' ? 'waBtn' : 'waOpen'))}</span></a></p><div id="waMsg"></div>` : ''}
       <div class="field"><label for="co">${esc(t('note'))}</label><textarea id="co">${esc(c ? c.note || '' : '')}</textarea></div>
       <div class="two">
         <div class="field"><label for="cf">${esc(t('paysFrom'))}</label><select id="cf">${monthOptions(c ? c.from : month, false)}</select></div>
@@ -899,6 +984,13 @@ function openCustomer(cid){
     </form>`, 'fixed');
   const f = id => $('#' + id, el);
   if(!c) setTimeout(() => f('cn').focus(), 50);
+  if(c) f('waGo').addEventListener('click', e => {
+    const num = waNumber(f('cp').value, waSettings().area), owes = statusOf(cid, month) !== 'paid';
+    if(!num){ e.preventDefault(); f('waMsg').innerHTML = `<div class="msg err">${esc(f('cp').value.trim() ? t('waBad', c.name) : t('waNoPhone'))}</div>`; return; }
+    f('waMsg').innerHTML = '';
+    e.currentTarget.href = waUrl(num, owes ? waText(c, month) : '');
+    if(owes) setTimeout(() => markReminded(cid, month), 400);
+  });
 
   let paTouched = false;
   const knownNames = () => [f('cn').value.trim()].concat(splitNames(f('cz').value));
@@ -1379,6 +1471,14 @@ function openSettings(focusSync){
         `}
       </div>
 
+      <div class="sec" id="waSec">
+        <h3>WhatsApp</h3>
+        <div class="field"><label for="waText">${esc(t('waTextLbl'))}</label><textarea id="waText" style="min-height:150px">${esc(waSettings().text || WA_DEFAULT)}</textarea><div class="hint">${esc(t('waHint'))}</div></div>
+        <div class="msg" id="waPrev"></div>
+        <div class="field"><label for="waArea">${esc(t('waArea'))}</label><input id="waArea" type="text" inputmode="numeric" autocomplete="off" value="${esc(waSettings().area)}" placeholder="11"><div class="hint">${esc(t('waAreaHint'))}</div></div>
+        <button type="button" class="btn small" id="waReset">${esc(t('waReset'))}</button>
+      </div>
+
       <div class="sec" id="aiSec">
         <h3>${esc(t('aiTitle'))}</h3>
         ${ai ? `<p>${esc(t('aiHasKey'))}</p>
@@ -1416,6 +1516,17 @@ function openSettings(focusSync){
       state.lots[id] = { id, name: t('lotN', lotsList().length + 1), order, t: Date.now() }; commit(); draw();
       const inp = $(`[data-lotname="${id}"]`, el); if(inp){ inp.focus(); inp.select(); }
     };
+    const waPreview = () => {
+      const sample = customersFor(ui.lot, ui.month).find(c => statusOf(c.id, ui.month) !== 'paid') || { name:'Juan Pérez', amount:45000, spot:'12', plate:'AB 123 CD', lot:(lotsList()[0] || {}).id };
+      $('#waPrev', el).textContent = t('waPreview') + ': ' + waText(sample, ui.month, $('#waText', el).value.trim() || WA_DEFAULT);
+    };
+    const waSave = () => {
+      const typed = $('#waText', el).value.trim(), text = typed === WA_DEFAULT ? '' : typed, area = $('#waArea', el).value.replace(/\D/g,''), cur = waSettings();
+      if(text !== cur.text || area !== cur.area){ state.settings.wa = { text, area, t: Date.now() }; commit(); }
+    };
+    $('#waText', el).oninput = waPreview; $('#waText', el).onchange = waSave; $('#waArea', el).onchange = waSave;
+    $('#waReset', el).onclick = () => { $('#waText', el).value = WA_DEFAULT; waSave(); waPreview(); };
+    waPreview();
     if(ai){
       $('#aiRemove', el).onclick = async () => { if(await confirmBox(t('aiRemoveTitle'), t('aiRemoveText'), t('aiRemove'), true)){ setAi('', ''); draw(); } };
       $('#aiModel', el).onchange = e => { const key = ai.key, model = e.target.value, list = aiModels; setAi(key, model); aiModels = list; };
@@ -1780,6 +1891,8 @@ $('#lists').addEventListener('click', e => {
   if(o){ if(o.dataset.open === 'add') openCustomer(null); else if(o.dataset.open === 'bulk') openBulk(); return; }
   const b = e.target.closest('[data-act]'); if(!b) return;
   const id = b.closest('.row').dataset.id;
+  if(b.dataset.act === 'wa'){ setTimeout(() => markReminded(id, ui.month), 400); return; }      /* the link itself opens WhatsApp */
+  if(b.dataset.act === 'wa-bad'){ toast(t('waBad', state.customers[id].name)); openCustomer(id); return; }
   if(b.dataset.act === 'open') openCustomer(id); else quickStatus(id, b.dataset.act);
 });
 document.addEventListener('keydown', e => { if(e.key === 'Escape' && modals.length) closeModal(modals[modals.length-1]); });
