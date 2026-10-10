@@ -462,7 +462,11 @@ const I18N = {
   unlinkTitle:['¿Desconectar la sincronización?','Disconnect sync?'],
   unlinkText:['Este dispositivo dejará de sincronizar. Los datos se conservan acá y en el repositorio.','This device will stop syncing. The data stays here and in the repository.'],
   dataTitle:['Clientes y datos','Customers & data'], sortLbl:['Orden de las listas','List order'], sortName:['por nombre','by name'], sortSpot:['por lugar','by space'], sortPlate:['por patente','by licence plate'],
-  csvBtn:['Mes en CSV (Excel)','Month as CSV (Excel)'], backupBtn:['Guardar copia de seguridad','Save backup'], restoreBtn:['Cargar copia de seguridad','Load backup'],
+  xlBtn:['Mes en Excel, por estacionamiento','Month as Excel, by parking lot'], xlTitle:['Parkinglot Manager · {0}','Parkinglot Manager · {0}'], xlSummary:['Resumen','Summary'],
+  xlSumHead:['Estacionamiento;Clientes;Pagado;Parcial;No pagado;Dudoso;Esperado;Cobrado;Falta','Parking lot;Customers;Paid;Partial;Unpaid;Unclear;Expected;Received;Missing'],
+  xlHead:['Lugar;Cliente;Patente;Monto mensual;Estado;Pagado;Falta;Recibido el;Transferido por;Teléfono;Nota','Space;Customer;Licence plate;Monthly amount;Status;Paid;Missing;Received on;Transferred by;Phone;Note'],
+  xlTotal:['Total','Total'], xlCount:['{0} clientes','{0} customers'], xlCount1:['1 cliente','1 customer'], xlNoLot:['Sin asignar','Not assigned'], xlSheet:['Hoja {0}','Sheet {0}'],
+  csvBtn:['Mes en CSV','Month as CSV'], backupBtn:['Guardar copia de seguridad','Save backup'], restoreBtn:['Cargar copia de seguridad','Load backup'],
   restored:['Copia de seguridad cargada.','Backup loaded.'], restoreBad:['Este archivo no es una copia de seguridad válida.','This file is not a valid backup.'],
   csvHead:['Estacionamiento;Lugar;Nombre;Patente;Monto mensual;Estado;Pagado;Recibido el;Transferido por;Nota','Parking lot;Space;Name;Licence plate;Monthly amount;Status;Paid;Received on;Transferred by;Note'],
   copyLink:['Copiar enlace','Copy link'], share:['Compartir…','Share…'], linkCopied:['Enlace copiado.','Link copied.'],
@@ -2288,6 +2292,7 @@ function openSettings(focusSync){
         <div class="field"><label for="sSort">${esc(t('sortLbl'))}</label><select id="sSort"><option value="name"${ui.sort === 'name' ? ' selected' : ''}>${esc(t('sortName'))}</option><option value="spot"${ui.sort === 'spot' ? ' selected' : ''}>${esc(t('sortSpot'))}</option><option value="plate"${ui.sort === 'plate' ? ' selected' : ''}>${esc(t('sortPlate'))}</option></select></div>
         <div class="actions" style="margin-top:0">
           <button type="button" class="btn small" id="bulk">${esc(t('bulkTitle'))}</button>
+          <button type="button" class="btn small" id="xlsx">${esc(t('xlBtn'))}</button>
           <button type="button" class="btn small" id="csv">${esc(t('csvBtn'))}</button>
           <button type="button" class="btn small" id="backup">${esc(t('backupBtn'))}</button>
           <button type="button" class="btn small" id="restore">${esc(t('restoreBtn'))}</button>
@@ -2331,7 +2336,7 @@ function openSettings(focusSync){
     }else bindAiKeyForm($('#aiSec', el), draw);
     $('#sSort', el).onchange = e => { ui.sort = e.target.value; saveUi(); renderLists(); };
     $('#bulk', el).onclick = openBulk;
-    $('#csv', el).onclick = exportCsv;
+    $('#csv', el).onclick = exportCsv; $('#xlsx', el).onclick = exportXlsx;
     $('#backup', el).onclick = () => download('parkinglot-backup-' + todayISO() + '.json', JSON.stringify(Object.assign({}, state, { settings:{} })), 'application/json');     /* never put the API key into a file */
     $('#restore', el).onclick = () => $('#restoreFile', el).click();
     $('#reload', el).onclick = () => location.reload();
@@ -2405,6 +2410,116 @@ function exportCsv(){
   }
   download('parkinglot-' + ui.month + '.csv', '\ufeff' + rows.map(r => r.map(cell).join(';')).join('\r\n'), 'text/csv;charset=utf-8');
 }
+
+/* ---------- Excel export: the month shown, one sheet per parking lot ----------
+   Written without a library: an .xlsx file is a zip of a few XML files. The zip is stored uncompressed. */
+const CRC_TABLE = (() => { const tb = new Uint32Array(256); for(let n = 0; n < 256; n++){ let c = n; for(let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; tb[n] = c >>> 0; } return tb; })();
+function crc32(bytes){ let c = 0xFFFFFFFF; for(let i = 0; i < bytes.length; i++) c = CRC_TABLE[(c ^ bytes[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+function zipStore(files){                /* [[path, text], ...] -> the parts of the zip file */
+  const enc = new TextEncoder(), parts = [], central = [], now = new Date();
+  const date = ((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate(), time = (now.getHours() << 11) | (now.getMinutes() << 5);
+  let offset = 0;
+  for(const [path, text] of files){
+    const name = enc.encode(path), data = enc.encode(text), crc = crc32(data);
+    const head = new DataView(new ArrayBuffer(30));
+    head.setUint32(0, 0x04034b50, true); head.setUint16(4, 20, true); head.setUint16(6, 0x0800, true);
+    head.setUint16(10, time, true); head.setUint16(12, date, true);
+    head.setUint32(14, crc, true); head.setUint32(18, data.length, true); head.setUint32(22, data.length, true); head.setUint16(26, name.length, true);
+    parts.push(new Uint8Array(head.buffer), name, data);
+    const cen = new DataView(new ArrayBuffer(46));
+    cen.setUint32(0, 0x02014b50, true); cen.setUint16(4, 20, true); cen.setUint16(6, 20, true); cen.setUint16(8, 0x0800, true);
+    cen.setUint16(12, time, true); cen.setUint16(14, date, true);
+    cen.setUint32(16, crc, true); cen.setUint32(20, data.length, true); cen.setUint32(24, data.length, true); cen.setUint16(28, name.length, true); cen.setUint32(42, offset, true);
+    central.push(new Uint8Array(cen.buffer), name);
+    offset += 30 + name.length + data.length;
+  }
+  const end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true);
+  end.setUint32(12, central.reduce((n, p) => n + p.length, 0), true); end.setUint32(16, offset, true);
+  return parts.concat(central, [new Uint8Array(end.buffer)]);
+}
+/* What the export contains: one block per parking lot with its customers of the month, in the order of the lists. */
+function monthReport(month){
+  const lots = lotsList();
+  if(customersFor(NO_LOT, month).length) lots.push(state.lots[NO_LOT]);
+  return lots.map(l => {
+    const sum = { n:0, paid:0, partial:0, unpaid:0, unclear:0, expected:0, received:0 };
+    const rows = sortCustomers(customersFor(l.id, month)).map(c => {
+      const p = payOf(c.id, month) || {}, s = statusOf(c.id, month), fee = c.amount || 0;
+      const got = s === 'paid' || s === 'partial' ? paidAmount(c, s, p) : 0;
+      sum.n++; sum[s]++; sum.expected += fee; sum.received += got;
+      return { spot: c.spot || '', name: c.name, plate: plates(c).join(', '), fee, s, got, left: s === 'paid' ? 0 : Math.max(0, fee - got), date: s === 'unpaid' ? '' : p.d || '', payer: s === 'unpaid' ? '' : p.p || '',
+        phone: c.phone || '', note: [p.n, c.note].filter(Boolean).join(' · ') };
+    });
+    return { id: l.id, name: l.id === NO_LOT ? t('xlNoLot') : lotLabel(l), rows, sum };
+  });
+}
+function monthXlsx(month){
+  const X = v => String(v ?? '').replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const col = i => String.fromCharCode(65 + i);
+  /* styles: 1 header, 2 money, 3 date, 4 bold, 5 bold money, 6-9 status paid/partial/unpaid/unclear, 10 title */
+  const S = { head:1, money:2, date:3, bold:4, boldMoney:5, paid:6, partial:7, unpaid:8, unclear:9, title:10 };
+  const cell = (r, i, v, s) => {
+    const ref = col(i) + r, st = s ? ` s="${s}"` : '';
+    if(v === '' || v === null || v === undefined) return s ? `<c r="${ref}"${st}/>` : '';
+    if(typeof v === 'number') return `<c r="${ref}"${st}><v>${v}</v></c>`;
+    if(typeof v === 'object') return `<c r="${ref}"${st}><f>${X(v.f)}</f><v>${v.v}</v></c>`;          /* formula with its result */
+    return `<c r="${ref}"${st} t="inlineStr"><is><t xml:space="preserve">${X(v)}</t></is></c>`;
+  };
+  const row = (r, cells) => `<row r="${r}">${cells.map((c, i) => cell(r, i, c[0], c[1])).join('')}</row>`;
+  const serial = iso => { const [y, m, d] = iso.split('-').map(Number); return Math.round((Date.UTC(y, m - 1, d) - Date.UTC(1899, 11, 30)) / 86400000); };
+  const sheet = (rows, widths, filter) => `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0">${filter ? '<pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/>' : ''}</sheetView></sheetViews>
+<cols>${widths.map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`).join('')}</cols>
+<sheetData>${rows.join('')}</sheetData>${filter ? `<autoFilter ref="${filter}"/>` : ''}</worksheet>`;
+  const report = monthReport(month), money = v => Math.round(v * 100) / 100;
+
+  /* summary */
+  const sumHead = t('xlSumHead').split(';'), sumRows = [row(1, [[t('xlTitle', fmtMonthLong(month)), S.title]]), row(3, sumHead.map(h => [h, S.head]))];
+  report.forEach((l, i) => { const m = l.sum; sumRows.push(row(4 + i, [[l.name], [m.n], [m.paid], [m.partial], [m.unpaid], [m.unclear], [money(m.expected), S.money], [money(m.received), S.money], [money(m.expected - m.received), S.money]])); });
+  if(report.length){
+    const a = 4, b = 3 + report.length, tot = k => report.reduce((n, l) => n + (k === 'left' ? l.sum.expected - l.sum.received : l.sum[k]), 0);
+    sumRows.push(row(b + 1, [[t('xlTotal'), S.bold]].concat(['n', 'paid', 'partial', 'unpaid', 'unclear', 'expected', 'received', 'left'].map((k, i) => [{ f: `SUM(${col(i + 1)}${a}:${col(i + 1)}${b})`, v: money(tot(k)) }, i > 4 ? S.boldMoney : S.bold]))));
+  }
+  const sheets = [{ name: t('xlSummary'), xml: sheet(sumRows, [26, 10, 10, 10, 11, 10, 14, 14, 14], '') }];
+
+  /* one sheet per parking lot */
+  const head = t('xlHead').split(';'), used = new Set([t('xlSummary').toLowerCase()]);
+  report.forEach((l, li) => {
+    const rows = [row(1, head.map(h => [h, S.head]))];
+    l.rows.forEach((x, i) => rows.push(row(i + 2, [[x.spot], [x.name], [x.plate], [x.fee, S.money], [t(x.s), S[x.s]], [x.s === 'paid' || x.s === 'partial' ? money(x.got) : '', S.money], [money(x.left), S.money],
+      [x.date ? serial(x.date) : '', S.date], [x.payer], [x.phone], [x.note]])));
+    const n = l.rows.length;
+    if(n){
+      const sum = (c, k) => [{ f: `SUM(${c}2:${c}${n + 1})`, v: money(l.rows.reduce((a, x) => a + x[k], 0)) }, S.boldMoney];
+      rows.push(row(n + 3, [[t('xlTotal'), S.bold], [n === 1 ? t('xlCount1') : t('xlCount', n), S.bold], ['', 0], sum('D', 'fee'), ['', 0], sum('F', 'got'), sum('G', 'left')]));
+    }
+    let name = l.name.replace(/[\[\]:*?\/\\]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 31) || t('xlSheet', li + 1);          /* what Excel allows as a sheet name */
+    for(let k = 2; used.has(name.toLowerCase()); k++) name = name.slice(0, 28) + ' ' + k;
+    used.add(name.toLowerCase());
+    sheets.push({ name, xml: sheet(rows, [9, 28, 18, 15, 13, 13, 13, 13, 24, 18, 36], `A1:K${Math.max(n, 1) + 1}`) });
+  });
+
+  const fill = rgb => `<fill><patternFill patternType="solid"><fgColor rgb="FF${rgb}"/><bgColor indexed="64"/></patternFill></fill>`;
+  const xf = (font, fillId, fmt) => `<xf numFmtId="${fmt}" fontId="${font}" fillId="${fillId}" borderId="0" xfId="0"${fmt ? ' applyNumberFormat="1"' : ''}${font ? ' applyFont="1"' : ''}${fillId ? ' applyFill="1"' : ''}/>`;
+  const files = [
+    ['[Content_Types].xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>${sheets.map((s, i) => `<Override PartName="/xl/worksheets/sheet${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')}</Types>`],
+    ['_rels/.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`],
+    ['xl/workbook.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><bookViews><workbookView/></bookViews><sheets>${sheets.map((s, i) => `<sheet name="${X(s.name)}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join('')}</sheets><calcPr fullCalcOnLoad="1"/></workbook>`],
+    ['xl/_rels/workbook.xml.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${sheets.map((s, i) => `<Relationship Id="rId${i + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i + 1}.xml"/>`).join('')}<Relationship Id="rId${sheets.length + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`],
+    ['xl/styles.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="3"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="14"/><name val="Calibri"/></font></fonts>
+<fills count="7"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>${fill('E8ECF3')}${fill('DDF3E4')}${fill('DCEEFB')}${fill('FBE3E3')}${fill('FDECD3')}</fills>
+<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
+<cellXfs count="11">${xf(0, 0, 0)}${xf(1, 2, 0)}${xf(0, 0, 3)}${xf(0, 0, 14)}${xf(1, 0, 0)}${xf(1, 0, 3)}${xf(0, 3, 0)}${xf(0, 4, 0)}${xf(0, 5, 0)}${xf(0, 6, 0)}${xf(2, 0, 0)}</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`]
+  ].concat(sheets.map((s, i) => ['xl/worksheets/sheet' + (i + 1) + '.xml', s.xml]));
+  return new Blob(zipStore(files), { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+}
+function exportXlsx(){ download('parkinglot-' + ui.month + '.xlsx', monthXlsx(ui.month), 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'); }
 
 /* ---------- sync through GitHub ---------- */
 class SyncError extends Error {}
