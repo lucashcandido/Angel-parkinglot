@@ -170,6 +170,16 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 a.btn{display:inline-flex;align-items:center;gap:8px;text-decoration:none}
 .btn.wa{color:#17914e;border-color:#17914e}
 @media (prefers-color-scheme: dark){.ib.wa,.btn.wa{color:#4ade80}.btn.wa{border-color:#4ade80}}
+.dup{border:1px solid var(--line);border-radius:12px;padding:10px 12px 12px;margin:12px 0}
+.dup-why{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px}
+.dup-why .badge{margin-left:0;font-size:12.5px;padding:2px 8px}
+.dup-c{display:flex;align-items:center;gap:8px;border:1.5px solid var(--line);border-radius:11px;padding:8px 8px 8px 10px;margin-bottom:6px}
+.dup-c.on{border-color:var(--accent);background:var(--accent-soft)}
+.dup-c label{flex:1;min-width:0;display:flex;gap:10px;align-items:flex-start;cursor:pointer}
+.dup-c input{width:20px;height:20px;margin-top:2px;flex:none;accent-color:var(--accent)}
+.dup-i{display:block;min-width:0;overflow-wrap:anywhere}
+.badge.keep{background:var(--accent);color:var(--on-accent)}
+.dup .actions{margin-top:10px}
 .empty{padding:18px 14px;color:var(--muted);font-size:14px}
 .welcome{padding:22px 18px;text-align:center}
 .welcome p{color:var(--muted);margin:6px 0 14px}
@@ -319,6 +329,7 @@ code{background:var(--soft);border-radius:5px;padding:1px 5px;font-size:13.5px;o
   <div class="toolbar">
     <input id="search" type="search" autocomplete="off">
     <button id="btnImport" class="btn" type="button"></button>
+    <button id="btnDup" class="btn" type="button" hidden></button>
     <button id="btnAdd" class="btn primary" type="button"></button>
   </div>
 
@@ -477,6 +488,19 @@ const I18N = {
   acManual_html:['No se pudo publicar el código automáticamente: el token no puede escribir en el repositorio de la app. Creá el archivo <code>access.json</code> <a href="{0}" target="_blank" rel="noopener">acá</a>, pegá el texto de abajo y guardá con «Commit changes». Si el archivo ya existe, reemplazá su contenido.','The code could not be published automatically: the token may not write to the app repository. Create the file <code>access.json</code> <a href="{0}" target="_blank" rel="noopener">here</a>, paste the text below and save with “Commit changes”. If the file already exists, replace its content.'],
   useLocal:['Usar sin sincronizar (solo este dispositivo)','Use without sync (this device only)'],
   reload:['Recargar la app','Reload app'],
+  dupBtn:['Buscar duplicados','Check for duplicates'], dupTitle:['Posibles duplicados','Possible duplicates'], dupDone:['Listo','Done'],
+  dupIntro:['Se comparan todos los clientes de todos los estacionamientos: patente, nombre, teléfono y lugar.','All customers of all parking lots are compared: licence plate, name, phone and space.'],
+  dupNone:['No hay duplicados entre los {0} clientes.','No duplicates among the {0} customers.'],
+  dupFound1:['Hay 1 posible duplicado.','1 possible duplicate found.'], dupFoundN:['Hay {0} posibles duplicados.','{0} possible duplicates found.'],
+  dupKeepHint:['Tocá el cliente que se conserva. Al unir, los pagos y datos del otro pasan a ese y su nombre queda en «Paga a través de».','Tap the customer to keep. Merging moves the other one’s payments and details to it; the other name is kept under “Pays via”.'],
+  dupPlate:['Misma patente {0}','Same plate {0}'], dupName:['Mismo nombre','Same name'], dupSimilar:['Nombre parecido','Similar name'], dupPhone:['Mismo teléfono','Same phone'], dupSpot:['Mismo lugar {0}','Same space {0}'],
+  dupAlias:['«{0}» figura como pagador de {1}','“{0}” is listed as a payer of {1}'],
+  dupKeeps:['Se conserva','Kept'], dupEdit:['Editar','Edit'], dupMerge:['Unir en uno','Merge into one'], dupDistinct:['Son clientes distintos','Different customers'],
+  dupPays0:['sin pagos registrados','no payments recorded'], dupPays1:['1 mes con pago','1 month with a payment'], dupPaysN:['{0} meses con pago','{0} months with payments'],
+  dupMergeTitle:['¿Unir en un solo cliente?','Merge into one customer?'],
+  dupMergeText:['Queda {0}. Se le suman los pagos y datos de {1}, que deja de figurar aparte.','{0} stays. The payments and details of {1} are added to it; {1} no longer appears separately.'],
+  dupMerged:['Unidos en {0}.','Merged into {0}.'], dupMarked:['Marcados como clientes distintos.','Marked as different customers.'],
+  dupHidden:['Volver a revisar los marcados como distintos ({0})','Check those marked as different again ({0})'],
   stmtBtn:['Datos','Data'], stmtSub:['Mes mostrado: {0}','Month shown: {0}'],
   stmtIntro:['Subí extractos del banco (PDF o capturas) o tus planillas con clientes y pagos (Excel .xlsx, LibreOffice .ods o .csv). Claude lee los archivos y carga los datos por vos; antes de guardar ves una vista previa.','Add bank statements (PDF or screenshots) or your lists of customers and payments (Excel .xlsx, LibreOffice .ods or .csv). Claude reads the files and enters the data for you; you get a preview before anything is saved.'],
   stmtPick:['Elegir archivos','Choose files'],
@@ -591,7 +615,7 @@ const splitNames = s => String(s ?? '').split(/[,;\n]/).map(x => x.trim()).filte
    lots:      { id: {id,name,order,deleted?,t} }
    customers: { id: {id,lot,name,spot,amount,aliases[],phone,note,from,until,deleted?,t} }
    payments:  { "customerId|YYYY-MM": {s:'paid'|'unpaid'|'unclear', a,d,p,n, t} }
-   settings:  { ai: {key,model,t} } - the Anthropic API key, shared by all connected devices
+   settings:  { ai: {key,model,t} } - the Anthropic API key, shared by all connected devices; nodup: {pairs[],t} - customer pairs that are not duplicates
    t = timestamp of the last change; when merging, the newer record wins.
    The three built-in lots keep their internal name until renamed (t = 0) and are shown translated. */
 function emptyState(){
@@ -766,7 +790,7 @@ function quickStatus(cid, s){
 }
 
 /* ---------- rendering ---------- */
-function render(){ ai = aiFromState(); renderLogin(); renderTabs(); renderMonth(); renderLists(); renderSync(); }
+function render(){ ai = aiFromState(); renderLogin(); renderTabs(); renderMonth(); renderLists(); renderSync(); if(dupView) dupView(); }
 
 function applyStatic(){
   document.documentElement.lang = ui.lang;
@@ -777,6 +801,7 @@ function applyStatic(){
   $('#search').placeholder = t('searchPh'); $('#search').setAttribute('aria-label', t('aSearch'));
   $('#btnAdd').textContent = t('addCustomer');
   $('#btnImport').textContent = t('stmtBtn');
+  $('#btnDup').textContent = t('dupBtn');
 }
 function setLang(l){
   if(l !== 'es' && l !== 'en' || l === ui.lang) return;
@@ -792,6 +817,7 @@ function renderTabs(){
     return `<button type="button" class="tab${ui.lot === id ? ' on' : ''}" data-lot="${esc(id)}" aria-pressed="${ui.lot === id}"><b>${esc(name)}</b><small>${esc(t('tabCount', paid, cs.length))}</small></button>`;
   };
   $('#tabs').innerHTML = lots.map(l => cell(l.id, lotLabel(l))).join('') + (lots.length > 1 ? cell('all', t('all')) : '');
+  $('#btnDup').hidden = !(ui.lot === 'all' || lots.length < 2);        /* the check covers all parking lots, so it lives under "All" */
 }
 
 function renderMonth(){
@@ -1126,6 +1152,192 @@ function openCustomer(cid){
     state.customers[c.id] = Object.assign({}, c, { deleted:true, t: Date.now() });
     closeModal(el); commit();
   };
+}
+
+/* ---------- duplicates ----------
+   Looks through all customers of all parking lots for records that are probably the same customer:
+   same plate, same or similar name, a name that is another customer's payer, same phone, same space.
+   Pairs marked as "different customers" are kept in settings.nodup and not shown again. */
+const pairKey = (a, b) => a < b ? a + '|' + b : b + '|' + a;
+const distinctPairs = () => { const d = state.settings && state.settings.nodup; return d && Array.isArray(d.pairs) ? d.pairs : []; };
+const liveCustomer = id => { const c = state.customers[id]; return !!c && !c.deleted; };
+const uniqBy = (list, key) => list.filter((x, i) => x && list.findIndex(y => y && key(y) === key(x)) === i);
+function editDistance(a, b){
+  let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for(let i = 1; i <= a.length; i++){
+    const cur = [i];
+    for(let j = 1; j <= b.length; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    prev = cur;
+  }
+  return prev[b.length];
+}
+function similarNames(a, b){            /* a, b: nameKey values */
+  if(!a || !b || a === b || /\d/.test(a + b)) return false;
+  const x = a.split(' '), y = b.split(' '), [s, l] = x.length <= y.length ? [x, y] : [y, x];
+  if(s.length >= 2 && s.length < l.length && s.every(w => l.includes(w))) return true;        /* "Juan Perez" - "Juan Carlos Perez" */
+  const min = Math.min(a.length, b.length), max = min >= 12 ? 2 : min >= 6 ? 1 : 0;
+  return max > 0 && Math.abs(a.length - b.length) <= max && editDistance(a, b) <= max;        /* a typing mistake */
+}
+function phoneKey(p){
+  const d = waNumber(p, waSettings().area) || String(p ?? '').replace(/\D/g, '');
+  return d.length >= 8 ? d.slice(-8) : '';
+}
+function findDuplicates(){
+  const list = Object.values(state.customers).filter(c => !c.deleted && state.lots[c.lot] && !state.lots[c.lot].deleted);
+  const skip = new Set(distinctPairs());
+  const info = list.map(c => ({ c, name: nameKey(c.name), plates: plates(c).map(plateKey).filter(k => k.length >= 4), alias: (c.aliases || []).map(nameKey).filter(Boolean),
+    phone: phoneKey(c.phone), spot: c.spot ? c.lot + '|' + norm(c.spot) : '' }));
+  const spotCount = {};
+  for(const x of info) if(x.spot) spotCount[x.spot] = (spotCount[x.spot] || 0) + 1;
+  const overlap = (a, b) => (!a.from || !b.until || a.from <= b.until) && (!b.from || !a.until || b.from <= a.until);
+  const parent = info.map((_, i) => i), root = i => parent[i] === i ? i : (parent[i] = root(parent[i]));
+  const found = [];
+  for(let i = 0; i < info.length; i++) for(let j = i + 1; j < info.length; j++){
+    const a = info[i], b = info[j], why = [];
+    if(skip.has(pairKey(a.c.id, b.c.id))) continue;
+    const pl = a.plates.find(k => b.plates.includes(k));
+    if(pl) why.push(t('dupPlate', plates(a.c).find(x => plateKey(x) === pl)));
+    if(a.name && a.name === b.name) why.push(t('dupName'));
+    else if(similarNames(a.name, b.name)) why.push(t('dupSimilar'));
+    if(a.name !== b.name){
+      if(b.alias.includes(a.name)) why.push(t('dupAlias', a.c.name, b.c.name));
+      else if(a.alias.includes(b.name)) why.push(t('dupAlias', b.c.name, a.c.name));
+    }
+    if(a.phone && a.phone === b.phone) why.push(t('dupPhone'));
+    if(a.spot && a.spot === b.spot && spotCount[a.spot] <= 3 && overlap(a.c, b.c)) why.push(t('dupSpot', a.c.spot));      /* a "space" shared by many is a category, not a space */
+    if(why.length){ found.push([i, why]); parent[root(i)] = root(j); }
+  }
+  const pays = {};
+  for(const k in state.payments) if(ORDER.includes(state.payments[k].s) && state.payments[k].s !== 'unpaid'){ const id = k.slice(0, k.lastIndexOf('|')); pays[id] = (pays[id] || 0) + 1; }
+  const score = c => (pays[c.id] || 0) * 10 + (c.plate ? 2 : 0) + (c.phone ? 1 : 0) + (c.amount ? 1 : 0) + (c.spot ? 1 : 0);
+  const byRoot = {};
+  for(const [i, why] of found){ const g = byRoot[root(i)] = byRoot[root(i)] || { reasons:[], members:[] }; for(const w of why) if(!g.reasons.includes(w)) g.reasons.push(w); }
+  info.forEach((x, i) => { const g = byRoot[root(i)]; if(g) g.members.push({ c: x.c, pays: pays[x.c.id] || 0 }); });
+  const coll = new Intl.Collator(ui.lang, { numeric:true, sensitivity:'base' });
+  const groups = Object.values(byRoot);
+  for(const g of groups){ g.members.sort((a, b) => score(b.c) - score(a.c) || coll.compare(a.c.name, b.c.name)); g.ids = g.members.map(m => m.c.id); }      /* the fullest record first: suggested to keep */
+  groups.sort((a, b) => coll.compare(a.members[0].c.name, b.members[0].c.name));
+  return { groups, total: list.length };
+}
+/* One month recorded on both customers: the better status wins; two different instalments add up. */
+function joinPayments(a, b, fee){
+  const rank = { unpaid:0, unclear:1, partial:2, paid:3 };
+  const A = a || { s:'unpaid' }, sa = ORDER.includes(A.s) ? A.s : 'unpaid', sb = ORDER.includes(b.s) ? b.s : 'unpaid';
+  const [hi, lo] = rank[sb] > rank[sa] ? [b, A] : [A, b];
+  let s = rank[sb] > rank[sa] ? sb : sa, amt = hi.a || 0;
+  const xa = A.x || [], xb = b.x || [];
+  if(sa === 'partial' && sb === 'partial'){
+    const same = xa.some(f => xb.includes(f)) || ((A.a || 0) === (b.a || 0) && (A.d || '') === (b.d || ''));      /* the same payment entered twice */
+    amt = same ? Math.max(A.a || 0, b.a || 0) : Math.round(((A.a || 0) + (b.a || 0)) * 100) / 100;
+    if(fee && amt >= fee - 0.5) s = 'paid';
+  }else if(sa === sb) amt = Math.max(A.a || 0, b.a || 0);
+  const rec = { s };
+  if(s !== 'unpaid'){
+    if(amt) rec.a = amt;
+    const d = [hi.d, sa === sb ? lo.d : ''].filter(Boolean).sort().pop(); if(d) rec.d = d;
+    const p = uniqBy(splitNames(hi.p).concat(rank[sa] && rank[sb] ? splitNames(lo.p) : []), nameKey).join(', '); if(p) rec.p = p;
+    const x = uniqBy(xa.concat(xb), f => f); if(x.length) rec.x = x;
+  }
+  const n = uniqBy([A.n, b.n].map(v => String(v || '').trim()), norm).join(' · '); if(n) rec.n = n;
+  const r = [A.r, b.r].filter(Boolean).sort().pop(); if(r && s !== 'paid') rec.r = r;
+  return rec;
+}
+/* Merges the other customers into the one that stays: empty fields are filled, plates and payer names are collected,
+   the other names become payer names, the payments of all months move over. Returns a function that undoes it. */
+function mergeCustomers(keepId, otherIds){
+  const keep = state.customers[keepId], others = otherIds.map(id => state.customers[id]).filter(o => o && !o.deleted && o.id !== keepId);
+  if(!keep || keep.deleted || !others.length) return null;
+  const before = { cust:{ [keepId]: Object.assign({}, keep, { aliases: (keep.aliases || []).slice() }) }, pay:{} };
+  const next = Object.assign({}, keep, { aliases: (keep.aliases || []).slice() });
+  const addAlias = n => { if(n && nameKey(n) !== nameKey(next.name) && !next.aliases.some(q => nameKey(q) === nameKey(n))) next.aliases.push(n); };
+  for(const o of others){
+    before.cust[o.id] = Object.assign({}, o);
+    addAlias(o.name); (o.aliases || []).forEach(addAlias);
+    next.plate = uniqBy(plates(next).concat(plates(o)), plateKey).join(', ');
+    for(const k of ['spot', 'phone', 'amount']) if(!next[k] && o[k]) next[k] = o[k];
+    next.note = uniqBy([next.note, o.note].map(v => String(v || '').trim()), norm).join(' · ');
+    next.from = next.from && o.from ? (o.from < next.from ? o.from : next.from) : '';
+    next.until = next.until && o.until ? (o.until > next.until ? o.until : next.until) : '';
+  }
+  const bare = o => canon(Object.assign({}, o, { t: undefined }));
+  for(const o of others){
+    for(const k of Object.keys(state.payments).filter(k => k.startsWith(o.id + '|'))){
+      const key = payKey(keepId, k.slice(o.id.length + 1)), old = state.payments[key];
+      const rec = joinPayments(old, state.payments[k], next.amount || 0);
+      if(old ? bare(old) === bare(rec) : (rec.s === 'unpaid' && Object.keys(rec).length === 1)) continue;
+      if(!(key in before.pay)) before.pay[key] = old ? Object.assign({}, old) : null;
+      state.payments[key] = Object.assign(rec, { t: Date.now() });
+    }
+    state.customers[o.id] = Object.assign({}, o, { deleted:true, t: Date.now() });
+  }
+  state.customers[keepId] = Object.assign(next, { t: Date.now() });
+  return () => {
+    for(const id in before.cust) state.customers[id] = Object.assign(before.cust[id], { t: Date.now() });
+    for(const key in before.pay) state.payments[key] = before.pay[key] ? Object.assign(before.pay[key], { t: Date.now() }) : { s:'unpaid', t: Date.now() };
+    commit();
+  };
+}
+function setDistinct(pairs){ state.settings.nodup = { pairs: pairs.filter(p => p.split('|').every(liveCustomer)), t: Date.now() }; commit(); }
+
+let dupView = null;                     /* redraws the open duplicates window after every change */
+function openDuplicates(){
+  const choice = {};                    /* group -> the customer chosen to stay */
+  const el = openModal(`<div class="fs">
+    <div class="sheet-head"><h2>${esc(t('dupTitle'))}</h2>${closeX()}</div>
+    <div class="fs-body" id="dupBody"></div>
+    <div class="actions fs-foot"><button type="button" class="btn primary grow" data-close>${esc(t('dupDone'))}</button></div></div>`, 'fixed');
+  let shown = null, groups = [];
+  const keepOf = g => g.ids.includes(choice[g.ids.join('|')]) ? choice[g.ids.join('|')] : g.ids[0];
+  const draw = () => {
+    if(!el.isConnected){ if(dupView === draw) dupView = null; return; }
+    const res = findDuplicates(); groups = res.groups;
+    const hidden = distinctPairs().filter(p => p.split('|').every(liveCustomer)).length;
+    let html = `<p class="hint" style="margin-bottom:10px">${esc(t('dupIntro'))}</p>`;
+    html += groups.length ? `<div class="msg" id="dupCount"><b>${esc(groups.length === 1 ? t('dupFound1') : t('dupFoundN', groups.length))}</b> ${esc(t('dupKeepHint'))}</div>`
+                          : `<div class="msg good" id="dupCount">${esc(t('dupNone', res.total))}</div>`;
+    html += groups.map((g, gi) => {
+      const keep = keepOf(g);
+      return `<div class="dup" data-g="${gi}">
+        <div class="dup-why">${g.reasons.map(r => `<span class="badge warn">${esc(r)}</span>`).join('')}</div>
+        ${g.members.map(m => { const c = m.c, bits = [lotName(c.lot), c.spot && t('space', c.spot), c.amount && fmtMoney(c.amount).replace(' ', String.fromCharCode(160)), c.phone].filter(Boolean); return `<div class="dup-c${c.id === keep ? ' on' : ''}">
+          <label><input type="radio" name="dupKeep${gi}" value="${esc(c.id)}"${c.id === keep ? ' checked' : ''}>
+            <span class="dup-i"><b>${esc(c.name)}</b>${platesHtml(c)}${c.id === keep ? `<span class="badge keep">${esc(t('dupKeeps'))}</span>` : ''}
+              <span class="row-sub">${esc(bits.join(' · '))}</span>
+              ${c.aliases && c.aliases.length ? `<span class="row-sub">${esc(t('paysVia', c.aliases.join(', ')))}</span>` : ''}
+              <span class="row-sub">${esc(!m.pays ? t('dupPays0') : m.pays === 1 ? t('dupPays1') : t('dupPaysN', m.pays))}</span></span></label>
+          <button type="button" class="btn small" data-edit="${esc(c.id)}">${esc(t('dupEdit'))}</button></div>`; }).join('')}
+        <div class="actions"><button type="button" class="btn primary grow" data-merge>${esc(t('dupMerge'))}</button><button type="button" class="btn grow" data-distinct>${esc(t('dupDistinct'))}</button></div>
+      </div>`;
+    }).join('');
+    if(hidden) html += `<p><button type="button" class="link" id="dupReset">${esc(t('dupHidden', hidden))}</button></p>`;
+    if(html !== shown) $('#dupBody', el).innerHTML = shown = html;
+  };
+  el.addEventListener('change', e => {
+    const box = e.target.closest('.dup'); if(!box || e.target.type !== 'radio') return;
+    const g = groups[box.dataset.g]; if(!g) return;
+    choice[g.ids.join('|')] = e.target.value; draw();
+  });
+  el.addEventListener('click', async e => {
+    const ed = e.target.closest('[data-edit]');
+    if(ed){ openCustomer(ed.dataset.edit); return; }
+    if(e.target.id === 'dupReset'){ setDistinct([]); return; }
+    const box = e.target.closest('.dup'), g = box && groups[box.dataset.g]; if(!g) return;
+    if(e.target.closest('[data-distinct]')){
+      const prev = distinctPairs().slice(), add = [];
+      for(let i = 0; i < g.ids.length; i++) for(let j = i + 1; j < g.ids.length; j++) add.push(pairKey(g.ids[i], g.ids[j]));
+      setDistinct(uniqBy(prev.concat(add), p => p));
+      toast(t('dupMarked'), t('undo'), () => setDistinct(prev));
+      return;
+    }
+    if(e.target.closest('[data-merge]')){
+      const keepId = keepOf(g), keep = state.customers[keepId], rest = g.ids.filter(id => id !== keepId);
+      if(!await confirmBox(t('dupMergeTitle'), t('dupMergeText', keep.name, rest.map(id => state.customers[id].name).join(', ')), t('dupMerge'))) return;
+      const undo = mergeCustomers(keepId, rest); if(!undo) return;
+      commit();
+      toast(t('dupMerged', keep.name), t('undo'), undo);
+    }
+  });
+  dupView = draw; draw();
 }
 
 /* paste several customers from Excel */
@@ -2310,6 +2522,7 @@ $('#monthSub').addEventListener('click', e => { if(e.target.id === 'toNow'){ ui.
 $('#search').addEventListener('input', renderLists);
 $('#btnAdd').onclick = () => openCustomer(null);
 $('#btnImport').onclick = openImport;
+$('#btnDup').onclick = openDuplicates;
 $('#btnSettings').onclick = () => openSettings(false);
 $('#syncPill').onclick = () => { if(cfg && sync.status !== 'error') runSync(); else openSettings(true); };
 $('#switch').addEventListener('click', e => { const b = e.target.closest('[data-list]'); if(!b) return; ui.list = b.dataset.list; saveUi(); renderLists(); });

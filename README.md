@@ -18,6 +18,7 @@ Die Oberfläche gibt es auf **Spanisch und Englisch**; umgeschaltet wird mit dem
 - **Ein Klick auf den Kunden** öffnet ein einziges Fenster für alles: Zahlung des Monats (Status, Betrag, Datum, „überwiesen von“, Notiz), Status früherer Monate und sämtliche Kundendaten – gespeichert wird mit einem Knopf
 - Ein neuer Zahlername lässt sich dabei mit einem Haken dauerhaft merken
 - Hinweis, wenn bei einem Kunden noch Vormonate offen sind
+- **Duplikate prüfen** (Knopf „Buscar duplicados / Check for duplicates“ in der Ansicht „Alle“): vergleicht alle Kunden aller Parkanlagen und listet mögliche Doppelte auf – gleiches Kennzeichen (auch anders geschrieben), gleicher oder ähnlicher Name, ein Kunde, der bei einem anderen schon als Zahlername steht, gleiche Telefonnummer, gleicher Stellplatz in derselben Anlage. Jeden Treffer kann man bearbeiten, **zusammenfügen** (Zahlungen, Kennzeichen und Daten wandern zum Kunden, der bleibt; der andere Name wird als „zahlt über“ gemerkt; mit „Rückgängig“) oder als „verschiedene Kunden“ markieren, damit er nicht wieder erscheint
 - Kundenliste direkt aus Excel einfügen, Monat als CSV exportieren, Sicherung als Datei
 
 ## Daten mit Claude einlesen (Knopf „Datos / Data“)
