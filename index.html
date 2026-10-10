@@ -420,16 +420,16 @@ const I18N = {
   aliases:['Paga a través de (otros nombres en el extracto bancario)','Pays via (other names on the bank statement)'],
   aliasesPh:['p. ej. María Gómez, Taller Sur SRL','e.g. María Gómez, Taller Sur SRL'],
   aliasesHint:['Separar varios nombres con coma. La búsqueda también encuentra al cliente por estos nombres.','Separate several names with commas. Search also finds the customer by these names.'],
-  phone:['Teléfono (WhatsApp)','Phone (WhatsApp)'], phoneHint:['Con código de área, p. ej. 11 5555-0000','With area code, e.g. 11 5555-0000'],
+  phone:['Teléfono (WhatsApp)','Phone (WhatsApp)'], phoneHint:['Como lo tengas: 11 5555-0000, 15 5555-0000… De otro país con + y código de país, p. ej. +598 99 123 456','Any way you have it: 11 5555-0000, 15 5555-0000… Another country with + and country code, e.g. +598 99 123 456'],
   waBtn:['Recordar por WhatsApp','Remind via WhatsApp'], waOpen:['Abrir WhatsApp','Open WhatsApp'],
-  waBad:['Revisá el teléfono de {0}: falta el código de área o el número está incompleto.','Check the phone number of {0}: the area code is missing or the number is incomplete.'],
+  waBad:['Revisá el teléfono de {0}: le faltan números. Escribilo con código de área o, si es de otro país, con + y código de país.','Check the phone number of {0}: digits are missing. Write it with the area code or, for another country, with + and the country code.'],
   waNoPhone:['Cargá primero el teléfono.','Enter the phone number first.'],
   reminded:['recordado el {0}','reminded on {0}'],
   waTextLbl:['Mensaje de recordatorio (se envía siempre en español)','Reminder message (always sent in Spanish)'],
   waHint:['Se completan solos: {nombre} {monto} {pagado} {falta} {mes} {meses} {lugar} {patente} {estacionamiento}','Filled in automatically: {nombre} {monto} {pagado} {falta} {mes} {meses} {lugar} {patente} {estacionamiento}'],
   waPreview:['Vista previa','Preview'],
   waArea:['Código de área por defecto','Default area code'],
-  waAreaHint:['Se usa cuando un teléfono está cargado sin código de área (p. ej. 11).','Used when a phone number was entered without an area code (e.g. 11).'],
+  waAreaHint:['Se usa cuando un teléfono está cargado sin código de área. Vacío = 11 (Buenos Aires).','Used when a phone number was entered without an area code. Empty = 11 (Buenos Aires).'],
   waReset:['Restablecer el texto','Reset the text'],
   note:['Nota','Note'], paysFrom:['Paga desde','Pays from'], lastMonth:['Último mes','Last month'], ongoing:['– sigue vigente –','– ongoing –'],
   errName:['Ingresá un nombre.','Please enter a name.'], errUntil:['«Último mes» es anterior a «Paga desde».','“Last month” is before “Pays from”.'],
@@ -734,27 +734,28 @@ const WA_DEFAULT = 'Hola {nombre}, ¿cómo estás? Te escribimos del estacionami
 const WA_DEFAULT_PARTIAL = 'Hola {nombre}, ¿cómo estás? Te escribimos del estacionamiento: del pago mensual de {monto} correspondiente a {mes} recibimos {pagado} y falta abonar {falta}. Si ya lo hiciste, por favor envianos el comprobante. ¡Muchas gracias!';
 const WA_ICON = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 11.6a8.5 8.5 0 0 1-12.6 7.4L3.5 20.5l1.5-4.3A8.5 8.5 0 1 1 20.5 11.6z"/><path d="M9.2 8.6c-.3 2.6 3.2 6 5.9 5.9"/></svg>';
 const waSettings = () => { const w = (state.settings && state.settings.wa) || {}; return { text: w.text || '', area: w.area || '' }; };
-/* Turns a number as people write it in Argentina into what WhatsApp expects: 54 9 + area code + number, without 0 and 15.
-   Returns '' when it cannot be completed (no area code). Numbers of other countries need a leading +. */
+/* Turns a number as people write it into what WhatsApp expects.
+   Argentina: 54 9 + area code + number, without the leading 0 and without the 15. A number without area code gets the default one
+   from the settings, otherwise 11 (Buenos Aires). Other countries: written with + (or 00) it is taken as it is; a longer number
+   without + is taken as a number with its country code. Returns '' only when the number is too short to be completed. */
 function waNumber(phone, area){
   const raw = String(phone ?? '').trim();
   let d = raw.replace(/\D/g,'');
   if(!d) return '';
   const intl = raw.startsWith('+') || d.startsWith('00');
   if(d.startsWith('00')) d = d.slice(2);
-  if(intl && !d.startsWith('54')) return d.length >= 8 ? d : '';
+  if(intl && !d.startsWith('54')) return d.length >= 7 ? d : '';
   if(d.startsWith('54') && (intl || d.length >= 12)) d = d.slice(2);
-  if(d.startsWith('9') && d.length === 11) d = d.slice(1);
   d = d.replace(/^0+/, '');
-  if(d.length === 12) for(const a of [2, 3, 4]) if(d.substr(a, 2) === '15'){ d = d.slice(0, a) + d.slice(a + 2); break; }
+  if(d.startsWith('9') && d.length >= 11) d = d.slice(1).replace(/^0+/, '');        /* no area code starts with 9 */
+  const areaLike = a => a === 2 ? d.startsWith('11') : /^[23]/.test(d);              /* area codes: 11, 2xx, 3xx, 2xxx, 3xxx */
+  if(d.length === 12) for(const a of [2, 3, 4]) if(areaLike(a) && d.substr(a, 2) === '15'){ d = d.slice(0, a) + d.slice(a + 2); break; }
   if(d.length === 10 && d.startsWith('15')) d = d.slice(2);
-  if(d.length < 10){
-    if(d.startsWith('15') && d.length >= 8) d = d.slice(2);
-    const ac = String(area ?? '').replace(/\D/g,'').replace(/^0+/, '');
-    if(!ac || ac.length + d.length !== 10) return '';
-    d = ac + d;
-  }
-  return d.length === 10 ? '549' + d : '';
+  if(d.length === 10) return '549' + d;
+  if(d.length > 10) return intl ? '' : d;
+  if(d.startsWith('15') && d.length >= 8) d = d.slice(2);
+  for(const ac of [String(area ?? '').replace(/\D/g,'').replace(/^0+/, ''), '11']) if(ac && ac.length + d.length === 10) return '549' + ac + d;
+  return '';
 }
 /* the months a customer still owes, up to the month shown */
 function openMonths(c, month){
