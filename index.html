@@ -149,6 +149,7 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 .row-note{display:block;font-size:13.5px;margin-top:2px;overflow-wrap:anywhere}
 .badge{display:inline-block;font-size:11.5px;font-weight:650;border-radius:6px;padding:1px 6px;vertical-align:1px;margin-left:4px;background:var(--soft);color:var(--muted)}
 .badge.warn{background:var(--unpaid-soft);color:var(--unpaid)}
+.badge.sim{background:var(--accent-soft);color:var(--accent);font-weight:600}
 .plate{display:inline-block;font:700 12.5px/1.25 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.06em;white-space:nowrap;border:1.5px solid var(--text);border-radius:5px;padding:1px 6px;margin-left:6px;vertical-align:1px;background:var(--card);color:var(--text)}
 .sheet-head .plate{font-size:13.5px;margin:0 6px 0 0}
 .row-actions{display:flex;align-items:center;gap:6px;padding:0 10px 0 4px}
@@ -505,6 +506,7 @@ const I18N = {
   carTotal:['Total por mes: {0} ({1} autos)','Total per month: {0} ({1} cars)'], monthlyCar1:['Monto auto 1 (ARS)','Amount car 1 (ARS)'], plateCar1:['Patente auto 1','Plate car 1'],
   mgSum:['Son autos distintos: se suman los montos','Different cars: the amounts are added'], mgOne:['Es el mismo auto: queda un solo monto','The same car: one amount stays'],
   mgResult1:['Queda 1 auto: {0}','Result: 1 car: {0}'], mgResultN:['Quedan {0} autos: {1} = {2} por mes','Result: {0} cars: {1} = {2} per month'],
+  simBadge:['nombre parecido','similar name'],
   dupBtn:['Buscar duplicados','Check for duplicates'], dupTitle:['Posibles duplicados','Possible duplicates'], dupDone:['Listo','Done'],
   dupIntro:['Se comparan todos los clientes de todos los estacionamientos: patente, nombre, teléfono y lugar.','All customers of all parking lots are compared: licence plate, name, phone and space.'],
   dupNone:['No hay duplicados entre los {0} clientes.','No duplicates among the {0} customers.'],
@@ -866,6 +868,37 @@ const platesHtml = c => plates(c).map(x => `<span class="plate">${esc(x)}</span>
 function searchText(c, p){
   return norm([c.name, c.plate, (c.aliases || []).join(' '), c.spot, c.phone, c.note, p && p.p, p && p.n, lotName(c.lot)].filter(Boolean).join(' '));
 }
+/* Search that forgives typing mistakes in names: words are compared by how they sound in Spanish (z/s, b/v, ll/y, silent h,
+   c/k/qu, g/j before e and i, double letters) and one wrong, missing or swapped letter is allowed (two in long words). */
+const soundKey = v => norm(v).replace(/[^a-z0-9 ]/g, ' ').replace(/h/g, '').replace(/ll/g, 'y').replace(/qu/g, 'k').replace(/c(?=[ei])/g, 's').replace(/g(?=[ei])/g, 'j')
+  .replace(/c/g, 'k').replace(/z/g, 's').replace(/v/g, 'b').replace(/([a-z])\1+/g, '$1');
+function prefixDistance(q, w){            /* smallest number of typing mistakes between q and the beginning of w */
+  const n = Math.min(w.length, q.length + 2);
+  let prev2 = null, prev = Array.from({ length: n + 1 }, (_, j) => j);
+  for(let i = 1; i <= q.length; i++){
+    const cur = [i];
+    for(let j = 1; j <= n; j++){
+      cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (q[i - 1] === w[j - 1] ? 0 : 1));
+      if(i > 1 && j > 1 && q[i - 1] === w[j - 2] && q[i - 2] === w[j - 1]) cur[j] = Math.min(cur[j], prev2[j - 2] + 1);      /* two letters swapped */
+    }
+    prev2 = prev; prev = cur;
+  }
+  return Math.min(...prev);
+}
+function similarWord(token, words){
+  const k = soundKey(token).replace(/ /g, ''); if(k.length < 3) return false;
+  const max = k.length >= 8 ? 2 : k.length >= 4 ? 1 : 0;
+  return words.some(w => w.startsWith(k) || (max > 0 && prefixDistance(k, w) <= max));
+}
+/* 'exact' when the text is found as typed, 'similar' when every word is found but a name only nearly, '' otherwise */
+function searchHit(c, p, q, qPlate){
+  const text = searchText(c, p);
+  if(text.includes(q) || (qPlate.length > 1 && plateKey(c.plate).includes(qPlate))) return 'exact';
+  const tokens = q.split(/\s+/).filter(Boolean);
+  if(tokens.every(tk => text.includes(tk))) return tokens.length > 1 ? 'exact' : '';
+  const words = soundKey([c.name].concat(c.aliases || [], p && p.p ? [p.p] : []).join(' ')).split(' ').filter(Boolean);
+  return tokens.every(tk => text.includes(tk) || similarWord(tk, words)) ? 'similar' : '';
+}
 function sortCustomers(list){
   const coll = new Intl.Collator(ui.lang, { numeric:true, sensitivity:'base' });
   if(ui.sort === 'plate') return list.sort((a, b) => coll.compare(plateKey(a.plate) || '\uffff', plateKey(b.plate) || '\uffff') || coll.compare(a.name, b.name));
@@ -882,7 +915,7 @@ function progressHtml(c, s, p){
   if(fee && s === 'partial' && got < fee) parts.push(t('progLeft', fmtMoney(fee - got)));
   return `<span class="prog ${s}"><span class="prog-txt">${parts.map(x => `<span>${esc(x)}</span>`).join(' ')}</span><span class="prog-bar"><i style="width:${pct}%"></i></span></span>`;
 }
-function rowHtml(c, s, p){
+function rowHtml(c, s, p, similar){
   const bits = [];
   if(c.spot) bits.push(esc(t('space', c.spot)));
   if(s === 'paid' || s === 'partial'){
@@ -894,7 +927,8 @@ function rowHtml(c, s, p){
   const note = (p && p.n) ? `<span class="row-note">📝 ${esc(p.n)}</span>` : '';
   const open = s !== 'paid' ? priorOpen(c, ui.month) : 0;
   const badges = (ui.lot === 'all' ? `<span class="badge${c.lot === NO_LOT ? ' warn' : ''}">${esc(lotName(c.lot))}</span>` : '') +
-    (open ? `<span class="badge warn">${esc(open === 1 ? t('open1') : t('openN', open))}</span>` : '');
+    (open ? `<span class="badge warn">${esc(open === 1 ? t('open1') : t('openN', open))}</span>` : '') +
+    (similar ? `<span class="badge sim">${esc(t('simBadge'))}</span>` : '');
   const btn = (act, cls, sym, label) => `<button type="button" class="ib ${cls}" data-act="${act}" aria-label="${esc(label)}" title="${esc(label)}">${sym}</button>`;
   let wa = '';
   if(s !== 'paid' && c.phone){
@@ -919,11 +953,13 @@ function renderLists(){
   const all = customersFor(ui.lot, month);
   const groups = { paid:[], partial:[], unpaid:[], unclear:[] }, totals = { paid:0, partial:0, unpaid:0, unclear:0 }, counts = { paid:0, partial:0, unpaid:0, unclear:0 };
   let expected = 0, received = 0;
+  const near = new Set();                /* found although the name is not written exactly like that */
   for(const c of all){
     const p = payOf(c.id, month), s = statusOf(c.id, month);
     const got = paidAmount(c, s, p), amt = s === 'paid' || s === 'partial' ? got : (c.amount || 0);
     counts[s]++; totals[s] += amt; expected += c.amount || 0; if(s === 'paid' || s === 'partial') received += got;
-    if(!q || searchText(c, p).includes(q) || (qPlate.length > 1 && plateKey(c.plate).includes(qPlate))) groups[s].push(c);
+    const hit = q ? searchHit(c, p, q, qPlate) : 'exact';
+    if(hit){ groups[s].push(c); if(hit === 'similar') near.add(c.id); }
   }
   const n = all.length;
 
@@ -963,7 +999,7 @@ function renderLists(){
   }
   const emptyKey = { paid:'emptyPaid', partial:'emptyPartial', unpaid:'emptyUnpaid', unclear:'emptyUnclear' };
   lists.innerHTML = ORDER.map(k => {
-    const rows = sortCustomers(groups[k]).map(c => rowHtml(c, k, payOf(c.id, month))).join('');
+    const rows = sortCustomers(groups[k]).sort((a, b) => near.has(a.id) - near.has(b.id)).map(c => rowHtml(c, k, payOf(c.id, month), near.has(c.id))).join('');
     return `<section class="card col ${k}${ui.list === k ? ' active' : ''}">
       <div class="col-head"><span class="mark"></span><span>${esc(t(k))}</span><span class="sum">${counts[k] ? esc(fmtMoney(totals[k])) : ''}</span><span class="cnt">${q ? groups[k].length + ' / ' : ''}${counts[k]}</span></div>
       ${rows ? '<ul>' + rows + '</ul>' : `<div class="empty">${esc(q ? t('noMatch') : t(emptyKey[k]))}</div>`}
