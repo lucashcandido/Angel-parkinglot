@@ -6,7 +6,7 @@
 <title>Angel Parkinglot</title>
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src https://api.github.com https://api.anthropic.com; manifest-src 'self'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com https://api.anthropic.com; manifest-src 'self'; base-uri 'none'; form-action 'none'">
 <meta name="theme-color" content="#1d4ed8">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -92,8 +92,15 @@ h1,h2,h3,p{margin:0}
 .banner.err{background:var(--unpaid-soft)}
 .banner.info{background:var(--accent-soft);flex-wrap:nowrap;align-items:flex-start}
 .banner.info .icon-btn{margin:-6px -8px -6px 0}
-.scan{border-radius:14px;overflow:hidden;background:#000;aspect-ratio:1/1;margin-top:10px}
-.scan video{width:100%;height:100%;object-fit:cover;display:block}
+.login{max-width:460px;margin:22px auto;padding:24px 20px;text-align:center}
+.login h2{font-size:22px}
+.login p{color:var(--muted);margin:8px 0 14px}
+.login input{font:700 22px/1.2 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.08em;text-align:center;text-transform:uppercase;min-height:56px}
+.login .btn{width:100%;margin-top:12px;min-height:52px;font-size:17px}
+.login .link{margin-top:18px;color:var(--muted)}
+.login .msg{text-align:left}
+.code{font:700 23px/1.3 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.08em;text-align:center;padding:12px 8px;border:1.5px dashed var(--muted);border-radius:12px;margin:8px 0;background:var(--card);-webkit-user-select:all;user-select:all}
+body.locked .tabs,body.locked .monthbar,body.locked #summary,body.locked .toolbar,body.locked #switch,body.locked #lists{display:none}
 
 .toolbar{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0 10px}
 .toolbar input{flex:1 1 240px;min-width:0}
@@ -237,8 +244,6 @@ details li{margin-bottom:6px}
 code{background:var(--soft);border-radius:5px;padding:1px 5px;font-size:13.5px;overflow-wrap:anywhere}
 .msg{font-size:14px;padding:9px 12px;border-radius:10px;margin:10px 0;background:var(--soft)}
 .msg.err{background:var(--unpaid-soft);color:var(--unpaid)} .msg.good{background:var(--paid-soft);color:var(--paid)}
-.qr{display:grid;place-items:center;background:#fff;border-radius:12px;padding:12px;margin:10px 0}
-.qr svg{width:min(100%,280px);height:auto}
 
 #toast{position:fixed;left:12px;right:12px;margin:0 auto;width:fit-content;bottom:calc(18px + env(safe-area-inset-bottom));z-index:60;background:#111827;color:#fff;border-radius:12px;padding:10px 12px 10px 16px;display:none;align-items:center;gap:12px;font-size:14.5px;max-width:calc(100vw - 24px);box-shadow:0 8px 24px rgba(0,0,0,.3)}
 #toast.show{display:flex}
@@ -265,6 +270,7 @@ code{background:var(--soft);border-radius:5px;padding:1px 5px;font-size:13.5px;o
 </header>
 
 <main class="wrap">
+  <div id="login" hidden></div>
   <section class="monthbar">
     <button id="prev" class="nav" type="button">‹</button>
     <div class="monthmid">
@@ -298,7 +304,7 @@ code{background:var(--soft);border-radius:5px;padding:1px 5px;font-size:13.5px;o
    devices see the same state. Interface languages: Spanish and English.
    ===================================================================== */
 
-const LS = { data:'apl.data.v1', cfg:'apl.cfg.v1', ui:'apl.ui.v1', dirty:'apl.dirty.v1', ai:'apl.ai.v1', a2hs:'apl.a2hs.v1' };
+const LS = { data:'apl.data.v1', cfg:'apl.cfg.v1', ui:'apl.ui.v1', dirty:'apl.dirty.v1', ai:'apl.ai.v1', a2hs:'apl.a2hs.v1', code:'apl.code.v1', local:'apl.local.v1' };
 const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const STANDALONE = navigator.standalone === true || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
 const DATA_FILE = 'data.json';
@@ -373,14 +379,14 @@ const I18N = {
   lotDelTitle:['¿Quitar estacionamiento?','Remove parking lot?'], lotDelText:['«{0}» se quitará de la selección.','“{0}” will be removed from the selection.'],
   syncTitle:['Sincronización entre dispositivos','Device sync'],
   connectedTo:['Conectado a','Connected to'],
-  syncNow:['Sincronizar ahora','Sync now'], pair:['Conectar otro dispositivo','Connect another device'], unlink:['Desconectar','Disconnect'],
-  syncIntro_html:['Para que la PC y el iPhone muestren lo mismo, la app guarda los datos en tu repositorio <b>privado</b> de GitHub. Para eso necesitás, una sola vez, una clave de acceso (token).','So that your PC and iPhone show the same data, the app stores it in your <b>private</b> GitHub repository. For that you need an access key (token), once.'],
+  syncNow:['Sincronizar ahora','Sync now'], unlink:['Desconectar','Disconnect'],
+  syncIntro_html:['Para que todos los dispositivos muestren lo mismo, la app guarda los datos en tu repositorio <b>privado</b> de GitHub. Esto se configura una sola vez con un token; los demás dispositivos entran después con un código de acceso.','So that all devices show the same data, the app stores it in your <b>private</b> GitHub repository. This is set up once with a token; the other devices then get in with an access code.'],
   tokenHow:['Cómo crear el token (2 minutos)','How to create the token (2 minutes)'],
   tokenSteps_html:[
-    '<li>Abrí <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">github.com → Settings → Fine-grained tokens → Generate new token</a>.</li><li><b>Token name:</b> p. ej. <code>Parkinglot</code>. <b>Expiration:</b> «No expiration» (o el plazo más largo).</li><li><b>Repository access:</b> «Only select repositories» → elegí tu repositorio de datos.</li><li><b>Permissions → Repository permissions → Contents:</b> «Read and write».</li><li>Hacé clic en «Generate token», copiá el token (empieza con <code>github_pat_</code>) y pegalo abajo.</li>',
-    '<li>Open <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">github.com → Settings → Fine-grained tokens → Generate new token</a>.</li><li><b>Token name:</b> e.g. <code>Parkinglot</code>. <b>Expiration:</b> “No expiration” (or the longest option).</li><li><b>Repository access:</b> “Only select repositories” → choose your data repository.</li><li><b>Permissions → Repository permissions → Contents:</b> “Read and write”.</li><li>Click “Generate token”, copy the token (it starts with <code>github_pat_</code>) and paste it below.</li>'],
+    '<li>Abrí <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">github.com → Settings → Fine-grained tokens → Generate new token</a>.</li><li><b>Token name:</b> p. ej. <code>Parkinglot</code>. <b>Expiration:</b> «No expiration» (o el plazo más largo).</li><li><b>Repository access:</b> «Only select repositories» → elegí <b>los dos</b>: <code>{0}</code> y <code>{1}</code>.</li><li><b>Permissions → Repository permissions → Contents:</b> «Read and write».</li><li>Hacé clic en «Generate token», copiá el token (empieza con <code>github_pat_</code>) y pegalo abajo.</li>',
+    '<li>Open <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">github.com → Settings → Fine-grained tokens → Generate new token</a>.</li><li><b>Token name:</b> e.g. <code>Parkinglot</code>. <b>Expiration:</b> “No expiration” (or the longest option).</li><li><b>Repository access:</b> “Only select repositories” → choose <b>both</b>: <code>{0}</code> and <code>{1}</code>.</li><li><b>Permissions → Repository permissions → Contents:</b> “Read and write”.</li><li>Click “Generate token”, copy the token (it starts with <code>github_pat_</code>) and paste it below.</li>'],
   repoLbl:['Repositorio de datos (dueño/nombre)','Data repository (owner/name)'],
-  tokenHint:['El token queda guardado en este dispositivo y solo se envía a GitHub.','The token stays on this device and is only sent to GitHub.'],
+  tokenHint:['El token solo se envía a GitHub. Para los demás dispositivos se guarda cifrado con el código de acceso.','The token is sent only to GitHub. For the other devices it is stored encrypted with the access code.'],
   connect:['Conectar','Connect'],
   errRepoFmt:['Escribí el repositorio como dueño/nombre.','Please enter the repository as owner/name.'],
   errNoToken:['Pegá el token.','Please paste the token.'],
@@ -392,10 +398,7 @@ const I18N = {
   csvBtn:['Mes en CSV (Excel)','Month as CSV (Excel)'], backupBtn:['Guardar copia de seguridad','Save backup'], restoreBtn:['Cargar copia de seguridad','Load backup'],
   restored:['Copia de seguridad cargada.','Backup loaded.'], restoreBad:['Este archivo no es una copia de seguridad válida.','This file is not a valid backup.'],
   csvHead:['Estacionamiento;Lugar;Nombre;Patente;Monto mensual;Estado;Pagado;Recibido el;Transferido por;Nota','Parking lot;Space;Name;Licence plate;Monthly amount;Status;Paid;Received on;Transferred by;Note'],
-  pairMsg_html:['Escaneá el código con la cámara del otro dispositivo o enviate el enlace a vos mismo. <b>No lo compartas</b>: contiene tu clave de acceso.','Scan the code with the other device’s camera or send the link to yourself. <b>Do not share it</b> – it contains your access key.'],
   copyLink:['Copiar enlace','Copy link'], share:['Compartir…','Share…'], linkCopied:['Enlace copiado.','Link copied.'],
-  pairTitle:['¿Conectar este dispositivo?','Connect this device?'],
-  pairText:['Este dispositivo se conectará al repositorio de datos {0} y mostrará lo mismo que tus otros dispositivos.','This device will be connected to the data repository {0} and will show the same data as your other devices.'],
   paired:['Este dispositivo ya está conectado.','This device is now connected.'],
   eToken:['El token no es válido o venció. Cargá uno nuevo en los ajustes.','The token is invalid or has expired. Please enter a new one in the settings.'],
   eRate:['GitHub no acepta más pedidos por ahora. Probá de nuevo en unos minutos.','GitHub is not accepting more requests right now. Please try again in a few minutes.'],
@@ -407,15 +410,25 @@ const I18N = {
   eConflict:['No se pudo guardar varias veces porque otro dispositivo estaba escribiendo al mismo tiempo. Se volverá a intentar.','Saving failed several times because another device was writing at the same time. It will be retried.'],
   ePublic:['Este repositorio es público: tus datos de clientes quedarían a la vista de cualquiera. Usá un repositorio privado.','This repository is public – your customer data would be visible to anyone. Please use a private repository.'],
   eNet:['Sin conexión con GitHub. Revisá tu conexión a internet.','No connection to GitHub. Please check your internet connection.'],
-  linkTitle:['¿Ya conectaste otro dispositivo?','Already connected another device?'],
-  linkText:['En ese dispositivo abrí Ajustes → «Conectar otro dispositivo» y escaneá acá el código QR, o pegá el enlace.','On that device open Settings → “Connect another device”, then scan the QR code here or paste the link.'],
-  scanQr:['Escanear código QR','Scan QR code'], linkLbl:['Enlace de conexión','Connection link'], linkGo:['Conectar con enlace','Connect with link'],
-  errLink:['Este enlace de conexión no es válido.','This connection link is not valid.'],
-  firstTitle:['Primera conexión: con token','First connection: with a token'],
-  scanHint:['Apuntá la cámara al código QR que muestra el otro dispositivo.','Point the camera at the QR code shown on the other device.'],
-  scanOther:['Ese código QR no es de esta app.','That QR code is not from this app.'],
-  scanNoCam:['No se pudo usar la cámara. Permití el acceso o pegá el enlace de conexión.','The camera could not be used. Allow access or paste the connection link instead.'],
-  a2hs:['Para tenerla como app en el iPhone: tocá Compartir y elegí «Agregar a inicio». La app instalada guarda sus datos aparte; conectala ahí desde Ajustes con «Escanear código QR».','To get it as an app on your iPhone: tap Share and choose “Add to Home Screen”. The installed app keeps its own data; connect it there from Settings with “Scan QR code”.'],
+  firstTitle:['Primera configuración: con token','First-time setup: with a token'],
+  a2hs:['Para tenerla como app en el iPhone: tocá Compartir y elegí «Agregar a inicio». Si la app instalada pide el código de acceso, escribilo una vez.','To get it as an app on your iPhone: tap Share and choose “Add to Home Screen”. If the installed app asks for the access code, type it once.'],
+  codeTitle:['Código de acceso','Access code'],
+  codeIntro:['Escribí el código que te dieron. Se pide una sola vez en este dispositivo.','Type the code you were given. It is asked only once on this device.'],
+  codeGo:['Entrar','Enter'], codeBusy:['Verificando…','Checking…'],
+  codeBad:['El código no es correcto.','That code is not correct.'],
+  codeNone:['El acceso todavía no está configurado. Avisale al administrador.','Access has not been set up yet. Please tell the administrator.'],
+  codeNoCrypto:['Este navegador no puede verificar el código. Abrí la app por https.','This browser cannot check the code. Open the app over https.'],
+  codeAdmin:['Primera configuración (administrador)','First-time setup (administrator)'],
+  codeCopied:['Código copiado.','Code copied.'],
+  acTitle:['Código de acceso para los demás dispositivos','Access code for the other devices'],
+  acText:['En cada dispositivo nuevo: abrir la app y escribir este código una sola vez. También podés enviar el enlace: al tocarlo, el dispositivo queda conectado.','On each new device: open the app and type this code once. You can also send the link: tapping it connects the device.'],
+  acNone:['Creá un código para que los demás dispositivos entren sin token.','Create a code so that the other devices can get in without a token.'],
+  acCopy:['Copiar código','Copy code'], acMake:['Crear código de acceso','Create access code'], acNew:['Generar código nuevo','Generate new code'],
+  acNewTitle:['¿Generar un código nuevo?','Generate a new code?'],
+  acNewText:['El código anterior deja de servir para dispositivos nuevos. Los que ya están conectados siguen funcionando.','The old code stops working for new devices. Devices that are already connected keep working.'],
+  acDone:['Listo. En los demás dispositivos el código funciona en uno o dos minutos.','Done. On the other devices the code works within a minute or two.'],
+  acManual_html:['No se pudo publicar el código automáticamente: el token no puede escribir en el repositorio de la app. Creá el archivo <code>access.json</code> <a href="{0}" target="_blank" rel="noopener">acá</a>, pegá el texto de abajo y guardá con «Commit changes». Si el archivo ya existe, reemplazá su contenido.','The code could not be published automatically: the token may not write to the app repository. Create the file <code>access.json</code> <a href="{0}" target="_blank" rel="noopener">here</a>, paste the text below and save with “Commit changes”. If the file already exists, replace its content.'],
+  useLocal:['Usar sin sincronizar (solo este dispositivo)','Use without sync (this device only)'],
   reload:['Recargar la app','Reload app'],
   stmtBtn:['Extracto bancario','Bank statement'], stmtSub:['Pagos de {0}','Payments for {0}'],
   stmtIntro:['Subí el PDF o capturas de pantalla de tu banco. Claude lee los ingresos y los asigna a tus clientes; antes de guardar ves una vista previa.','Add the PDF or screenshots from your bank. Claude reads the incoming transfers and assigns them to your customers; you get a preview before anything is saved.'],
@@ -626,7 +639,7 @@ function quickStatus(cid, s){
 }
 
 /* ---------- rendering ---------- */
-function render(){ ai = aiFromState(); renderTabs(); renderMonth(); renderLists(); renderSync(); }
+function render(){ ai = aiFromState(); renderLogin(); renderTabs(); renderMonth(); renderLists(); renderSync(); }
 
 function applyStatic(){
   document.documentElement.lang = ui.lang;
@@ -640,7 +653,7 @@ function applyStatic(){
 }
 function setLang(l){
   if(l !== 'es' && l !== 'en' || l === ui.lang) return;
-  ui.lang = l; saveUi(); applyStatic(); render();
+  ui.lang = l; saveUi(); applyStatic(); renderLogin(true); render();
 }
 
 function renderTabs(){
@@ -731,7 +744,7 @@ function renderLists(){
 
   /* banner */
   let banner = '';
-  if(!cfg) banner = `<div class="banner"><span>${esc(t('bannerLocal'))}</span><button type="button" class="btn small" data-open="sync">${esc(t('bannerSetup'))}</button></div>`;
+  if(!cfg && !isLocked()) banner = `<div class="banner"><span>${esc(t('bannerLocal'))}</span><button type="button" class="btn small" data-open="sync">${esc(t('bannerSetup'))}</button></div>`;
   else if(sync.status === 'error') banner = `<div class="banner err"><span>${esc(sync.msg || t('bannerErr'))}</span><button type="button" class="btn small" data-open="sync">${esc(t('settings'))}</button></div>`;
   if(IS_IOS && !STANDALONE && !store.get(LS.a2hs, false)) banner += `<div class="banner info"><span>${esc(t('a2hs'))}</span><button type="button" class="icon-btn" data-dismiss="a2hs" aria-label="${esc(t('aClose'))}" title="${esc(t('aClose'))}">✕</button></div>`;
   $('#banner').innerHTML = banner;
@@ -744,6 +757,7 @@ function renderLists(){
   lists.classList.toggle('searching', !!q);
   const totalCustomers = Object.values(state.customers).filter(c => !c.deleted).length;
   if(!totalCustomers){
+    if(isLocked()){ lists.innerHTML = ''; return; }
     lists.innerHTML = `<div class="card welcome" style="grid-column:1/-1">
       <h2>${esc(t('welcome'))}</h2>
       <p>${esc(t('welcomeText'))}</p>
@@ -1318,6 +1332,7 @@ function openImport(){
 
 /* ---------- settings ---------- */
 function openSettings(focusSync){
+  let acNote = '';
   const el = openModal(`<div class="sheet-head"><h2>${esc(t('settings'))}</h2>${closeX()}</div><div id="setBody"></div>`);
   const draw = () => {
     const lots = lotsList();
@@ -1333,30 +1348,34 @@ function openSettings(focusSync){
         ${cfg ? `
           <p>${esc(t('connectedTo'))} <code>${esc(cfg.repo)}</code>.${sync.last ? ' ' + esc(t('lastSync', fmtTime(sync.last))) + '.' : ''}</p>
           ${sync.status === 'error' ? `<div class="msg err">${esc(sync.msg)}</div>` : ''}
+          <div class="box">
+            <p><b>${esc(t('acTitle'))}</b></p>
+            ${accessCode() ? `<div class="code" id="acCode">${esc(showCode(accessCode()))}</div>
+              <p class="hint">${esc(t('acText'))}</p>
+              <div class="actions" style="margin-top:10px">
+                <button type="button" class="btn small" id="acCopy">${esc(t('acCopy'))}</button>
+                <button type="button" class="btn small" id="acLink">${esc(t('copyLink'))}</button>
+                ${navigator.share ? `<button type="button" class="btn small" id="acShare">${esc(t('share'))}</button>` : ''}
+                <button type="button" class="btn small" id="acNew">${esc(t('acNew'))}</button>
+              </div>` : `<p>${esc(t('acNone'))}</p><button type="button" class="btn small primary" id="acMake">${esc(t('acMake'))}</button>`}
+            <div id="acMsg">${acNote}</div>
+          </div>
           <div class="actions" style="margin-top:0">
             <button type="button" class="btn small" id="syncNow">${esc(t('syncNow'))}</button>
-            <button type="button" class="btn small" id="pair">${esc(t('pair'))}</button>
             <button type="button" class="btn small danger" id="unlink">${esc(t('unlink'))}</button>
           </div>
-          <div id="pairBox"></div>
         ` : `
           <p>${t('syncIntro_html')}</p>
-          <div class="box">
-            <p><b>${esc(t('linkTitle'))}</b> ${esc(t('linkText'))}</p>
-            <button type="button" class="btn small" id="scanQr">${esc(t('scanQr'))}</button>
-            <div class="field" style="margin-top:12px"><label for="sLink">${esc(t('linkLbl'))}</label><input id="sLink" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://…#k=…"></div>
-            <div id="lMsg"></div>
-            <button type="button" class="btn small" id="linkGo">${esc(t('linkGo'))}</button>
-          </div>
           <p><b>${esc(t('firstTitle'))}</b></p>
           <details>
             <summary>${esc(t('tokenHow'))}</summary>
-            <ol>${t('tokenSteps_html')}</ol>
+            <ol>${t('tokenSteps_html', esc(DEFAULT_REPO.split('/')[1]), esc(APP_REPO.split('/')[1]))}</ol>
           </details>
           <div class="field"><label for="sRepo">${esc(t('repoLbl'))}</label><input id="sRepo" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" value="${esc(DEFAULT_REPO)}"></div>
           <div class="field"><label for="sTok">Token</label><input id="sTok" type="password" autocomplete="off" placeholder="github_pat_…"><div class="hint">${esc(t('tokenHint'))}</div></div>
           <div id="sMsg"></div>
           <button type="button" class="btn primary" id="connect">${esc(t('connect'))}</button>
+          <p style="margin-top:14px"><button type="button" class="link" id="useLocal">${esc(t('useLocal'))}</button></p>
         `}
       </div>
 
@@ -1418,24 +1437,33 @@ function openSettings(focusSync){
       }catch(err){ toast(t('restoreBad')); }
     };
 
+    const shareLink = () => location.origin + location.pathname + '#c=' + showCode(accessCode());
+    const copyText = async (text, okKey) => {
+      try{ await navigator.clipboard.writeText(text); toast(t(okKey)); }
+      catch(e){ acNote = `<textarea readonly>${esc(text)}</textarea>`; draw(); }
+    };
+    /* encrypts repository + token with the code and puts the file next to the app */
+    const publish = async code => {
+      acNote = `<div class="msg">${esc(t('checking'))}</div>`; draw();
+      const r = await publishAccess(code);
+      if(code !== accessCode()) setAccessCode(code);
+      rememberCode(code);
+      acNote = r.ok ? `<div class="msg good">${esc(t('acDone'))}</div>`
+        : `<div class="msg err">${t('acManual_html', esc('https://github.com/' + APP_REPO + '/new/main?filename=' + ACCESS_FILE))}</div><textarea readonly id="acBlob" style="min-height:120px">${esc(r.text)}</textarea>`;
+      draw();
+    };
     if(cfg){
       $('#syncNow', el).onclick = async () => { await runSync(); draw(); };
       $('#unlink', el).onclick = async () => {
         if(!await confirmBox(t('unlinkTitle'), t('unlinkText'), t('unlink'), true)) return;
-        cfg = null; store.del(LS.cfg); clearTimeout(sync.timer); setSync('local'); render(); draw();
+        cfg = null; store.del(LS.cfg); forgetCode(); store.set(LS.local, true); clearTimeout(sync.timer); acNote = ''; setSync('local'); render(); draw();
       };
-      $('#pair', el).onclick = () => showPairing($('#pairBox', el));
+      if($('#acMake', el)) $('#acMake', el).onclick = () => publish(newCode());
+      if($('#acNew', el)) $('#acNew', el).onclick = async () => { if(await confirmBox(t('acNewTitle'), t('acNewText'), t('acNew'))) publish(newCode()); };
+      if($('#acCopy', el)) $('#acCopy', el).onclick = () => copyText(showCode(accessCode()), 'codeCopied');
+      if($('#acLink', el)) $('#acLink', el).onclick = () => copyText(shareLink(), 'linkCopied');
+      if($('#acShare', el)) $('#acShare', el).onclick = () => navigator.share({ title:'Angel Parkinglot', url: shareLink() }).catch(() => {});
     }else{
-      const pairWith = async p => {
-        const msg = $('#lMsg', el);
-        if(!p){ if(msg) msg.innerHTML = `<div class="msg err">${esc(t('errLink'))}</div>`; return; }
-        if(msg) msg.innerHTML = `<div class="msg">${esc(t('checking'))}</div>`;
-        const r = await usePairing(p, false);
-        if(r === 'ok' || r === 'same'){ draw(); toast(t('paired')); }
-        else if($('#lMsg', el)) $('#lMsg', el).innerHTML = `<div class="msg err">${esc(r)}</div>`;
-      };
-      $('#linkGo', el).onclick = () => pairWith(parsePairing($('#sLink', el).value));
-      $('#scanQr', el).onclick = () => openScanner(pairWith);
       $('#connect', el).onclick = async () => {
         const repo = $('#sRepo', el).value.trim().replace(/^https?:\/\/github\.com\//i,'').replace(/\.git$/,'').replace(/\/+$/,'');
         const token = $('#sTok', el).value.trim(), msg = $('#sMsg', el), btn = $('#connect', el);
@@ -1443,9 +1471,11 @@ function openSettings(focusSync){
         if(!token){ msg.innerHTML = `<div class="msg err">${esc(t('errNoToken'))}</div>`; return; }
         btn.disabled = true; msg.innerHTML = `<div class="msg">${esc(t('checking'))}</div>`;
         const err = await connect(repo, token);
-        if(err){ btn.disabled = false; msg.innerHTML = `<div class="msg err">${esc(err)}</div>`; }
-        else { draw(); toast(t('syncReady')); }
+        if(err){ btn.disabled = false; msg.innerHTML = `<div class="msg err">${esc(err)}</div>`; return; }
+        toast(t('syncReady'));
+        await publish(accessCode() || newCode());      /* a new token is re-published under the code the devices already have */
       };
+      $('#useLocal', el).onclick = () => { store.set(LS.local, true); closeModal(el); render(); };
     }
   };
   draw();
@@ -1487,11 +1517,12 @@ function gh(conf, path, opts){
 }
 async function httpErr(res){
   let m = ''; try{ m = (await res.json()).message || ''; }catch(e){}
-  if(res.status === 401) return new SyncError(t('eToken'));
-  if(res.status === 403 && /rate limit/i.test(m)) return new SyncError(t('eRate'));
-  if(res.status === 403) return new SyncError(t('ePerm'));
-  if(res.status === 404) return new SyncError(t('eRepo'));
-  return new SyncError(t('eHttp', res.status) + (m ? ': ' + m : ''));
+  const err = text => Object.assign(new SyncError(text), { status: res.status });
+  if(res.status === 401) return err(t('eToken'));
+  if(res.status === 403 && /rate limit/i.test(m)) return err(t('eRate'));
+  if(res.status === 403) return err(t('ePerm'));
+  if(res.status === 404) return err(t('eRepo'));
+  return err(t('eHttp', res.status) + (m ? ': ' + m : ''));
 }
 async function fetchRemote(conf){
   const res = await gh(conf, `/repos/${conf.repo}/contents/${DATA_FILE}`);
@@ -1547,7 +1578,9 @@ async function runSync(){
     sync.last = Date.now();
     setSync(sync.again ? 'pending' : 'ok');
   }catch(e){
-    if(e instanceof SyncError) setSync('error', e.message); else setSync('offline');
+    if(!(e instanceof SyncError)) setSync('offline');
+    else if(e.status === 401 && cfg === conf && await tryHeal()){ sync.again = true; setSync('pending'); }
+    else setSync('error', e.message);
   }finally{
     sync.busy = false;
     if(sync.again && cfg){ sync.again = false; sync.timer = setTimeout(runSync, 400); }
@@ -1572,108 +1605,162 @@ async function connect(repo, token){
   return '';
 }
 
-/* Another device: link / QR code holding repository + token (only after the #, never sent to a server) */
-const b64url = s => b64enc(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
-const unb64url = s => b64dec(s.replace(/-/g,'+').replace(/_/g,'/'));
-function showPairing(box){
-  const link = location.origin + location.pathname + '#k=' + b64url(cfg.repo + '\n' + cfg.token);
-  box.innerHTML = `
-    <div class="msg">${t('pairMsg_html')}</div>
-    <div class="qr" id="qrBox" hidden></div>
-    <div class="actions" style="margin-top:0"><button type="button" class="btn small" id="pairCopy">${esc(t('copyLink'))}</button>${navigator.share ? `<button type="button" class="btn small" id="pairShare">${esc(t('share'))}</button>` : ''}</div>`;
-  $('#pairCopy', box).onclick = async () => {
-    try{ await navigator.clipboard.writeText(link); toast(t('linkCopied')); }
-    catch(e){ box.insertAdjacentHTML('beforeend', `<textarea readonly style="margin-top:10px">${esc(link)}</textarea>`); $('#pairCopy', box).disabled = true; }
-  };
-  if(navigator.share) $('#pairShare', box).onclick = () => navigator.share({ title:'Angel Parkinglot', url: link }).catch(() => {});
-  const drawQr = () => {
-    try{
-      const q = window.qrcode(0, 'L'); q.addData(link); q.make();
-      const qb = $('#qrBox', box); qb.innerHTML = q.createSvgTag({ cellSize:4, margin:4, scalable:true }); qb.hidden = false;
-    }catch(e){}
-  };
-  if(window.qrcode) drawQr();
-  else { const s = document.createElement('script'); s.src = 'vendor/qrcode.js'; s.onload = drawQr; document.head.appendChild(s); }
+/* ---------- access code: how every further device gets in ----------
+   The administrator connects once with a GitHub token. The app then encrypts {repository, token}
+   with a random access code and publishes the result as access.json next to the app. Any other
+   device needs only that code - typed once, or received as a link: it downloads access.json,
+   decrypts it and is connected. Without the code the file is useless. */
+const ACCESS_FILE = 'access.json', ACCESS_ITERATIONS = 600000;
+const CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789', CODE_LEN = 12;      /* no 0/O, 1/I/L: easy to read out and type */
+const APP_REPO = (() => {
+  const host = /^([\w-]+)\.github\.io$/i.exec(location.hostname), dir = location.pathname.split('/').filter(Boolean)[0];
+  return host && dir && !/\./.test(dir) ? host[1] + '/' + dir : 'lucashcandido/Angel-parkinglot';
+})();
+const cleanCode = s => String(s ?? '').toUpperCase().replace(/[^A-Z0-9]/g,'');
+const showCode = c => cleanCode(c).replace(/(.{4})(?=.)/g,'$1-');
+function newCode(){
+  let out = '';
+  while(out.length < CODE_LEN) for(const x of crypto.getRandomValues(new Uint8Array(24))) if(x < 248 && out.length < CODE_LEN) out += CODE_CHARS[x % 31];
+  return out;
 }
-/* Pairing data travels as a link (#k=...): opened directly, pasted, or scanned from the QR code. */
-function parsePairing(text){
-  const m = /(?:#k=|^)([\w-]{16,})\s*$/.exec(String(text || '').trim());
-  if(!m) return null;
-  let repo, token, aiKey;
-  try{ [repo, token, aiKey] = unb64url(m[1]).split('\n'); }catch(e){ return null; }
-  if(!repo || !token || !/^[\w.-]+\/[\w.-]+$/.test(repo)) return null;
-  return { repo, token, aiKey: aiKey || '' };
+const b64ToBytes = s => Uint8Array.from(atob(String(s)), ch => ch.charCodeAt(0));
+async function codeKey(code, salt, iterations){
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(cleanCode(code)), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({ name:'PBKDF2', salt, iterations, hash:'SHA-256' }, base, { name:'AES-GCM', length:256 }, false, ['encrypt','decrypt']);
 }
-/* Returns 'same', 'declined', 'ok', or an error message. */
-async function usePairing(p, ask){
-  const takeAiKey = () => { if(p.aiKey && !aiFromState()) setAi(p.aiKey, ''); };     /* links made by earlier versions carried the key */
-  if(cfg && cfg.repo === p.repo && cfg.token === p.token){ takeAiKey(); return 'same'; }
-  if(ask && !await confirmBox(t('pairTitle'), t('pairText', p.repo), t('connect'))) return 'declined';
-  const err = await connect(p.repo, p.token);
-  if(err) return err;
-  takeAiKey();
-  return 'ok';
+async function sealAccess(code, conf){
+  const salt = crypto.getRandomValues(new Uint8Array(16)), iv = crypto.getRandomValues(new Uint8Array(12));
+  const key = await codeKey(code, salt, ACCESS_ITERATIONS);
+  const ct = await crypto.subtle.encrypt({ name:'AES-GCM', iv }, key, new TextEncoder().encode(JSON.stringify({ repo: conf.repo, token: conf.token })));
+  return { v:1, it: ACCESS_ITERATIONS, salt: bytesToB64(salt), iv: bytesToB64(iv), ct: bytesToB64(new Uint8Array(ct)) };
 }
-async function checkPairingLink(){
-  if(!/^#k=/.test(location.hash)) return;
-  const p = parsePairing(location.hash);
-  history.replaceState(null, '', location.pathname + location.search);
-  if(!p) return;
-  const r = await usePairing(p, true);
-  if(r !== 'same' && r !== 'declined') toast(r === 'ok' ? t('paired') : r);
+/* Throws when the code is wrong or the file is not what it should be. */
+async function openAccess(code, blob){
+  if(!blob || blob.v !== 1 || !Number.isInteger(blob.it) || blob.it < 100000 || blob.it > 5000000) throw new Error('format');
+  const key = await codeKey(code, b64ToBytes(blob.salt), blob.it);
+  const plain = await crypto.subtle.decrypt({ name:'AES-GCM', iv: b64ToBytes(blob.iv) }, key, b64ToBytes(blob.ct));
+  const conf = JSON.parse(new TextDecoder().decode(plain));
+  if(!conf || typeof conf.token !== 'string' || !/^[\w.-]+\/[\w.-]+$/.test(conf.repo || '')) throw new Error('format');
+  return { repo: conf.repo, token: conf.token };
+}
+/* Reads access.json: fresh from GitHub first, the copy served with the app as fallback. null = not set up yet. */
+async function fetchAccessBlob(){
+  try{
+    const r = await fetch(API + `/repos/${APP_REPO}/contents/${ACCESS_FILE}`, { headers:{ 'Accept':'application/vnd.github+json' }, cache:'no-store' });
+    if(r.ok){ const j = await r.json(); if(j && j.content) return JSON.parse(b64dec(j.content)); }
+  }catch(e){}
+  const r = await fetch(ACCESS_FILE + '?v=' + Date.now(), { cache:'no-store' });
+  if(r.status === 404) return null;
+  if(!r.ok) throw new Error('net');
+  return r.json();
+}
+/* Publishes the encrypted access file next to the app. ok:false → the token may not write there; text is then shown for doing it by hand. */
+async function publishAccess(code){
+  const text = JSON.stringify(await sealAccess(code, cfg)), path = `/repos/${APP_REPO}/contents/${ACCESS_FILE}`;
+  try{
+    const got = await gh(cfg, path);
+    if(!got.ok && got.status !== 404) return { ok:false, text };
+    const body = { message:'Update access file', content: b64enc(text) };
+    if(got.ok) body.sha = (await got.json()).sha;
+    const put = await gh(cfg, path, { method:'PUT', body: JSON.stringify(body) });
+    return { ok: put.ok, text };
+  }catch(e){ return { ok:false, text }; }
 }
 
-const loading = {};
-function loadScript(src, ready){
-  if(ready()) return Promise.resolve();
-  return loading[src] || (loading[src] = new Promise((resolve, reject) => {
-    const el = document.createElement('script');
-    el.src = src;
-    el.onload = () => resolve();
-    el.onerror = () => { delete loading[src]; reject(new Error('load')); };
-    document.head.appendChild(el);
-  }));
+const accessCode = () => { const a = state.settings && state.settings.access; return a && a.code ? cleanCode(a.code) : ''; };
+function setAccessCode(code){ state.settings.access = { code, t: Date.now() }; commit(); }
+/* The code a device has used is kept, so it can fetch a replaced token by itself later on. */
+const COOKIE_PATH = location.pathname.replace(/[^/]*$/, '') || '/';
+function rememberCode(code){
+  store.set(LS.code, code);
+  try{ document.cookie = 'apl_code=' + code + '; max-age=31536000; path=' + COOKIE_PATH + '; SameSite=Strict' + (location.protocol === 'https:' ? '; Secure' : ''); }catch(e){}
 }
-/* Reads the pairing QR code with the camera - the way to connect the app once it sits on the home screen. */
-function openScanner(onResult){
-  const el = openModal(`<div class="sheet-head"><h2>${esc(t('scanQr'))}</h2>${closeX()}</div>
-    <p class="hint" id="scMsg">${esc(t('scanHint'))}</p>
-    <div class="scan"><video id="scVideo" playsinline muted autoplay></video></div>`);
-  const msg = $('#scMsg', el), video = $('#scVideo', el), cv = document.createElement('canvas');
-  let stream = null, timer = null, done = false;
-  const stop = () => { done = true; clearInterval(timer); if(stream) stream.getTracks().forEach(tr => tr.stop()); };
-  const fail = () => { stop(); msg.textContent = t('scanNoCam'); msg.className = 'msg err'; $('.scan', el).hidden = true; };
-  const tick = () => {
-    if(done) return;
-    if(!document.body.contains(el)){ stop(); return; }
-    if(!video.videoWidth || !window.jsQR) return;
-    const k = Math.min(1, 1000 / Math.max(video.videoWidth, video.videoHeight));
-    cv.width = Math.round(video.videoWidth * k); cv.height = Math.round(video.videoHeight * k);
-    const cx = cv.getContext('2d', { willReadFrequently:true });
-    cx.drawImage(video, 0, 0, cv.width, cv.height);
-    let hit = null;
-    try{ hit = window.jsQR(cx.getImageData(0, 0, cv.width, cv.height).data, cv.width, cv.height, { inversionAttempts:'dontInvert' }); }catch(e){}
-    if(!hit || !hit.data) return;
-    const p = parsePairing(hit.data);
-    if(!p){ msg.textContent = t('scanOther'); return; }
-    stop(); closeModal(el); onResult(p);
-  };
-  (async () => {
-    if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return fail();
-    try{
-      await loadScript('vendor/jsQR.js', () => !!window.jsQR);
-      stream = await navigator.mediaDevices.getUserMedia({ audio:false, video:{ facingMode:{ ideal:'environment' }, width:{ ideal:1280 }, height:{ ideal:720 } } });
-      if(done || !document.body.contains(el)){ stop(); return; }
-      video.srcObject = stream;
-      await video.play().catch(() => {});
-      timer = setInterval(tick, 250);
-    }catch(e){ fail(); }
-  })();
-  el.closest('.ov').addEventListener('click', e => { if(e.target.closest('[data-close]')) stop(); });
+function forgetCode(){
+  store.del(LS.code);
+  try{ document.cookie = 'apl_code=; max-age=0; path=' + COOKIE_PATH; }catch(e){}
+}
+function knownCode(){
+  const c = cleanCode(store.get(LS.code, ''));
+  if(c) return c;
+  const m = /(?:^|;\s*)apl_code=([A-Z0-9]+)/.exec(document.cookie || '');
+  return m ? m[1] : '';
+}
+/* Connects this device with an access code. Returns '' or a message for the person in front of it. */
+async function unlockWithCode(code){
+  code = cleanCode(code);
+  if(!window.crypto || !crypto.subtle) return t('codeNoCrypto');
+  if(code.length < 8) return t('codeBad');
+  let blob;
+  try{ blob = await fetchAccessBlob(); }catch(e){ return t('eNet'); }
+  if(!blob) return t('codeNone');
+  let conf;
+  try{ conf = await openAccess(code, blob); }catch(e){ return t('codeBad'); }
+  const err = await connect(conf.repo, conf.token);
+  if(err) return err;
+  rememberCode(code);
+  return '';
+}
+/* The administrator replaced the token: fetch the new one with the code this device already has. */
+async function tryHeal(){
+  const code = knownCode();
+  if(!code || !cfg || !window.crypto || !crypto.subtle) return false;
+  try{
+    const blob = await fetchAccessBlob();
+    if(!blob) return false;
+    const conf = await openAccess(code, blob);
+    if(conf.token === cfg.token && conf.repo === cfg.repo) return false;
+    cfg = conf; store.set(LS.cfg, cfg);
+    return true;
+  }catch(e){ return false; }
+}
+
+/* The first screen of a device that is not connected yet: one field, one button. */
+const isLocked = () => !cfg && !store.get(LS.local, false) && !Object.values(state.customers).some(c => !c.deleted);
+function renderLogin(force){
+  const box = $('#login'), want = isLocked();
+  document.body.classList.toggle('locked', want);
+  if(!force && box.dataset.on === String(want)) return;
+  box.dataset.on = String(want);
+  box.hidden = !want;
+  box.innerHTML = !want ? '' : `<div class="card login">
+    <h2>${esc(t('codeTitle'))}</h2>
+    <p>${esc(t('codeIntro'))}</p>
+    <input id="codeIn" type="text" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" placeholder="XXXX-XXXX-XXXX" aria-label="${esc(t('codeTitle'))}">
+    <div id="codeMsg"></div>
+    <button type="button" class="btn primary" id="codeGo">${esc(t('codeGo'))}</button>
+    <button type="button" class="link" id="codeAdmin">${esc(t('codeAdmin'))}</button>
+  </div>`;
+}
+async function submitCode(code){
+  const btn = $('#codeGo');
+  if(btn && btn.disabled) return;
+  if(btn){ btn.disabled = true; btn.textContent = t('codeBusy'); }
+  if($('#codeMsg')) $('#codeMsg').innerHTML = '';
+  const err = await unlockWithCode(code);
+  if(!err){ toast(t('paired')); return; }
+  if(!$('#codeMsg')) toast(err);
+  if($('#codeGo')){ $('#codeGo').disabled = false; $('#codeGo').textContent = t('codeGo'); }
+  if($('#codeMsg')) $('#codeMsg').innerHTML = `<div class="msg err">${esc(err)}</div>`;
+}
+/* On start: a link with the code (#c=...) or a code this device already knows connects it without any typing. */
+async function startAccess(){
+  const m = /^#c=([\w-]+)$/.exec(location.hash);
+  if(m) history.replaceState(null, '', location.pathname + location.search);
+  if(cfg) return;
+  const code = m ? cleanCode(m[1]) : knownCode();
+  if(!code) return;
+  if($('#codeIn')) $('#codeIn').value = showCode(code);
+  await submitCode(code);
 }
 
 /* ---------- events ---------- */
 $('#langSwitch').addEventListener('click', e => { const b = e.target.closest('[data-lang]'); if(b) setLang(b.dataset.lang); });
+$('#login').addEventListener('input', e => { if(e.target.id === 'codeIn') e.target.value = showCode(cleanCode(e.target.value).slice(0, CODE_LEN)); });
+$('#login').addEventListener('keydown', e => { if(e.key === 'Enter' && e.target.id === 'codeIn') submitCode(e.target.value); });
+$('#login').addEventListener('click', e => {
+  if(e.target.id === 'codeGo') submitCode($('#codeIn').value);
+  if(e.target.id === 'codeAdmin') openSettings(true);
+});
 $('#tabs').addEventListener('click', e => { const b = e.target.closest('[data-lot]'); if(!b) return; ui.lot = b.dataset.lot; saveUi(); render(); });
 $('#prev').onclick = () => { ui.month = addMonth(ui.month, -1); render(); };
 $('#next').onclick = () => { ui.month = addMonth(ui.month, 1); render(); };
@@ -1715,7 +1802,7 @@ setInterval(() => { if(cfg && document.visibilityState === 'visible' && !sync.bu
 
 applyStatic();
 render();
-checkPairingLink().then(() => { if(cfg) runSync(); });
+startAccess().then(() => { if(cfg) runSync(); });
 if('serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('sw.js').catch(() => {});
 </script>
 </body>

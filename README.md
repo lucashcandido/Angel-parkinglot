@@ -36,30 +36,38 @@ Beim Einlesen gehen die Dateien und die Kundenliste (Namen, Zahlernamen, Beträg
 
 Dieses Repo enthält **nur den Programmcode**. Die Kundendaten liegen getrennt im privaten Repo `Angel-parkinglot-data` (Datei `data.json`) und werden von der App automatisch gelesen und geschrieben. Ändern zwei Geräte gleichzeitig etwas, werden die Stände zusammengeführt; pro Kunde und Monat gilt die jeweils neueste Änderung. Ohne Internet speichert die App lokal und gleicht später ab.
 
-### Einmalig einrichten
+### Einmalig einrichten (Administrator)
 
 1. Token erstellen: https://github.com/settings/personal-access-tokens/new
-   - **Repository access:** „Only select repositories“ → `Angel-parkinglot-data`
+   - **Repository access:** „Only select repositories“ → **beide** auswählen: `Angel-parkinglot-data` und `Angel-parkinglot`
    - **Permissions → Repository permissions → Contents:** „Read and write“
    - **Expiration:** „No expiration“ oder das längste Angebot
-2. App öffnen → Zahnrad → **Sincronización entre dispositivos / Device sync** → Token einfügen → **Conectar / Connect**.
-3. Weiteres Gerät im Browser: auf dem ersten Gerät **Conectar otro dispositivo / Connect another device** wählen und den QR-Code mit der Kamera scannen.
+2. App öffnen → **Primera configuración (administrador) / First-time setup** → Token einfügen → **Conectar / Connect**.
+3. Die App erzeugt daraufhin von selbst einen **Zugangscode** (z. B. `WK6B-4APP-D4CW`) und zeigt ihn in den Einstellungen an.
+
+### Jedes weitere Gerät
+
+App öffnen, den Zugangscode einmal eintippen, **Entrar / Enter** – fertig. Alternativ den Link aus den Einstellungen („Copiar enlace“) schicken, z. B. per WhatsApp: Antippen verbindet das Gerät ohne Tippen. Kein Token, kein QR-Code, keine GitHub-Kenntnisse nötig.
+
+So funktioniert es: Die App verschlüsselt Repo-Name und Token mit dem Zugangscode (PBKDF2-SHA256 mit 600 000 Runden, AES-GCM) und legt das Ergebnis als `access.json` in dieses Repo. Ein neues Gerät lädt die Datei, entschlüsselt sie mit dem eingetippten Code und ist verbunden. Ohne den Code ist die Datei wertlos; der Code selbst ist zufällig erzeugt (12 Zeichen) und steht nur in den privaten Daten.
+
+- **Token läuft ab oder wird ersetzt:** Der Administrator trägt den neuen Token ein (Einstellungen → Desconectar, dann wie oben). Der Zugangscode bleibt gleich, und alle anderen Geräte holen sich den neuen Token beim nächsten Abgleich von selbst.
+- **Neuer Zugangscode:** „Generar código nuevo“ – der alte Code gilt dann nicht mehr für neue Geräte; verbundene Geräte laufen weiter.
+- **Gerät abmelden:** „Desconectar“ auf dem Gerät. Um ein verlorenes Gerät auszusperren, den Token bei GitHub löschen, einen neuen eintragen und einen neuen Code erzeugen.
 
 ### Als App auf dem iPhone (Home-Bildschirm)
 
 1. Die Adresse der App auf dem iPhone in **Safari** öffnen.
 2. Teilen-Symbol → **„Zum Home-Bildschirm“** → „Hinzufügen“.
-3. Die App über das neue Symbol öffnen. Sie hat einen eigenen, von Safari getrennten Speicher und ist deshalb zunächst nicht verbunden.
-4. In der App: Zahnrad → **Escanear código QR / Scan QR code** und den QR-Code scannen, den der PC unter „Conectar otro dispositivo“ zeigt. Alternativ den Verbindungs-Link einfügen.
+3. Die App über das neue Symbol öffnen. Fragt sie nach dem Zugangscode, ihn dort einmal eintippen (die App vom Home-Bildschirm hat einen eigenen, von Safari getrennten Speicher).
 
 Die App startet danach auch ohne Internet (die Daten des letzten Abgleichs bleiben sichtbar, Änderungen werden später synchronisiert).
 
-Der Token wird nur im Browser des jeweiligen Geräts gespeichert und nur an `api.github.com` gesendet. Den Kopplungs-Link bzw. QR-Code nicht weitergeben – er enthält den Token.
+Der Token wird nur an `api.github.com` gesendet.
 
 ## Technik
 
 - `index.html` – die komplette App (HTML, CSS, JavaScript), keine externen Abhängigkeiten zur Laufzeit
+- `access.json` – verschlüsselter Zugang für weitere Geräte; wird von der App geschrieben, nicht von Hand ändern
 - `sw.js` – hält die App-Dateien für den Start ohne Internet vor (Netz zuerst, gespeicherte Kopie als Rückfall)
-- `vendor/jsQR.js` – QR-Code-Erkennung mit der Kamera ([jsQR](https://github.com/cozmo/jsQR) 1.4.0, Apache-2.0-Lizenz)
-- `vendor/qrcode.js` – QR-Code-Erzeugung ([qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator) 1.4.4, MIT-Lizenz, © Kazuhiko Arase)
 - `manifest.webmanifest`, `icon-*.png` – Symbol für den Home-Bildschirm

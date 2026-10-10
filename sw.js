@@ -1,8 +1,8 @@
 /* Angel Parkinglot - keeps the app itself available without a connection.
    Network first, so a new version arrives as soon as the device is online; the stored copy is the fallback.
    Only the app's own files are handled; requests to GitHub and Anthropic never pass through here. */
-const CACHE = 'apl-shell-v1';
-const SHELL = ['./', 'manifest.webmanifest', 'icon-180.png', 'icon-192.png', 'icon-512.png', 'vendor/qrcode.js', 'vendor/jsQR.js'];
+const CACHE = 'apl-shell-v2';
+const SHELL = ['./', 'manifest.webmanifest', 'icon-180.png', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
