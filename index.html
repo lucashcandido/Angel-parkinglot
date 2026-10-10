@@ -415,7 +415,7 @@ const I18N = {
   tapMonth:['Tocá un mes para cambiar su estado.','Tap a month to change its status.'],
   custData:['Datos del cliente','Customer details'], editCustomer:['Editar cliente','Edit customer'], newCustomer:['Nuevo cliente','New customer'],
   name:['Nombre','Name'], plate:['Patente','Licence plate'], platePh:['p. ej. AB 123 CD','e.g. AB 123 CD'],
-  plateHint:['Varias patentes separadas por coma.','Separate several plates with commas.'],
+  plateHint:['Sin espacios: la app los pone sola. Varias patentes separadas por coma.','No spaces needed: the app adds them. Separate several plates with commas.'],
   lot:['Estacionamiento','Parking lot'], spaceLbl:['Lugar','Space'], monthly:['Monto mensual (ARS)','Monthly amount (ARS)'],
   aliases:['Paga a través de (otros nombres en el extracto bancario)','Pays via (other names on the bank statement)'],
   aliasesPh:['p. ej. María Gómez, Taller Sur SRL','e.g. María Gómez, Taller Sur SRL'],
@@ -845,8 +845,17 @@ function renderMonth(){
     : `<button type="button" class="link" id="toNow">${esc(t('toNow'))}</button>`;
 }
 
-const plates = c => splitNames(c.plate);
-const cleanPlate = v => splitNames(String(v ?? '').toUpperCase()).map(x => x.replace(/\s+/g,' ')).join(', ');
+/* Plates are written with their spaces by the app: AB 123 CD (current), ABC 123 (older), A123 BCD and 123 ABC (motorcycles).
+   Anything else stays as typed, in capitals. */
+function fmtPlate(v){
+  const raw = String(v ?? '').toUpperCase().replace(/\s+/g,' ').trim(), k = raw.replace(/[^A-Z0-9]/g,'');
+  let m;
+  if((m = /^([A-Z]{2})(\d{3})([A-Z]{2})$/.exec(k))) return m[1] + ' ' + m[2] + ' ' + m[3];
+  if((m = /^([A-Z]{3})(\d{3})$/.exec(k)) || (m = /^(\d{3})([A-Z]{3})$/.exec(k)) || (m = /^([A-Z]\d{3})([A-Z]{3})$/.exec(k))) return m[1] + ' ' + m[2];
+  return raw;
+}
+const plates = c => splitNames(c.plate).map(fmtPlate);
+const cleanPlate = v => splitNames(v).map(fmtPlate).filter(Boolean).join(', ');
 const plateKey = v => norm(v).replace(/[^a-z0-9]/g,'');
 const platesHtml = c => plates(c).map(x => `<span class="plate">${esc(x)}</span>`).join('');
 function searchText(c, p){
@@ -1061,7 +1070,7 @@ function openCustomer(cid){
     <div class="fs-body">${paySection}
       <div class="field"><label for="cn">${esc(t('name'))}</label><input id="cn" type="text" autocomplete="off" value="${esc(c ? c.name : '')}" required></div>
       <div class="two">
-        <div class="field"><label for="ck">${esc(t('plate'))}</label><input id="ck" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" style="text-transform:uppercase" value="${esc(cars[0].k)}" placeholder="${esc(t('platePh'))}"></div>
+        <div class="field"><label for="ck">${esc(t('plate'))}</label><input id="ck" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" style="text-transform:uppercase" value="${esc(cleanPlate(cars[0].k))}" placeholder="${esc(t('platePh'))}"></div>
         <div class="field"><label for="cs">${esc(t('spaceLbl'))}</label><input id="cs" type="text" autocomplete="off" value="${esc(cars[0].s)}"></div>
       </div>
       <div class="hint" style="margin:-6px 0 12px">${esc(t('plateHint'))}</div>
@@ -1105,6 +1114,8 @@ function openCustomer(cid){
   f('cars').addEventListener('click', e => { const b = e.target.closest('[data-cardel]'); if(!b) return; extra.splice(b.closest('.car').dataset.i, 1); drawCars(); onFee(); });
   f('carAdd').onclick = () => { extra.push({ k:'', s:'', a:'' }); drawCars(); const rows = $$('.car', el); $('input', rows[rows.length - 1]).focus(); };
   f('ca').addEventListener('input', showTotal);
+  f('ck').addEventListener('change', () => { f('ck').value = cleanPlate(f('ck').value); });          /* the spaces of a plate are put in by the app */
+  f('cars').addEventListener('change', e => { if(e.target.dataset.c !== 'k') return; e.target.value = cleanPlate(e.target.value); extra[e.target.closest('.car').dataset.i].k = e.target.value; });
   drawCars();
   if(c) f('waGo').addEventListener('click', e => {
     const num = waNumber(f('cp').value, waSettings().area), owes = statusOf(cid, month) !== 'paid';
