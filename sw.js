@@ -1,4 +1,4 @@
-/* Parkinglot Manager - keeps the app itself available without a connection.
+/* Cast Comercial - keeps the app itself available without a connection.
    Network first, so a new version arrives as soon as the device is online; the stored copy is the fallback.
    Only the app's own files are handled; requests to GitHub and Anthropic never pass through here. */
 const CACHE = 'apl-shell-v2';

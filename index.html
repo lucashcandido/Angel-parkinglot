@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Parkinglot Manager</title>
+<title>Cast Comercial</title>
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com https://api.anthropic.com; manifest-src 'self'; base-uri 'none'; form-action 'none'">
 <meta name="theme-color" content="#1d4ed8">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Parkinglot">
+<meta name="apple-mobile-web-app-title" content="Cast Comercial">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
@@ -311,7 +311,7 @@ code{background:var(--soft);border-radius:5px;padding:1px 5px;font-size:13.5px;o
 <header class="top">
   <div class="wrap">
     <div class="top-in">
-      <h1><span class="logo">P</span><span>Parkinglot Manager</span></h1>
+      <h1><span class="logo">P</span><span>Cast Comercial</span></h1>
       <button id="syncPill" class="pill" type="button"></button>
       <div id="langSwitch" class="lang" role="group" aria-label="Idioma / Language">
         <button type="button" data-lang="es" title="Español">ES</button>
@@ -355,7 +355,7 @@ code{background:var(--soft);border-radius:5px;padding:1px 5px;font-size:13.5px;o
 <script>
 'use strict';
 /* =====================================================================
-   Parkinglot Manager – payment overview for parking lots
+   Cast Comercial – payment overview for parking lots
    A single HTML file. Data lives in the browser and (once set up) is
    stored as data.json in a private GitHub repository so that several
    devices see the same state. Interface languages: Spanish and English.
@@ -466,7 +466,7 @@ const I18N = {
   unlinkTitle:['¿Desconectar la sincronización?','Disconnect sync?'],
   unlinkText:['Este dispositivo dejará de sincronizar. Los datos se conservan acá y en el repositorio.','This device will stop syncing. The data stays here and in the repository.'],
   dataTitle:['Clientes y datos','Customers & data'], sortLbl:['Orden de las listas','List order'], sortName:['por nombre','by name'], sortSpot:['por lugar','by space'], sortPlate:['por patente','by licence plate'],
-  xlBtn:['Mes en Excel, por estacionamiento','Month as Excel, by parking lot'], xlTitle:['Parkinglot Manager · {0}','Parkinglot Manager · {0}'], xlSummary:['Resumen','Summary'],
+  xlBtn:['Mes en Excel, por estacionamiento','Month as Excel, by parking lot'], xlTitle:['Cast Comercial · {0}','Cast Comercial · {0}'], xlSummary:['Resumen','Summary'],
   xlSumHead:['Estacionamiento;Clientes;Pagado;Parcial;No pagado;Dudoso;Esperado;Cobrado;Falta','Parking lot;Customers;Paid;Partial;Unpaid;Unclear;Expected;Received;Missing'],
   xlHead:['Lugar;Cliente;Patente;Monto mensual;Estado;Pagado;Falta;Recibido el;Transferido por;Teléfono;Nota','Space;Customer;Licence plate;Monthly amount;Status;Paid;Missing;Received on;Transferred by;Phone;Note'],
   xlTotal:['Total','Total'], xlCount:['{0} clientes','{0} customers'], xlCount1:['1 cliente','1 customer'], xlNoLot:['Sin asignar','Not assigned'], xlSheet:['Hoja {0}','Sheet {0}'],
@@ -2538,7 +2538,7 @@ function openSettings(focusSync){
     $('#sSort', el).onchange = e => { ui.sort = e.target.value; saveUi(); renderLists(); };
     $('#bulk', el).onclick = openBulk;
     $('#csv', el).onclick = exportCsv; $('#xlsx', el).onclick = exportXlsx;
-    $('#backup', el).onclick = () => download('parkinglot-backup-' + todayISO() + '.json', JSON.stringify(Object.assign({}, state, { settings:{} })), 'application/json');     /* never put the API key into a file */
+    $('#backup', el).onclick = () => download('cast-comercial-backup-' + todayISO() + '.json', JSON.stringify(Object.assign({}, state, { settings:{} })), 'application/json');     /* never put the API key into a file */
     $('#restore', el).onclick = () => $('#restoreFile', el).click();
     $('#reload', el).onclick = () => location.reload();
     $('#restoreFile', el).onchange = async e => {
@@ -2576,7 +2576,7 @@ function openSettings(focusSync){
       if($('#acNew', el)) $('#acNew', el).onclick = async () => { if(await confirmBox(t('acNewTitle'), t('acNewText'), t('acNew'))) publish(newCode()); };
       if($('#acCopy', el)) $('#acCopy', el).onclick = () => copyText(showCode(accessCode()), 'codeCopied');
       if($('#acLink', el)) $('#acLink', el).onclick = () => copyText(shareLink(), 'linkCopied');
-      if($('#acShare', el)) $('#acShare', el).onclick = () => navigator.share({ title:'Parkinglot Manager', url: shareLink() }).catch(() => {});
+      if($('#acShare', el)) $('#acShare', el).onclick = () => navigator.share({ title:'Cast Comercial', url: shareLink() }).catch(() => {});
     }else{
       $('#connect', el).onclick = async () => {
         const repo = $('#sRepo', el).value.trim().replace(/^https?:\/\/github\.com\//i,'').replace(/\.git$/,'').replace(/\/+$/,'');
@@ -2609,7 +2609,7 @@ function exportCsv(){
     const p = payOf(c.id, ui.month) || {}, s = statusOf(c.id, ui.month);
     rows.push([lotName(c.lot), c.spot, c.name, c.plate || '', String(c.amount || 0).replace('.',','), t(s), s === 'paid' || s === 'partial' ? String(paidAmount(c, s, p)).replace('.',',') : '', p.d || '', p.p || '', p.n || '']);
   }
-  download('parkinglot-' + ui.month + '.csv', '\ufeff' + rows.map(r => r.map(cell).join(';')).join('\r\n'), 'text/csv;charset=utf-8');
+  download('cast-comercial-' + ui.month + '.csv', '\ufeff' + rows.map(r => r.map(cell).join(';')).join('\r\n'), 'text/csv;charset=utf-8');
 }
 
 /* ---------- Excel export: the month shown, one sheet per parking lot ----------
@@ -2720,7 +2720,7 @@ function monthXlsx(month){
   ].concat(sheets.map((s, i) => ['xl/worksheets/sheet' + (i + 1) + '.xml', s.xml]));
   return new Blob(zipStore(files), { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
 }
-function exportXlsx(){ download('parkinglot-' + ui.month + '.xlsx', monthXlsx(ui.month), 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'); }
+function exportXlsx(){ download('cast-comercial-' + ui.month + '.xlsx', monthXlsx(ui.month), 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'); }
 
 /* ---------- sync through GitHub ---------- */
 class SyncError extends Error {}
