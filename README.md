@@ -31,7 +31,7 @@ Die Oberfläche gibt es auf **Spanisch und Englisch**; umgeschaltet wird mit dem
 
 - oben die Monatssummen **Ingresos**, **Gastos** und **Resultado** (Einnahmen minus Ausgaben, rot wenn negativ)
 - **+ Ingreso** und **+ Gasto**: Betrag, Datum (vorgeschlagen: heute), Zweck, Kategorie (Vorschläge wie Ventas, Bebidas, Sueldos, Alquiler – frei überschreibbar) und Notiz; „Guardar y cargar otro“ für mehrere Einträge hintereinander
-- zwei Listen (Einnahmen grün, Ausgaben rot), neueste zuerst; Antippen öffnet den Eintrag zum Ändern oder Löschen (mit „Rückgängig“)
+- **Jeder Eintrag gehört zu einem Tag:** Die Übersicht zeigt eine Karte pro Tag (neuester zuerst) mit den Einnahmen, Ausgaben und dem Ergebnis dieses Tages; die Knöpfe + und − auf der Karte tragen direkt für diesen Tag ein. Antippen öffnet einen Eintrag zum Ändern (auch des Tages) oder Löschen (mit „Rückgängig“)
 - Suche nach Zweck, Kategorie, Notiz oder Betrag
 - Die Einträge werden wie alles andere über das Daten-Repo abgeglichen und stehen in der Sicherungsdatei
 
