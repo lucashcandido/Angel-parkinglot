@@ -209,6 +209,39 @@ a.btn{display:inline-flex;align-items:center;gap:8px;text-decoration:none}
 .saldo-end span:first-child{margin-right:auto}
 .saldo-end .calc{font-weight:500;color:var(--muted);font-size:14px}
 .saldo-end b{font-size:20px}
+/* diagram of the bar's month - colours from a palette checked for colour-blind readers */
+:root{--viz-in:#008300;--viz-out:#e34948;--viz-bal:#2a78d6}
+@media (prefers-color-scheme: dark){:root{--viz-out:#e66767;--viz-bal:#3987e5}}
+.sheet.wide{max-width:760px}
+.viz-kpi{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:6px}
+.viz-kpi span{display:block;font-size:12.5px;color:var(--muted)}
+.viz-kpi b{display:block;font-size:17px;white-space:nowrap}
+.viz-wrap{position:relative;outline-offset:4px;touch-action:pan-y;border-radius:8px}
+.viz-h{font-size:14.5px;margin:14px 0 4px}
+.viz-legend{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:13px;color:var(--muted);margin-bottom:2px}
+.viz .k{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+.viz .k.in{background:var(--viz-in)} .viz .k.out{background:var(--viz-out)}
+.viz .k.bal{background:var(--viz-bal);height:3px;width:14px;vertical-align:3px}
+.viz svg{display:block;max-width:100%}
+.viz .gr{stroke:var(--line);stroke-width:1} .viz .ax{stroke:var(--muted);stroke-width:1;opacity:.55}
+.viz .tk{font-size:11px;fill:var(--muted);font-variant-numeric:tabular-nums}
+.viz .bar.in{fill:var(--viz-in)} .viz .bar.out{fill:var(--viz-out)}
+.viz-wrap.has-cur .bar:not(.on){opacity:.4}
+.viz .line{fill:none;stroke:var(--viz-bal);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.viz .area{fill:var(--viz-bal);opacity:.1}
+.viz .dot{fill:var(--viz-bal);stroke:var(--card);stroke-width:2}
+.viz .lb{font-size:12.5px;font-weight:700;fill:var(--text)}
+.viz .cross{stroke:var(--muted);stroke-width:1}
+.viz-tip{position:absolute;top:44px;z-index:2;background:var(--card);border:1px solid var(--line);border-radius:10px;box-shadow:0 4px 14px rgba(16,24,40,.16);padding:8px 10px;font-size:13px;pointer-events:none;white-space:nowrap}
+.viz-tip-h{font-weight:650;margin-bottom:4px}
+.viz-tip-r{display:flex;align-items:center;gap:0 6px}
+.viz-tip-r .k{margin-right:0}
+.viz-tip-r b{font-variant-numeric:tabular-nums} .viz-tip-r span{color:var(--muted)}
+.viz-table{overflow-x:auto}
+.viz-table table{width:100%;border-collapse:collapse;font-size:13.5px;font-variant-numeric:tabular-nums}
+.viz-table th,.viz-table td{text-align:right;padding:5px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
+.viz-table th:first-child,.viz-table td:first-child{text-align:left}
+@media (max-width:430px){.viz-kpi b{font-size:14.5px}}
 @media (max-width:560px){
   .lists.duo{gap:8px}
   .lists.duo .row{display:block}
@@ -224,9 +257,9 @@ a.btn{display:inline-flex;align-items:center;gap:8px;text-decoration:none}
 .btn-pair .btn.cam{flex:none;border-left:0;border-radius:0 11px 11px 0;padding:0 12px;display:grid;place-items:center}
 #ePhoto{display:inline-flex;align-items:center;gap:8px}
 .tx.out{border-left-color:var(--unpaid)}
-@media (max-width:560px){.btn-pair{flex:1}}
+@media (max-width:560px){.btn-pair{flex:1 1 40%}}
 @media (max-width:430px){.bar-sum b{font-size:16px} .bar-sum .saldo b{font-size:21px}}
-@media (max-width:560px){#barView .toolbar input{flex:1 1 100%}}
+@media (max-width:560px){#barView .toolbar input{flex:1 1 50%} #barView #barOverview{flex:none}}
 .empty{padding:18px 14px;color:var(--muted);font-size:14px}
 .welcome{padding:22px 18px;text-align:center}
 .welcome p{color:var(--muted);margin:6px 0 14px}
@@ -390,6 +423,7 @@ code{background:var(--soft);border-radius:5px;padding:1px 5px;font-size:13.5px;o
   <section id="barView" hidden>
     <div class="toolbar">
       <input id="barSearch" type="search" autocomplete="off">
+      <button id="barOverview" class="btn" type="button"></button>
       <span class="btn-pair"><button id="barIn" class="btn in" type="button"></button><button id="barInPhoto" class="btn in cam" type="button"></button></span>
       <span class="btn-pair"><button id="barOut" class="btn out" type="button"></button><button id="barOutPhoto" class="btn out cam" type="button"></button></span>
     </div>
@@ -571,6 +605,12 @@ const I18N = {
   barPhotoDup:['ya cargado','already entered'], barPhotoNoDate:['sin fecha: revisar','no date: please check'], barPhotoAddIn:['Agregar como ingreso','Add as income'], barPhotoAddOut:['Agregar como gasto','Add as expense'],
   barPhotoSaved1:['1 movimiento guardado.','1 entry saved.'], barPhotoSavedN:['{0} movimientos guardados.','{0} entries saved.'], barPhotoElse:['Algunos son de {0}.','Some belong to {0}.'],
   errBarPhoto:['Revisá monto y fecha de cada movimiento que se guarda.','Check amount and date of every entry to be saved.'],
+  barOverview:['Resumen','Overview'], vizSaldo:['Saldo','Balance'],
+  vizAria:['Diagrama del mes. Con las flechas izquierda y derecha se recorre día por día.','Chart of the month. Use the left and right arrow keys to go day by day.'],
+  vizDaily:['Ingresos y gastos por día','Income and expenses per day'], vizInUp:['Ingresos (hacia arriba)','Income (upwards)'], vizOutDown:['Gastos (hacia abajo)','Expenses (downwards)'],
+  vizRun:['Saldo acumulado del mes','Running balance of the month'], vizRunShort:['Saldo acumulado','Running balance'], vizDayNet:['Saldo del día','Day balance'],
+  vizHint:['Tocá o pasá el dedo sobre el diagrama para ver los montos de cada día.','Tap or move over the chart to see the amounts of each day.'],
+  vizTable:['Ver los días en una tabla','Show the days as a table'], vizEmpty:['Todavía no hay movimientos en este mes.','Nothing entered for this month yet.'],
   barSaldo:['Saldo de {0}','Balance for {0}'], barTotal:['Total','Total'], barAcum:['Saldo acumulado, con los meses anteriores: {0}','Running balance including earlier months: {0}'],
   barKindIn:['Ingreso','Income'], barKindOut:['Gasto','Expense'], barNewIn:['Nuevo ingreso','New income'], barNewOut:['Nuevo gasto','New expense'], barEdit:['Editar movimiento','Edit entry'],
   barAmount:['Monto (ARS)','Amount (ARS)'], barDate:['Fecha','Date'], barConcept:['Concepto','What for'], barConceptPhIn:['p. ej. Ventas del sábado','e.g. Saturday sales'], barConceptPhOut:['p. ej. Cerveza, proveedor, luz…','e.g. beer, supplier, electricity…'],
@@ -904,7 +944,7 @@ function applyStatic(){
   $('#btnAdd').textContent = t('addCustomer');
   $('#btnImport').textContent = t('stmtBtn');
   $('#btnDup').textContent = t('dupBtn');
-  $('#barIn').textContent = t('barAddIn'); $('#barOut').textContent = t('barAddOut');
+  $('#barIn').textContent = t('barAddIn'); $('#barOut').textContent = t('barAddOut'); $('#barOverview').textContent = t('barOverview');
   for(const [id, key] of [['#barInPhoto', 'barPhotoIn'], ['#barOutPhoto', 'barPhotoOut']]){ $(id).innerHTML = CAM_ICON; $(id).setAttribute('aria-label', t(key)); $(id).title = t(key); }
   $('#barSearch').placeholder = t('barSearchPh'); $('#barSearch').setAttribute('aria-label', t('aSearch'));
 }
@@ -1080,6 +1120,134 @@ function renderBar(){
     </section>`;
   }).join('') + `<div class="card saldo-end"><span>${esc(t('barSaldo', fmtMonthLong(month)))}</span><span class="calc">${esc(fmtMoney(sum.in))} − ${esc(fmtMoney(sum.out))} =</span><b class="${net < 0 ? 'neg' : 'bal'}" id="barEnd">${esc(signedMoney(net))}</b></div>`;
 }
+/* ---------- Rock La Ve: overview of the month as a diagram ----------
+   Two panels over the days of the month, sharing the day axis:
+   1. income (columns upwards) and expenses (columns downwards) of each day,
+   2. the running balance of the month as a line - it ends at the balance of the month.
+   One amount axis per panel; the colours are taken from a palette checked for colour-blind readers, and income / expenses
+   are also told apart by direction. Every figure is in the table underneath as well. */
+function barDays(month){
+  const [y, m] = month.split('-').map(Number), n = new Date(y, m, 0).getDate();
+  const days = Array.from({ length: n }, (_, i) => ({ day: i + 1, iso: month + '-' + pad2(i + 1), in: 0, out: 0, cum: 0, any: false }));
+  for(const e of Object.values(state.bar)){
+    if(!e || e.deleted || typeof e.d !== 'string' || e.d.slice(0, 7) !== month) continue;
+    const d = days[+e.d.slice(8) - 1]; if(!d) continue;
+    d[barKind(e)] += e.a || 0; d.any = true;
+  }
+  let run = 0;
+  for(const d of days){ run = Math.round((run + d.in - d.out) * 100) / 100; d.cum = run; }
+  return days;
+}
+function niceStep(range, parts){
+  const raw = range / parts, pow = Math.pow(10, Math.floor(Math.log10(raw)));
+  return [1, 2, 2.5, 5, 10].map(k => k * pow).find(s => s >= raw) || pow * 10;
+}
+function compactMoney(n){
+  const a = Math.abs(n), sign = n < 0 ? '−' : '', f = (v, d) => new Intl.NumberFormat(loc(), { maximumFractionDigits: d }).format(v);
+  if(a >= 1e6) return sign + f(a / 1e6, 1) + ' M';
+  if(a >= 1e3) return sign + f(a / 1e3, a < 1e4 ? 1 : 0) + (ui.lang === 'en' ? 'K' : ' mil');
+  return sign + f(a, 0);
+}
+function openBarOverview(){
+  const month = ui.month, days = barDays(month), n = days.length;
+  const sumIn = days.reduce((s, d) => s + d.in, 0), sumOut = days.reduce((s, d) => s + d.out, 0), net = Math.round((sumIn - sumOut) * 100) / 100;
+  const used = days.filter(d => d.any);
+  const el = openModal(`<div class="fs">
+    <div class="sheet-head"><h2>${esc(t('barOverview'))}<span class="sub">${esc(BAR_NAME + ' · ' + fmtMonthLong(month))}</span></h2>${closeX()}</div>
+    <div class="fs-body viz">
+      <div class="viz-kpi">
+        <div><span>${esc(t('barIn'))}</span><b>${esc(fmtMoney(sumIn))}</b></div>
+        <div><span>${esc(t('barOut'))}</span><b>${esc(fmtMoney(sumOut))}</b></div>
+        <div><span>${esc(t('vizSaldo'))}</span><b class="${net < 0 ? 'neg' : 'bal'}">${esc(signedMoney(net))}</b></div>
+      </div>
+      ${used.length ? `
+      <div class="viz-wrap" id="vizWrap" tabindex="0" role="group" aria-label="${esc(t('vizAria'))}">
+        <h3 class="viz-h">${esc(t('vizDaily'))}</h3>
+        <div class="viz-legend"><span><i class="k in"></i>${esc(t('vizInUp'))}</span><span><i class="k out"></i>${esc(t('vizOutDown'))}</span></div>
+        <div id="vizA"></div>
+        <h3 class="viz-h">${esc(t('vizRun'))}</h3>
+        <div id="vizB"></div>
+        <div class="viz-tip" id="vizTip" hidden></div>
+      </div>
+      <p class="hint">${esc(t('vizHint'))}</p>
+      <details class="viz-table"><summary>${esc(t('vizTable'))}</summary>
+        <table><thead><tr><th>${esc(t('barDate'))}</th><th>${esc(t('barIn'))}</th><th>${esc(t('barOut'))}</th><th>${esc(t('vizDayNet'))}</th><th>${esc(t('vizRunShort'))}</th></tr></thead>
+        <tbody>${used.map(d => `<tr><td>${esc(fmtDate(d.iso))}</td><td>${esc(fmtMoney(d.in))}</td><td>${esc(fmtMoney(d.out))}</td><td>${esc(signedMoney(Math.round((d.in - d.out) * 100) / 100))}</td><td>${esc(signedMoney(d.cum))}</td></tr>`).join('')}</tbody></table>
+      </details>` : `<div class="msg">${esc(t('vizEmpty'))}</div>`}
+    </div>
+    <div class="actions fs-foot"><button type="button" class="btn primary grow" data-close>${esc(t('dupDone'))}</button></div></div>`, 'fixed wide');
+  if(!used.length) return;
+  const wrap = $('#vizWrap', el), tip = $('#vizTip', el);
+  const last = month === curMonth() ? Math.max(new Date().getDate(), used[used.length - 1].day) : n;        /* the line stops today in the running month */
+  let geo = null, cur = 0;
+  const dayName = d => { const [y, m] = month.split('-').map(Number); return cap(new Intl.DateTimeFormat(loc(), { weekday:'short', day:'numeric', month:'short' }).format(new Date(y, m - 1, d.day)).replace(/\./g, '')); };
+  function draw(){
+    const W = Math.max(280, Math.round(wrap.clientWidth)), L = 54, R = 14, pw = W - L - R, band = pw / n, bw = Math.max(3, Math.min(24, band - 2));
+    const x = day => L + (day - 0.5) * band;
+    const ticksX = [1, 5, 10, 15, 20, 25, n];
+    const axisX = (y0, h) => ticksX.map(d => `<text class="tk" x="${x(d)}" y="${y0 + h + 15}" text-anchor="middle">${d}</text>`).join('');
+    /* panel A: income up, expenses down, one amount scale */
+    const maxIn = Math.max(...days.map(d => d.in)), maxOut = Math.max(...days.map(d => d.out));
+    const stepA = niceStep(Math.max(maxIn + maxOut, 1), 4), topA = Math.max(stepA, Math.ceil(maxIn / stepA) * stepA), botA = Math.ceil(maxOut / stepA) * stepA;
+    const HA = 190, TA = 8, ph = HA, yA = v => TA + (topA - v) / (topA + botA) * ph;
+    let a = '';
+    for(let v = -botA; v <= topA + 1e-9; v += stepA) a += `<line class="${Math.abs(v) < 1e-9 ? 'ax' : 'gr'}" x1="${L}" x2="${W - R}" y1="${yA(v)}" y2="${yA(v)}"/><text class="tk" x="${L - 8}" y="${yA(v) + 4}" text-anchor="end">${esc(compactMoney(Math.abs(v)))}</text>`;
+    const col = (d, v, cls) => {              /* rounded at the data end, square at the baseline */
+      if(!v) return '';
+      const up = cls === 'in', h = Math.max(1.5, Math.abs(yA(v) - yA(0))), r = Math.min(4, bw / 2, h), x0 = x(d.day) - bw / 2, y0 = yA(0);
+      return up ? `<path class="bar ${cls}" data-day="${d.day}" d="M${x0},${y0}v${-(h - r)}q0,${-r} ${r},${-r}h${bw - 2 * r}q${r},0 ${r},${r}v${h - r}z"/>`
+                : `<path class="bar ${cls}" data-day="${d.day}" d="M${x0},${y0}v${h - r}q0,${r} ${r},${r}h${bw - 2 * r}q${r},0 ${r},${-r}v${-(h - r)}z"/>`;
+    };
+    for(const d of days) a += col(d, d.in, 'in') + col(d, -d.out, 'out');
+    $('#vizA', el).innerHTML = `<svg viewBox="0 0 ${W} ${TA + ph + 22}" width="${W}" height="${TA + ph + 22}" role="img" aria-label="${esc(t('vizDaily'))}">${a}${axisX(TA, ph)}<line class="cross" id="crossA" y1="${TA}" y2="${TA + ph}" hidden/></svg>`;
+    /* panel B: running balance */
+    const cums = days.slice(0, last).map(d => d.cum), hi = Math.max(0, ...cums), lo = Math.min(0, ...cums);
+    const stepB = niceStep(Math.max(hi - lo, 1), 4), topB = Math.max(hi > 0 ? stepB : 0, Math.ceil(hi / stepB) * stepB), botB = Math.ceil(-lo / stepB) * stepB;
+    const HB = 150, TB = 10, yB = v => TB + (topB - v) / ((topB + botB) || 1) * HB;
+    let b = '';
+    for(let v = -botB; v <= topB + 1e-9; v += stepB) b += `<line class="${Math.abs(v) < 1e-9 ? 'ax' : 'gr'}" x1="${L}" x2="${W - R}" y1="${yB(v)}" y2="${yB(v)}"/><text class="tk" x="${L - 8}" y="${yB(v) + 4}" text-anchor="end">${esc(compactMoney(v))}</text>`;
+    const pts = days.slice(0, last).map(d => [x(d.day), yB(d.cum)]);
+    const path = 'M' + L + ',' + yB(0) + ' L' + pts.map(p => p[0] + ',' + p[1]).join(' L');
+    const end = pts[pts.length - 1], endV = cums[cums.length - 1], lab = signedMoney(endV), right = end[0] > W - R - 90;
+    b += `<path class="area" d="${path} L${end[0]},${yB(0)} Z"/><path class="line" d="${path}"/><circle class="dot" cx="${end[0]}" cy="${end[1]}" r="5"/>
+      <text class="lb" x="${right ? end[0] - 9 : end[0] + 9}" y="${end[1] + (end[1] < TB + 22 ? 18 : -9)}" text-anchor="${right ? 'end' : 'start'}">${esc(lab)}</text>`;
+    $('#vizB', el).innerHTML = `<svg viewBox="0 0 ${W} ${TB + HB + 22}" width="${W}" height="${TB + HB + 22}" role="img" aria-label="${esc(t('vizRun'))}">${b}${axisX(TB, HB)}<line class="cross" id="crossB" y1="${TB}" y2="${TB + HB}" hidden/><circle class="dot" id="dotB" r="5" hidden/></svg>`;
+    geo = { L, band, x, yB, W };
+    if(cur) show(cur);
+  }
+  function show(day){
+    cur = Math.max(1, Math.min(n, day));
+    const d = days[cur - 1], X = geo.x(cur);
+    for(const id of ['#crossA', '#crossB']){ const c = $(id, el); c.setAttribute('x1', X); c.setAttribute('x2', X); c.removeAttribute('hidden'); }
+    const dot = $('#dotB', el);
+    if(cur <= last){ dot.setAttribute('cx', X); dot.setAttribute('cy', geo.yB(d.cum)); dot.removeAttribute('hidden'); } else dot.setAttribute('hidden', '');
+    $$('.bar', el).forEach(p => p.classList.toggle('on', +p.dataset.day === cur)); wrap.classList.add('has-cur');
+    tip.textContent = '';                                  /* built with text nodes only */
+    const add = (cls, text) => { const s = document.createElement('div'); s.className = cls; s.textContent = text; tip.appendChild(s); return s; };
+    add('viz-tip-h', dayName(d));
+    const row = (key, label, value) => { const r = add('viz-tip-r', ''); const k = document.createElement('i'); k.className = 'k ' + key; const v = document.createElement('b'); v.textContent = value; const l = document.createElement('span'); l.textContent = label; r.append(k, v, l); };
+    row('in', t('barIn'), fmtMoney(d.in)); row('out', t('barOut'), fmtMoney(d.out));
+    if(cur <= last) row('bal', t('vizRunShort'), signedMoney(d.cum));
+    tip.hidden = false;
+    const tw = tip.offsetWidth, left = Math.max(4, Math.min(geo.W - tw - 4, X + (X > geo.W / 2 ? -tw - 12 : 12)));
+    tip.style.left = left + 'px';
+  }
+  const hide = () => { cur = 0; tip.hidden = true; wrap.classList.remove('has-cur'); for(const id of ['#crossA', '#crossB', '#dotB']) $(id, el).setAttribute('hidden', ''); $$('.bar.on', el).forEach(p => p.classList.remove('on')); };
+  const dayAt = e => { const r = wrap.getBoundingClientRect(); return Math.floor((e.clientX - r.left - geo.L) / geo.band) + 1; };
+  wrap.addEventListener('pointermove', e => show(dayAt(e)));
+  wrap.addEventListener('pointerdown', e => show(dayAt(e)));
+  wrap.addEventListener('pointerleave', e => { if(e.pointerType === 'mouse') hide(); });
+  wrap.addEventListener('keydown', e => {
+    if(e.key === 'ArrowRight' || e.key === 'ArrowLeft'){ e.preventDefault(); show((cur || (e.key === 'ArrowRight' ? 0 : n + 1)) + (e.key === 'ArrowRight' ? 1 : -1)); }
+    else if(e.key === 'Escape' && cur){ e.stopPropagation(); hide(); }
+  });
+  wrap.addEventListener('focus', () => { if(!cur && wrap.matches(':focus-visible')) show(used[used.length - 1].day); });
+  wrap.addEventListener('blur', hide);
+  const onResize = () => { if(!document.body.contains(el)){ window.removeEventListener('resize', onResize); return; } draw(); };
+  window.addEventListener('resize', onResize);
+  draw();
+}
+
 /* one window for adding or changing an entry */
 let barLastDate = '';
 function openEntry(id, kind, day){
@@ -3355,6 +3523,7 @@ $('#areas').addEventListener('click', e => { const b = e.target.closest('[data-a
 $('#barSearch').addEventListener('input', renderBar);
 $('#barIn').onclick = () => openEntry(null, 'in');
 $('#barOut').onclick = () => openEntry(null, 'out');
+$('#barOverview').onclick = openBarOverview;
 $('#barInPhoto').onclick = () => openBarPhoto('in');
 $('#barOutPhoto').onclick = () => openBarPhoto('out');
 $('#barLists').addEventListener('click', e => { const r = e.target.closest('.row'); if(r) openEntry(r.dataset.id); });
