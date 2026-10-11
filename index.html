@@ -193,24 +193,33 @@ a.btn{display:inline-flex;align-items:center;gap:8px;text-decoration:none}
 .dup-i{display:block;min-width:0;overflow-wrap:anywhere}
 .badge.keep{background:var(--accent);color:var(--on-accent)}
 .dup .actions{margin-top:10px}
-.bar-sum{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.bar-sum{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .bar-sum span{display:block;font-size:13px;color:var(--muted)}
 .bar-sum b{display:block;font-size:18px;font-variant-numeric:tabular-nums;white-space:nowrap}
 .pos{color:var(--paid)} .neg{color:var(--unpaid)}
 .row-amt{display:flex;align-items:center;padding:0 14px 0 6px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
 .seg.duo{grid-template-columns:1fr 1fr}
-.day{overflow:hidden}
-.day ul{list-style:none;margin:0;padding:0}
-.day-head{display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;padding:10px 10px 10px 14px;border-bottom:1px solid var(--line);background:var(--soft)}
-.day-head b{flex:1 1 auto;font-size:15.5px}
-.day-head .badge{vertical-align:2px}
-.day-sum{display:flex;flex-wrap:wrap;gap:2px 12px;font-size:13.5px;font-weight:650;font-variant-numeric:tabular-nums;white-space:nowrap}
-.day-add{display:flex;gap:6px;margin-left:auto}
-.day-add .btn{min-width:40px;min-height:38px;font-size:19px;font-weight:800;line-height:1;padding:4px 8px}
-.card.empty{padding:22px 16px;text-align:center}
+.lists.duo{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
+.bar-sum .saldo{grid-column:1/-1;border-top:1px solid var(--line);padding-top:8px;display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.bar-sum .saldo span{font-size:15px;font-weight:650;color:var(--text)}
+.bar-sum .saldo b{font-size:24px}
+.row-date{font-weight:650;color:var(--text)}
+.col-foot{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;padding:10px 14px;border-top:2px solid var(--line);font-weight:700;font-variant-numeric:tabular-nums}
+.saldo-end{grid-column:1/-1;display:flex;align-items:baseline;justify-content:flex-end;gap:6px 14px;flex-wrap:wrap;padding:12px 16px;font-weight:700;font-variant-numeric:tabular-nums}
+.saldo-end span:first-child{margin-right:auto}
+.saldo-end .calc{font-weight:500;color:var(--muted);font-size:14px}
+.saldo-end b{font-size:20px}
+@media (max-width:560px){
+  .lists.duo{gap:8px}
+  .lists.duo .row{display:block}
+  .lists.duo .row-main{width:100%;padding:8px 10px 2px}
+  .lists.duo .row-amt{padding:0 10px 8px;font-size:15px}
+  .lists.duo .col-head{padding:10px}
+  .lists.duo .col-foot{padding:8px 10px;font-size:14.5px}
+  .lists.duo .empty{padding:14px 10px}
+}
 .btn.in{color:var(--paid);border-color:var(--paid)} .btn.out{color:var(--unpaid);border-color:var(--unpaid)}
-@media (max-width:430px){.bar-sum b{font-size:15px}}
-@media (min-width:1250px){.lists.duo{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:430px){.bar-sum b{font-size:16px} .bar-sum .saldo b{font-size:21px}}
 @media (max-width:560px){#barView .toolbar input{flex:1 1 100%}}
 .empty{padding:18px 14px;color:var(--muted);font-size:14px}
 .welcome{padding:22px 18px;text-align:center}
@@ -541,11 +550,12 @@ const I18N = {
   carTotal:['Total por mes: {0} ({1} autos)','Total per month: {0} ({1} cars)'], monthlyCar1:['Monto auto 1 (ARS)','Amount car 1 (ARS)'], plateCar1:['Patente auto 1','Plate car 1'],
   mgSum:['Son autos distintos: se suman los montos','Different cars: the amounts are added'], mgOne:['Es el mismo auto: queda un solo monto','The same car: one amount stays'],
   mgResult1:['Queda 1 auto: {0}','Result: 1 car: {0}'], mgResultN:['Quedan {0} autos: {1} = {2} por mes','Result: {0} cars: {1} = {2} per month'],
-  areaPark:['Estacionamientos','Parking'], barIn:['Ingresos','Income'], barOut:['Gastos','Expenses'], barNet:['Resultado','Result'],
+  areaPark:['Estacionamientos','Parking'], barIn:['Ingresos','Income'], barOut:['Gastos','Expenses'],
   barAddIn:['+ Ingreso','+ Income'], barAddOut:['+ Gasto','+ Expense'], barSearchPh:['Buscar: concepto, categoría, monto…','Search: what for, category, amount…'],
-  barEmpty:['Todavía no hay movimientos en este mes. Cargá el primero con «+ Ingreso» o «+ Gasto».','Nothing entered for this month yet. Add the first one with “+ Income” or “+ Expense”.'], barToday:['hoy','today'],
+  barEmptyIn:['Todavía no hay ingresos en este mes.','No income this month yet.'], barEmptyOut:['Todavía no hay gastos en este mes.','No expenses this month yet.'],
+  barSaldo:['Saldo de {0}','Balance for {0}'], barTotal:['Total','Total'], barAcum:['Saldo acumulado, con los meses anteriores: {0}','Running balance including earlier months: {0}'],
   barKindIn:['Ingreso','Income'], barKindOut:['Gasto','Expense'], barNewIn:['Nuevo ingreso','New income'], barNewOut:['Nuevo gasto','New expense'], barEdit:['Editar movimiento','Edit entry'],
-  barAmount:['Monto (ARS)','Amount (ARS)'], barDate:['Día','Day'], barConcept:['Concepto','What for'], barConceptPhIn:['p. ej. Ventas del sábado','e.g. Saturday sales'], barConceptPhOut:['p. ej. Cerveza, proveedor, luz…','e.g. beer, supplier, electricity…'],
+  barAmount:['Monto (ARS)','Amount (ARS)'], barDate:['Fecha','Date'], barConcept:['Concepto','What for'], barConceptPhIn:['p. ej. Ventas del sábado','e.g. Saturday sales'], barConceptPhOut:['p. ej. Cerveza, proveedor, luz…','e.g. beer, supplier, electricity…'],
   barCat:['Categoría','Category'], barCatPh:['opcional','optional'], barSaveMore:['Guardar y cargar otro','Save and add another'],
   barCatsIn:['Ventas;Eventos;Entradas;Otros','Sales;Events;Tickets;Other'], barCatsOut:['Bebidas;Comida;Sueldos;Alquiler;Servicios;Impuestos;Mantenimiento;Música y shows;Otros','Drinks;Food;Wages;Rent;Utilities;Taxes;Maintenance;Music and shows;Other'],
   errBarAmount:['Ingresá el monto.','Enter the amount.'], errBarDate:['Elegí la fecha.','Choose the date.'],
@@ -1004,7 +1014,6 @@ function rowHtml(c, s, p, similar){
    A second area next to the parking lots, with the same month navigation.
    state.bar: { id: {id, k:'in'|'out', a: amount, d:'YYYY-MM-DD', c: what for, g: category, n: note, deleted?, t} } */
 const BAR_NAME = 'Rock La Ve';
-const barEntries = month => Object.values(state.bar).filter(e => e && !e.deleted && typeof e.d === 'string' && e.d.slice(0, 7) === month);
 const barKind = e => e.k === 'in' ? 'in' : 'out';
 const signedMoney = n => (n < 0 ? '− ' : '') + fmtMoney(Math.abs(n));
 function applyArea(){
@@ -1016,42 +1025,40 @@ function applyArea(){
 function renderBar(){
   const month = ui.month, q = norm($('#barSearch').value);
   const sum = { in:0, out:0 }, count = { in:0, out:0 }, groups = { in:[], out:[] };
-  for(const e of barEntries(month)){
-    const k = barKind(e);
+  let before = 0, earlier = false;      /* what the months before this one left over */
+  for(const e of Object.values(state.bar)){
+    if(!e || e.deleted || typeof e.d !== 'string') continue;
+    const k = barKind(e), m = e.d.slice(0, 7);
+    if(m < month){ before += k === 'in' ? e.a || 0 : -(e.a || 0); earlier = true; }
+    if(m !== month) continue;
     sum[k] += e.a || 0; count[k]++;
     if(!q || norm([e.c, e.g, e.n, fmtNum(e.a), e.a, fmtDate(e.d)].join(' ')).includes(q)) groups[k].push(e);
   }
-  const net = Math.round((sum.in - sum.out) * 100) / 100, top = Math.max(sum.in, sum.out);
+  const round = n => Math.round(n * 100) / 100, net = round(sum.in - sum.out);
   $('#summary').innerHTML = `
     <div class="bar-sum">
       <div><span>${esc(t('barIn'))}</span><b class="pos" id="barSumIn">${esc(fmtMoney(sum.in))}</b></div>
       <div><span>${esc(t('barOut'))}</span><b class="neg" id="barSumOut">${esc(fmtMoney(sum.out))}</b></div>
-      <div><span>${esc(t('barNet'))}</span><b class="${net < 0 ? 'neg' : 'pos'}" id="barSumNet">${esc(signedMoney(net))}</b></div>
+      <div class="saldo"><span>${esc(t('barSaldo', fmtMonthLong(month)))}</span><b class="${net < 0 ? 'neg' : 'pos'}" id="barSumNet">${esc(signedMoney(net))}</b></div>
     </div>
-    ${top ? `<div class="bar" aria-hidden="true"><i class="p" style="width:${sum.in / (sum.in + sum.out) * 100}%"></i><i class="u" style="width:${sum.out / (sum.in + sum.out) * 100}%;opacity:1"></i></div>` : ''}`;
-  /* every entry belongs to a day: one card per day, newest first, with the day's income, expenses and result */
-  const days = {};
-  for(const e of groups.in.concat(groups.out)) (days[e.d] = days[e.d] || []).push(e);
-  const dayName = iso => { const [y, m, d] = iso.split('-').map(Number); return cap(new Intl.DateTimeFormat(loc(), { weekday:'long', day:'numeric', month:'long' }).format(new Date(y, m - 1, d))); };
-  const lists = $('#barLists'), keys = Object.keys(days).sort().reverse();
-  lists.innerHTML = keys.length ? keys.map(d => {
-    const list = days[d].sort((a, b) => (barKind(a) === 'in' ? 0 : 1) - (barKind(b) === 'in' ? 0 : 1) || (b.t || 0) - (a.t || 0));
-    const got = list.reduce((n, e) => n + (barKind(e) === 'in' ? e.a || 0 : 0), 0), spent = list.reduce((n, e) => n + (barKind(e) === 'out' ? e.a || 0 : 0), 0), res = Math.round((got - spent) * 100) / 100;
-    return `<section class="card day" data-day="${esc(d)}">
-      <div class="day-head">
-        <b>${esc(dayName(d))}${d === todayISO() ? `<span class="badge keep">${esc(t('barToday'))}</span>` : ''}</b>
-        <span class="day-sum"><span class="pos">+ ${esc(fmtMoney(got))}</span><span class="neg">− ${esc(fmtMoney(spent))}</span><span class="day-net ${res < 0 ? 'neg' : 'pos'}">= ${esc(signedMoney(res))}</span></span>
-        <span class="day-add"><button type="button" class="btn small in" data-add="in" aria-label="${esc(t('barAddIn'))}" title="${esc(t('barAddIn'))}">+</button><button type="button" class="btn small out" data-add="out" aria-label="${esc(t('barAddOut'))}" title="${esc(t('barAddOut'))}">−</button></span>
-      </div>
-      <ul>${list.map(e => { const k = barKind(e); return `<li class="row" data-id="${esc(e.id)}">
-        <button type="button" class="row-main" data-act="open">
-          <span class="row-name">${esc(e.c || e.g || t('barNoConcept'))}</span>
-          <span class="row-sub">${esc([t(k === 'in' ? 'barKindIn' : 'barKindOut'), e.c ? e.g : ''].filter(Boolean).join(' · '))}</span>
-          ${e.n ? `<span class="row-note">📝 ${esc(e.n)}</span>` : ''}
-        </button>
-        <div class="row-amt ${k === 'in' ? 'pos' : 'neg'}">${k === 'in' ? '+' : '−'} ${esc(fmtMoney(e.a))}</div></li>`; }).join('')}</ul>
+    ${sum.in + sum.out ? `<div class="bar" aria-hidden="true"><i class="p" style="width:${sum.in / (sum.in + sum.out) * 100}%"></i><i class="u" style="width:${sum.out / (sum.in + sum.out) * 100}%;opacity:1"></i></div>` : ''}
+    ${earlier ? `<div class="hint" id="barAcum" style="margin-top:8px">${esc(t('barAcum', signedMoney(round(before + net))))}</div>` : ''}`;
+  /* two lists side by side: income and expenses, every entry with its date, newest first; the balance closes the month */
+  const cls = { in:'paid', out:'unpaid' }, label = { in:'barIn', out:'barOut' };
+  $('#barLists').innerHTML = ['in', 'out'].map(k => {
+    const rows = groups[k].sort((a, b) => b.d.localeCompare(a.d) || (b.t || 0) - (a.t || 0)).map(e => `<li class="row" data-id="${esc(e.id)}">
+      <button type="button" class="row-main" data-act="open">
+        <span class="row-name">${esc(e.c || e.g || t('barNoConcept'))}</span>
+        <span class="row-sub"><b class="row-date">${esc(fmtDate(e.d))}</b>${e.c && e.g ? ' · ' + esc(e.g) : ''}</span>
+        ${e.n ? `<span class="row-note">📝 ${esc(e.n)}</span>` : ''}
+      </button>
+      <div class="row-amt ${k === 'in' ? 'pos' : 'neg'}">${esc(fmtMoney(e.a))}</div></li>`).join('');
+    return `<section class="card col active ${cls[k]}" data-kind="${k}">
+      <div class="col-head"><span class="mark"></span><span>${esc(t(label[k]))}</span><span class="cnt">${q ? groups[k].length + ' / ' : ''}${count[k]}</span></div>
+      ${rows ? '<ul>' + rows + '</ul>' : `<div class="empty">${esc(q ? t('noMatch') : t(k === 'in' ? 'barEmptyIn' : 'barEmptyOut'))}</div>`}
+      <div class="col-foot"><span>${esc(t('barTotal'))}</span><b class="${k === 'in' ? 'pos' : 'neg'}">${esc(fmtMoney(sum[k]))}</b></div>
     </section>`;
-  }).join('') : `<div class="card empty" style="grid-column:1/-1">${esc(q ? t('noMatch') : t('barEmpty'))}</div>`;
+  }).join('') + `<div class="card saldo-end"><span>${esc(t('barSaldo', fmtMonthLong(month)))}</span><span class="calc">${esc(fmtMoney(sum.in))} − ${esc(fmtMoney(sum.out))} =</span><b class="${net < 0 ? 'neg' : 'pos'}" id="barEnd">${esc(signedMoney(net))}</b></div>`;
 }
 /* one window for adding or changing an entry */
 let barLastDate = '';
@@ -3153,11 +3160,7 @@ $('#areas').addEventListener('click', e => { const b = e.target.closest('[data-a
 $('#barSearch').addEventListener('input', renderBar);
 $('#barIn').onclick = () => openEntry(null, 'in');
 $('#barOut').onclick = () => openEntry(null, 'out');
-$('#barLists').addEventListener('click', e => {
-  const add = e.target.closest('[data-add]');
-  if(add){ openEntry(null, add.dataset.add, add.closest('.day').dataset.day); return; }          /* add to that day */
-  const r = e.target.closest('.row'); if(r) openEntry(r.dataset.id);
-});
+$('#barLists').addEventListener('click', e => { const r = e.target.closest('.row'); if(r) openEntry(r.dataset.id); });
 $('#btnAdd').onclick = () => openCustomer(null);
 $('#btnImport').onclick = openImport;
 $('#btnDup').onclick = openDuplicates;

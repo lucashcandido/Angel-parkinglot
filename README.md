@@ -29,9 +29,9 @@ Die Oberfläche gibt es auf **Spanisch und Englisch**; umgeschaltet wird mit dem
 
 Über den Parkanlagen-Reitern steht ein Umschalter **Estacionamientos | Rock La Ve**. Im Bereich Rock La Ve gibt es dieselbe Monatsnavigation und:
 
-- oben die Monatssummen **Ingresos**, **Gastos** und **Resultado** (Einnahmen minus Ausgaben, rot wenn negativ)
-- **+ Ingreso** und **+ Gasto**: Betrag, Datum (vorgeschlagen: heute), Zweck, Kategorie (Vorschläge wie Ventas, Bebidas, Sueldos, Alquiler – frei überschreibbar) und Notiz; „Guardar y cargar otro“ für mehrere Einträge hintereinander
-- **Jeder Eintrag gehört zu einem Tag:** Die Übersicht zeigt eine Karte pro Tag (neuester zuerst) mit den Einnahmen, Ausgaben und dem Ergebnis dieses Tages; die Knöpfe + und − auf der Karte tragen direkt für diesen Tag ein. Antippen öffnet einen Eintrag zum Ändern (auch des Tages) oder Löschen (mit „Rückgängig“)
+- oben die Monatssummen **Ingresos** und **Gastos** und groß darunter der **Saldo des Monats** (Einnahmen minus Ausgaben, rot wenn negativ); gibt es Einträge aus früheren Monaten, steht zusätzlich der fortlaufende Saldo dabei
+- **+ Ingreso** und **+ Gasto**: Betrag, Datum (Pflicht, vorgeschlagen: heute), Zweck, Kategorie (Vorschläge wie Ventas, Bebidas, Sueldos, Alquiler – frei überschreibbar) und Notiz; „Guardar y cargar otro“ für mehrere Einträge hintereinander
+- **zwei Listen nebeneinander** – Einnahmen (grün) und Ausgaben (rot) –, jeder Eintrag mit seinem Datum, neueste zuerst, unter jeder Liste die Summe und darunter noch einmal der Saldo des Monats; Antippen öffnet den Eintrag zum Ändern oder Löschen (mit „Rückgängig“)
 - Suche nach Zweck, Kategorie, Notiz oder Betrag
 - Die Einträge werden wie alles andere über das Daten-Repo abgeglichen und stehen in der Sicherungsdatei
 
