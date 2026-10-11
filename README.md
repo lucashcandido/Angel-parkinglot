@@ -25,6 +25,16 @@ Die Oberfläche gibt es auf **Spanisch und Englisch**; umgeschaltet wird mit dem
 - **Duplikate prüfen** (Knopf „Buscar duplicados / Check for duplicates“ in der Ansicht „Alle“): vergleicht alle Kunden aller Parkanlagen und listet mögliche Doppelte auf – gleiches Kennzeichen (auch anders geschrieben), gleicher oder ähnlicher Name, ein Kunde, der bei einem anderen schon als Zahlername steht, gleiche Telefonnummer, gleicher Stellplatz in derselben Anlage. Jeden Treffer kann man bearbeiten, **zusammenfügen** (Zahlungen, Kennzeichen und Daten wandern zum Kunden, der bleibt; der andere Name wird als „zahlt über“ gemerkt; mit „Rückgängig“) oder als „verschiedene Kunden“ markieren, damit er nicht wieder erscheint
 - Kundenliste direkt aus Excel einfügen, Monat als **Excel-Datei** exportieren (Einstellungen → „Mes en Excel, por estacionamiento“: ein Blatt pro Parkanlage mit Kunde, Kennzeichen, Monatsbetrag, Status, bezahlt, fehlt, Datum, Zahler, Telefon und Notiz, dazu ein Blatt „Resumen“ mit den Summen je Anlage) oder als CSV, Sicherung als Datei
 
+## Rock La Ve (Bar): Einnahmen und Ausgaben
+
+Über den Parkanlagen-Reitern steht ein Umschalter **Estacionamientos | Rock La Ve**. Im Bereich Rock La Ve gibt es dieselbe Monatsnavigation und:
+
+- oben die Monatssummen **Ingresos**, **Gastos** und **Resultado** (Einnahmen minus Ausgaben, rot wenn negativ)
+- **+ Ingreso** und **+ Gasto**: Betrag, Datum (vorgeschlagen: heute), Zweck, Kategorie (Vorschläge wie Ventas, Bebidas, Sueldos, Alquiler – frei überschreibbar) und Notiz; „Guardar y cargar otro“ für mehrere Einträge hintereinander
+- zwei Listen (Einnahmen grün, Ausgaben rot), neueste zuerst; Antippen öffnet den Eintrag zum Ändern oder Löschen (mit „Rückgängig“)
+- Suche nach Zweck, Kategorie, Notiz oder Betrag
+- Die Einträge werden wie alles andere über das Daten-Repo abgeglichen und stehen in der Sicherungsdatei
+
 ## Daten mit Claude einlesen (Knopf „Datos / Data“)
 
 Über **Datos / Data** lädt man Dateien hoch, und Claude pflegt sie ein. Vor dem Speichern zeigt die App immer eine Vorschau, in der sich jede Zeile ändern oder auslassen lässt; danach gibt es „Rückgängig“.

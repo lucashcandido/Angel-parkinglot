@@ -69,6 +69,9 @@ h1,h2,h3,p{margin:0}
 .icon-btn:hover{background:var(--soft)}
 .icon-btn svg{width:22px;height:22px}
 
+.areas{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);border-radius:11px;overflow:hidden;margin-bottom:8px}
+.areas button{border:0;background:var(--card);color:var(--muted);min-height:38px;font-weight:650;font-size:14.5px;padding:4px 8px}
+.areas button.on{background:var(--accent);color:var(--on-accent)}
 .tabs{display:flex;gap:8px;overflow-x:auto;padding-bottom:10px;scrollbar-width:none}
 .tabs::-webkit-scrollbar{display:none}
 .tab{flex:1 0 auto;min-width:104px;border:1px solid var(--line);background:var(--card);border-radius:12px;padding:8px 12px;text-align:left;line-height:1.2}
@@ -105,7 +108,7 @@ h1,h2,h3,p{margin:0}
 .login .link{margin-top:18px;color:var(--muted)}
 .login .msg{text-align:left}
 .code{font:700 23px/1.3 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.08em;text-align:center;padding:12px 8px;border:1.5px dashed var(--muted);border-radius:12px;margin:8px 0;background:var(--card);-webkit-user-select:all;user-select:all}
-body.locked .tabs,body.locked .monthbar,body.locked #summary,body.locked .toolbar,body.locked #switch,body.locked #lists{display:none}
+body.locked .tabs,body.locked .areas,body.locked .monthbar,body.locked #summary,body.locked .toolbar,body.locked #switch,body.locked #lists,body.locked #barView{display:none}
 
 .toolbar{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0 10px}
 .toolbar input{flex:1 1 240px;min-width:0}
@@ -190,6 +193,16 @@ a.btn{display:inline-flex;align-items:center;gap:8px;text-decoration:none}
 .dup-i{display:block;min-width:0;overflow-wrap:anywhere}
 .badge.keep{background:var(--accent);color:var(--on-accent)}
 .dup .actions{margin-top:10px}
+.bar-sum{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.bar-sum span{display:block;font-size:13px;color:var(--muted)}
+.bar-sum b{display:block;font-size:18px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.pos{color:var(--paid)} .neg{color:var(--unpaid)}
+.row-amt{display:flex;align-items:center;padding:0 14px 0 6px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.switch.duo{grid-template-columns:1fr 1fr} .seg.duo{grid-template-columns:1fr 1fr}
+.btn.in{color:var(--paid);border-color:var(--paid)} .btn.out{color:var(--unpaid);border-color:var(--unpaid)}
+@media (max-width:430px){.bar-sum b{font-size:15px}}
+@media (min-width:1250px){.lists.duo{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:560px){#barView .toolbar input{flex:1 1 100%}}
 .empty{padding:18px 14px;color:var(--muted);font-size:14px}
 .welcome{padding:22px 18px;text-align:center}
 .welcome p{color:var(--muted);margin:6px 0 14px}
@@ -321,6 +334,7 @@ code{background:var(--soft);border-radius:5px;padding:1px 5px;font-size:13.5px;o
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
       </button>
     </div>
+    <nav id="areas" class="areas"></nav>
     <nav id="tabs" class="tabs"></nav>
   </div>
 </header>
@@ -339,7 +353,7 @@ code{background:var(--soft);border-radius:5px;padding:1px 5px;font-size:13.5px;o
   <section id="summary" class="card summary"></section>
   <div id="banner"></div>
 
-  <div class="toolbar">
+  <div class="toolbar" id="parkTools">
     <input id="search" type="search" autocomplete="off">
     <button id="btnImport" class="btn" type="button"></button>
     <button id="btnDup" class="btn" type="button" hidden></button>
@@ -348,6 +362,16 @@ code{background:var(--soft);border-radius:5px;padding:1px 5px;font-size:13.5px;o
 
   <div id="switch" class="switch"></div>
   <div id="lists" class="lists"></div>
+
+  <section id="barView" hidden>
+    <div class="toolbar">
+      <input id="barSearch" type="search" autocomplete="off">
+      <button id="barIn" class="btn in" type="button"></button>
+      <button id="barOut" class="btn out" type="button"></button>
+    </div>
+    <div id="barSwitch" class="switch duo"></div>
+    <div id="barLists" class="lists duo"></div>
+  </section>
 </main>
 
 <div id="toast" role="status"></div>
@@ -509,6 +533,15 @@ const I18N = {
   carTotal:['Total por mes: {0} ({1} autos)','Total per month: {0} ({1} cars)'], monthlyCar1:['Monto auto 1 (ARS)','Amount car 1 (ARS)'], plateCar1:['Patente auto 1','Plate car 1'],
   mgSum:['Son autos distintos: se suman los montos','Different cars: the amounts are added'], mgOne:['Es el mismo auto: queda un solo monto','The same car: one amount stays'],
   mgResult1:['Queda 1 auto: {0}','Result: 1 car: {0}'], mgResultN:['Quedan {0} autos: {1} = {2} por mes','Result: {0} cars: {1} = {2} per month'],
+  areaPark:['Estacionamientos','Parking'], barIn:['Ingresos','Income'], barOut:['Gastos','Expenses'], barNet:['Resultado','Result'],
+  barAddIn:['+ Ingreso','+ Income'], barAddOut:['+ Gasto','+ Expense'], barSearchPh:['Buscar: concepto, categoría, monto…','Search: what for, category, amount…'],
+  barEmptyIn:['Todavía no hay ingresos en este mes.','No income this month yet.'], barEmptyOut:['Todavía no hay gastos en este mes.','No expenses this month yet.'],
+  barKindIn:['Ingreso','Income'], barKindOut:['Gasto','Expense'], barNewIn:['Nuevo ingreso','New income'], barNewOut:['Nuevo gasto','New expense'], barEdit:['Editar movimiento','Edit entry'],
+  barAmount:['Monto (ARS)','Amount (ARS)'], barDate:['Fecha','Date'], barConcept:['Concepto','What for'], barConceptPhIn:['p. ej. Ventas del sábado','e.g. Saturday sales'], barConceptPhOut:['p. ej. Cerveza, proveedor, luz…','e.g. beer, supplier, electricity…'],
+  barCat:['Categoría','Category'], barCatPh:['opcional','optional'], barSaveMore:['Guardar y cargar otro','Save and add another'],
+  barCatsIn:['Ventas;Eventos;Entradas;Otros','Sales;Events;Tickets;Other'], barCatsOut:['Bebidas;Comida;Sueldos;Alquiler;Servicios;Impuestos;Mantenimiento;Música y shows;Otros','Drinks;Food;Wages;Rent;Utilities;Taxes;Maintenance;Music and shows;Other'],
+  errBarAmount:['Ingresá el monto.','Enter the amount.'], errBarDate:['Elegí la fecha.','Choose the date.'],
+  barSavedIn:['Guardado en {0}.','Saved in {0}.'], barGo:['Ver','Show'], barDeleted:['Movimiento eliminado.','Entry deleted.'], barNoConcept:['(sin concepto)','(no description)'],
   simBadge:['nombre parecido','similar name'],
   dupBtn:['Buscar duplicados','Check for duplicates'], dupTitle:['Posibles duplicados','Possible duplicates'], dupDone:['Listo','Done'],
   dupIntro:['Se comparan todos los clientes de todos los estacionamientos: patente, nombre, teléfono y lugar.','All customers of all parking lots are compared: licence plate, name, phone and space.'],
@@ -596,7 +629,7 @@ const store = {
   del(k){ try{ localStorage.removeItem(k); }catch(e){} }
 };
 
-let ui = Object.assign({ lot:'lot1', list:'unpaid', sort:'name', lang:'' }, store.get(LS.ui, {}));
+let ui = Object.assign({ lot:'lot1', list:'unpaid', sort:'name', lang:'', area:'park', barList:'out' }, store.get(LS.ui, {}));
 if(ui.lang !== 'es' && ui.lang !== 'en') ui.lang = /^en/i.test(navigator.language || '') ? 'en' : 'es';
 function t(key){
   const e = I18N[key], a = arguments;
@@ -643,19 +676,20 @@ const splitNames = s => String(s ?? '').split(/[,;\n]/).map(x => x.trim()).filte
    customers: { id: {id,lot,name,plate,spot,amount,cars?[{k,s,a}],aliases[],phone,note,from,until,deleted?,t} }
    payments:  { "customerId|YYYY-MM": {s:'paid'|'unpaid'|'unclear', a,d,p,n, t} }
    settings:  { ai: {key,model,t} } - the Anthropic API key, shared by all connected devices; nodup: {pairs[],t} - customer pairs that are not duplicates
+   bar:       { id: {id,k:'in'|'out',a,d,c,g,n,deleted?,t} } - income and expenses of the bar Rock La Ve
    t = timestamp of the last change; when merging, the newer record wins.
    The three built-in lots keep their internal name until renamed (t = 0) and are shown translated. */
 const NO_LOT = 'none';              /* the place "?" for customers that cannot be assigned to a parking lot yet */
 function emptyState(){
   return { v:1,
     lots:{ lot1:{id:'lot1',name:'Parkanlage 1',order:1,t:0}, lot2:{id:'lot2',name:'Parkanlage 2',order:2,t:0}, lot3:{id:'lot3',name:'Parkanlage 3',order:3,t:0}, [NO_LOT]:{id:NO_LOT,name:'?',order:0,t:0} },
-    customers:{}, payments:{}, settings:{} };
+    customers:{}, payments:{}, settings:{}, bar:{} };
 }
 function normalize(s){
   const base = emptyState();
-  const out = { v:1, lots:{}, customers:{}, payments:{}, settings:{} };
+  const out = { v:1, lots:{}, customers:{}, payments:{}, settings:{}, bar:{} };
   if(s && typeof s === 'object'){
-    for(const k of ['lots','customers','payments','settings']) if(s[k] && typeof s[k] === 'object' && !Array.isArray(s[k])) out[k] = s[k];
+    for(const k of ['lots','customers','payments','settings','bar']) if(s[k] && typeof s[k] === 'object' && !Array.isArray(s[k])) out[k] = s[k];
   }
   for(const id in base.lots) if(!out.lots[id]) out.lots[id] = base.lots[id];
   const q = out.lots[NO_LOT];          /* "?" always exists; a device with an older version may have renamed or removed it */
@@ -680,7 +714,7 @@ function mergeMap(a, b){
   return out;
 }
 function mergeState(a, b){
-  return { v:1, lots:mergeMap(a.lots, b.lots), customers:mergeMap(a.customers, b.customers), payments:mergeMap(a.payments, b.payments), settings:mergeMap(a.settings, b.settings) };
+  return { v:1, lots:mergeMap(a.lots, b.lots), customers:mergeMap(a.customers, b.customers), payments:mergeMap(a.payments, b.payments), settings:mergeMap(a.settings, b.settings), bar:mergeMap(a.bar, b.bar) };
 }
 
 let state = normalize(store.get(LS.data, null));
@@ -690,7 +724,7 @@ let rev = 0;
 const sync = { status: cfg ? 'pending' : 'local', msg:'', last:0, busy:false, again:false, timer:null };
 
 function saveLocal(){ if(!store.set(LS.data, state)) toast(t('storageFail')); }
-function saveUi(){ store.set(LS.ui, { lot:ui.lot, list:ui.list, sort:ui.sort, lang:ui.lang }); }
+function saveUi(){ store.set(LS.ui, { lot:ui.lot, list:ui.list, sort:ui.sort, lang:ui.lang, area:ui.area, barList:ui.barList }); }
 function commit(){
   rev++;
   saveLocal(); store.set(LS.dirty, true);
@@ -822,7 +856,7 @@ function quickStatus(cid, s){
 }
 
 /* ---------- rendering ---------- */
-function render(){ ai = aiFromState(); renderLogin(); renderTabs(); renderMonth(); renderLists(); renderSync(); if(dupView) dupView(); }
+function render(){ ai = aiFromState(); renderLogin(); applyArea(); renderTabs(); renderMonth(); renderLists(); renderSync(); if(dupView) dupView(); }
 
 function applyStatic(){
   document.documentElement.lang = ui.lang;
@@ -834,6 +868,8 @@ function applyStatic(){
   $('#btnAdd').textContent = t('addCustomer');
   $('#btnImport').textContent = t('stmtBtn');
   $('#btnDup').textContent = t('dupBtn');
+  $('#barIn').textContent = t('barAddIn'); $('#barOut').textContent = t('barAddOut');
+  $('#barSearch').placeholder = t('barSearchPh'); $('#barSearch').setAttribute('aria-label', t('aSearch'));
 }
 function setLang(l){
   if(l !== 'es' && l !== 'en' || l === ui.lang) return;
@@ -956,7 +992,121 @@ function rowHtml(c, s, p, similar){
     <div class="row-actions">${wa}${acts}</div></li>`;
 }
 
+/* ---------- Rock La Ve: income and expenses of the bar ----------
+   A second area next to the parking lots, with the same month navigation.
+   state.bar: { id: {id, k:'in'|'out', a: amount, d:'YYYY-MM-DD', c: what for, g: category, n: note, deleted?, t} } */
+const BAR_NAME = 'Rock La Ve';
+const barEntries = month => Object.values(state.bar).filter(e => e && !e.deleted && typeof e.d === 'string' && e.d.slice(0, 7) === month);
+const barKind = e => e.k === 'in' ? 'in' : 'out';
+const signedMoney = n => (n < 0 ? '− ' : '') + fmtMoney(Math.abs(n));
+function applyArea(){
+  const bar = ui.area === 'bar';
+  $('#barView').hidden = !bar;
+  for(const sel of ['#tabs', '#parkTools', '#switch', '#lists']) $(sel).hidden = bar;
+  $('#areas').innerHTML = [['park', t('areaPark')], ['bar', BAR_NAME]].map(([k, name]) => `<button type="button" data-area="${k}" class="${(ui.area === 'bar') === (k === 'bar') ? 'on' : ''}" aria-pressed="${(ui.area === 'bar') === (k === 'bar')}">${esc(name)}</button>`).join('');
+}
+function renderBar(){
+  const month = ui.month, q = norm($('#barSearch').value);
+  const sum = { in:0, out:0 }, count = { in:0, out:0 }, groups = { in:[], out:[] };
+  for(const e of barEntries(month)){
+    const k = barKind(e);
+    sum[k] += e.a || 0; count[k]++;
+    if(!q || norm([e.c, e.g, e.n, fmtNum(e.a), e.a, fmtDate(e.d)].join(' ')).includes(q)) groups[k].push(e);
+  }
+  const net = Math.round((sum.in - sum.out) * 100) / 100, top = Math.max(sum.in, sum.out);
+  $('#summary').innerHTML = `
+    <div class="bar-sum">
+      <div><span>${esc(t('barIn'))}</span><b class="pos" id="barSumIn">${esc(fmtMoney(sum.in))}</b></div>
+      <div><span>${esc(t('barOut'))}</span><b class="neg" id="barSumOut">${esc(fmtMoney(sum.out))}</b></div>
+      <div><span>${esc(t('barNet'))}</span><b class="${net < 0 ? 'neg' : 'pos'}" id="barSumNet">${esc(signedMoney(net))}</b></div>
+    </div>
+    ${top ? `<div class="bar" aria-hidden="true"><i class="p" style="width:${sum.in / (sum.in + sum.out) * 100}%"></i><i class="u" style="width:${sum.out / (sum.in + sum.out) * 100}%;opacity:1"></i></div>` : ''}`;
+  const cls = { in:'paid', out:'unpaid' }, label = { in:'barIn', out:'barOut' };
+  $('#barSwitch').innerHTML = ['in', 'out'].map(k => `<button type="button" class="${cls[k]}${ui.barList === k ? ' on' : ''}" data-blist="${k}"><b>${esc(fmtMoney(sum[k]))}</b>${esc(t(label[k]))}</button>`).join('');
+  const lists = $('#barLists');
+  lists.classList.toggle('searching', !!q);
+  lists.innerHTML = ['in', 'out'].map(k => {
+    const rows = groups[k].sort((a, b) => b.d.localeCompare(a.d) || (b.t || 0) - (a.t || 0)).map(e => `<li class="row" data-id="${esc(e.id)}">
+      <button type="button" class="row-main" data-act="open">
+        <span class="row-name">${esc(e.c || e.g || t('barNoConcept'))}</span>
+        <span class="row-sub">${esc([fmtDate(e.d), e.c ? e.g : ''].filter(Boolean).join(' · '))}</span>
+        ${e.n ? `<span class="row-note">📝 ${esc(e.n)}</span>` : ''}
+      </button>
+      <div class="row-amt ${k === 'in' ? 'pos' : 'neg'}">${esc(fmtMoney(e.a))}</div></li>`).join('');
+    return `<section class="card col ${cls[k]}${ui.barList === k ? ' active' : ''}" data-kind="${k}">
+      <div class="col-head"><span class="mark"></span><span>${esc(t(label[k]))}</span><span class="sum">${count[k] ? esc(fmtMoney(sum[k])) : ''}</span><span class="cnt">${q ? groups[k].length + ' / ' : ''}${count[k]}</span></div>
+      ${rows ? '<ul>' + rows + '</ul>' : `<div class="empty">${esc(q ? t('noMatch') : t(k === 'in' ? 'barEmptyIn' : 'barEmptyOut'))}</div>`}
+    </section>`;
+  }).join('');
+}
+/* one window for adding or changing an entry */
+let barLastDate = '';
+function openEntry(id, kind){
+  const e = id ? state.bar[id] : null;
+  let k = e ? barKind(e) : kind === 'in' ? 'in' : 'out';
+  const date = e ? e.d : barLastDate && barLastDate.slice(0, 7) === ui.month ? barLastDate : ui.month === curMonth() ? todayISO() : ui.month + '-01';
+  const el = openModal(`
+    <form novalidate>
+    <div class="sheet-head"><h2 id="eTitle"></h2>${closeX()}</div>
+    <div class="fs-body">
+      <div class="field"><div class="seg duo">${[['in', 'barKindIn', 'paid'], ['out', 'barKindOut', 'unpaid']].map(([v, key, c]) => `<label><input type="radio" name="ek" value="${v}"${v === k ? ' checked' : ''}><span class="${c}">${esc(t(key))}</span></label>`).join('')}</div></div>
+      <div class="two">
+        <div class="field"><label for="ea">${esc(t('barAmount'))}</label><input id="ea" type="text" inputmode="decimal" autocomplete="off" value="${esc(e ? fmtNum(e.a) : '')}"></div>
+        <div class="field"><label for="ed">${esc(t('barDate'))}</label><input id="ed" type="date" value="${esc(date)}"></div>
+      </div>
+      <div class="field"><label for="ec">${esc(t('barConcept'))}</label><input id="ec" type="text" list="eConcepts" autocomplete="off" value="${esc(e ? e.c || '' : '')}"><datalist id="eConcepts"></datalist></div>
+      <div class="field"><label for="eg">${esc(t('barCat'))}</label><input id="eg" type="text" list="eCats" autocomplete="off" value="${esc(e ? e.g || '' : '')}" placeholder="${esc(t('barCatPh'))}"><datalist id="eCats"></datalist></div>
+      <div class="field"><label for="en">${esc(t('note'))}</label><textarea id="en">${esc(e ? e.n || '' : '')}</textarea></div>
+      <div id="eErr"></div>
+    </div>
+    <div class="actions fs-foot">${e ? `<button type="button" class="btn danger" id="eDel">${esc(t('del'))}</button>` : `<button type="button" class="btn" id="eMore">${esc(t('barSaveMore'))}</button>`}<button type="submit" class="btn primary grow">${esc(t('save'))}</button></div>
+    </form>`, 'fixed');
+  const f = i => $('#' + i, el);
+  const fill = () => {                    /* title and suggestions follow income / expense */
+    f('eTitle').textContent = e ? t('barEdit') : t(k === 'in' ? 'barNewIn' : 'barNewOut');
+    f('ec').placeholder = t(k === 'in' ? 'barConceptPhIn' : 'barConceptPhOut');
+    const mine = Object.values(state.bar).filter(x => x && !x.deleted && barKind(x) === k).sort((a, b) => (b.t || 0) - (a.t || 0));
+    const opts = list => uniqBy(list.map(v => String(v || '').trim()), norm).slice(0, 40).map(v => `<option value="${esc(v)}">`).join('');
+    f('eConcepts').innerHTML = opts(mine.map(x => x.c));
+    f('eCats').innerHTML = opts(t(k === 'in' ? 'barCatsIn' : 'barCatsOut').split(';').concat(mine.map(x => x.g)));
+  };
+  fill();
+  $$('input[name=ek]', el).forEach(r => r.addEventListener('change', () => { k = r.value; fill(); }));
+  if(!e) setTimeout(() => f('ea').focus(), 50);
+  $('form', el).addEventListener('input', () => { f('eErr').innerHTML = ''; });
+  const save = more => {
+    const fail = key => { f('eErr').innerHTML = `<div class="msg err">${esc(t(key))}</div>`; return false; };
+    const a = parseAmount(f('ea').value), d = f('ed').value;
+    if(!(a > 0)) return fail('errBarAmount');
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(d)) return fail('errBarDate');
+    const next = { id: e ? e.id : uid(), k, a, d, c: f('ec').value.trim(), g: f('eg').value.trim(), n: f('en').value.trim() };
+    if(!e || canon(Object.assign({}, e, { t: 0 })) !== canon(Object.assign({}, next, { t: 0 }))) state.bar[next.id] = Object.assign(next, { t: Date.now() });
+    barLastDate = d;
+    closeModal(el); commit();
+    const m = d.slice(0, 7);
+    if(more) openEntry(null, k);
+    else if(m !== ui.month) toast(t('barSavedIn', fmtMonthLong(m)), t('barGo'), () => { ui.month = m; render(); });
+    return true;
+  };
+  $('form', el).onsubmit = ev => { ev.preventDefault(); save(false); };
+  if(!e) f('eMore').onclick = () => save(true);
+  if(e) f('eDel').onclick = () => {
+    const old = Object.assign({}, e);
+    state.bar[e.id] = Object.assign({}, e, { deleted:true, t: Date.now() });
+    closeModal(el); commit();
+    toast(t('barDeleted'), t('undo'), () => { state.bar[old.id] = Object.assign(old, { t: Date.now() }); commit(); });
+  };
+}
+
+function renderBanner(){
+  let banner = '';
+  if(!cfg && !isLocked()) banner = `<div class="banner"><span>${esc(t('bannerLocal'))}</span><button type="button" class="btn small" data-open="sync">${esc(t('bannerSetup'))}</button></div>`;
+  else if(sync.status === 'error') banner = `<div class="banner err"><span>${esc(sync.msg || t('bannerErr'))}</span><button type="button" class="btn small" data-open="sync">${esc(t('settings'))}</button></div>`;
+  if(IS_IOS && !STANDALONE && !store.get(LS.a2hs, false)) banner += `<div class="banner info"><span>${esc(t('a2hs'))}</span><button type="button" class="icon-btn" data-dismiss="a2hs" aria-label="${esc(t('aClose'))}" title="${esc(t('aClose'))}">✕</button></div>`;
+  $('#banner').innerHTML = banner;
+}
 function renderLists(){
+  if(ui.area === 'bar'){ renderBanner(); renderBar(); return; }
   const month = ui.month, q = norm($('#search').value), qPlate = plateKey(q);
   const all = customersFor(ui.lot, month);
   const groups = { paid:[], partial:[], unpaid:[], unclear:[] }, totals = { paid:0, partial:0, unpaid:0, unclear:0 }, counts = { paid:0, partial:0, unpaid:0, unclear:0 };
@@ -981,12 +1131,7 @@ function renderLists(){
     <div class="bar" aria-hidden="true"><i class="p" style="width:${pct('paid')}%"></i><i class="h" style="width:${pct('partial')}%"></i><i class="c" style="width:${pct('unclear')}%"></i><i class="u" style="width:${pct('unpaid')}%"></i></div>`
     : `<div class="sum-head"><span class="big">${esc(t('sumNone', fmtMonthLong(month)))}</span></div>`;
 
-  /* banner */
-  let banner = '';
-  if(!cfg && !isLocked()) banner = `<div class="banner"><span>${esc(t('bannerLocal'))}</span><button type="button" class="btn small" data-open="sync">${esc(t('bannerSetup'))}</button></div>`;
-  else if(sync.status === 'error') banner = `<div class="banner err"><span>${esc(sync.msg || t('bannerErr'))}</span><button type="button" class="btn small" data-open="sync">${esc(t('settings'))}</button></div>`;
-  if(IS_IOS && !STANDALONE && !store.get(LS.a2hs, false)) banner += `<div class="banner info"><span>${esc(t('a2hs'))}</span><button type="button" class="icon-btn" data-dismiss="a2hs" aria-label="${esc(t('aClose'))}" title="${esc(t('aClose'))}">✕</button></div>`;
-  $('#banner').innerHTML = banner;
+  renderBanner();
 
   /* list switch (phone) */
   $('#switch').innerHTML = ORDER.map(k => `<button type="button" class="${k}${ui.list === k ? ' on' : ''}" data-list="${k}"><b>${counts[k]}</b>${esc(t(k))}</button>`).join('');
@@ -2990,6 +3135,12 @@ $('#prev').onclick = () => { ui.month = addMonth(ui.month, -1); render(); };
 $('#next').onclick = () => { ui.month = addMonth(ui.month, 1); render(); };
 $('#monthSub').addEventListener('click', e => { if(e.target.id === 'toNow'){ ui.month = curMonth(); render(); } });
 $('#search').addEventListener('input', renderLists);
+$('#areas').addEventListener('click', e => { const b = e.target.closest('[data-area]'); if(!b) return; ui.area = b.dataset.area; saveUi(); render(); window.scrollTo(0, 0); });
+$('#barSearch').addEventListener('input', renderBar);
+$('#barIn').onclick = () => openEntry(null, 'in');
+$('#barOut').onclick = () => openEntry(null, 'out');
+$('#barSwitch').addEventListener('click', e => { const b = e.target.closest('[data-blist]'); if(!b) return; ui.barList = b.dataset.blist; saveUi(); renderBar(); });
+$('#barLists').addEventListener('click', e => { const r = e.target.closest('.row'); if(r) openEntry(r.dataset.id); });
 $('#btnAdd').onclick = () => openCustomer(null);
 $('#btnImport').onclick = openImport;
 $('#btnDup').onclick = openDuplicates;
