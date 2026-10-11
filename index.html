@@ -69,10 +69,10 @@ h1,h2,h3,p{margin:0}
 .icon-btn:hover{background:var(--soft)}
 .icon-btn svg{width:22px;height:22px}
 
-.areas{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);border-radius:11px;overflow:hidden;margin-bottom:8px}
+.areas{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);border-radius:11px;overflow:hidden;margin-bottom:10px}
 .areas button{border:0;background:var(--card);color:var(--muted);min-height:38px;font-weight:650;font-size:14.5px;padding:4px 8px}
 .areas button.on{background:var(--accent);color:var(--on-accent)}
-.tabs{display:flex;gap:8px;overflow-x:auto;padding-bottom:10px;scrollbar-width:none}
+.tabs{display:flex;gap:8px;overflow-x:auto;padding-bottom:10px;margin-top:2px;scrollbar-width:none}
 .tabs::-webkit-scrollbar{display:none}
 .tab{flex:1 0 auto;min-width:104px;border:1px solid var(--line);background:var(--card);border-radius:12px;padding:8px 12px;text-align:left;line-height:1.2}
 .tab b{display:block;font-size:15px;font-weight:650;white-space:nowrap}
@@ -359,7 +359,6 @@ code{background:var(--soft);border-radius:5px;padding:1px 5px;font-size:13.5px;o
       </button>
     </div>
     <nav id="areas" class="areas"></nav>
-    <nav id="tabs" class="tabs"></nav>
   </div>
 </header>
 
@@ -373,6 +372,7 @@ code{background:var(--soft);border-radius:5px;padding:1px 5px;font-size:13.5px;o
     </div>
     <button id="next" class="nav" type="button">›</button>
   </section>
+  <nav id="tabs" class="tabs"></nav>
 
   <section id="summary" class="card summary"></section>
   <div id="banner"></div>
