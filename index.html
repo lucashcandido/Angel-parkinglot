@@ -1059,7 +1059,7 @@ function renderBar(){
     <div class="bar-sum">
       <div><span>${esc(t('barIn'))}</span><b class="pos" id="barSumIn">${esc(fmtMoney(sum.in))}</b></div>
       <div><span>${esc(t('barOut'))}</span><b class="neg" id="barSumOut">${esc(fmtMoney(sum.out))}</b></div>
-      <div class="saldo"><span>${esc(t('barSaldo', fmtMonthLong(month)))}</span><b class="bal" id="barSumNet">${esc(signedMoney(net))}</b></div>
+      <div class="saldo"><span>${esc(t('barSaldo', fmtMonthLong(month)))}</span><b class="${net < 0 ? 'neg' : 'bal'}" id="barSumNet">${esc(signedMoney(net))}</b></div>
     </div>
     ${sum.in + sum.out ? `<div class="bar" aria-hidden="true"><i class="p" style="width:${sum.in / (sum.in + sum.out) * 100}%"></i><i class="u" style="width:${sum.out / (sum.in + sum.out) * 100}%;opacity:1"></i></div>` : ''}
     ${earlier ? `<div class="hint" id="barAcum" style="margin-top:8px">${esc(t('barAcum', signedMoney(round(before + net))))}</div>` : ''}`;
@@ -1078,7 +1078,7 @@ function renderBar(){
       ${rows ? '<ul>' + rows + '</ul>' : `<div class="empty">${esc(q ? t('noMatch') : t(k === 'in' ? 'barEmptyIn' : 'barEmptyOut'))}</div>`}
       <div class="col-foot"><span>${esc(t('barTotal'))}</span><b class="${k === 'in' ? 'pos' : 'neg'}">${esc(fmtMoney(sum[k]))}</b></div>
     </section>`;
-  }).join('') + `<div class="card saldo-end"><span>${esc(t('barSaldo', fmtMonthLong(month)))}</span><span class="calc">${esc(fmtMoney(sum.in))} − ${esc(fmtMoney(sum.out))} =</span><b class="bal" id="barEnd">${esc(signedMoney(net))}</b></div>`;
+  }).join('') + `<div class="card saldo-end"><span>${esc(t('barSaldo', fmtMonthLong(month)))}</span><span class="calc">${esc(fmtMoney(sum.in))} − ${esc(fmtMoney(sum.out))} =</span><b class="${net < 0 ? 'neg' : 'bal'}" id="barEnd">${esc(signedMoney(net))}</b></div>`;
 }
 /* one window for adding or changing an entry */
 let barLastDate = '';
