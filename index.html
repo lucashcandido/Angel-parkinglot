@@ -77,7 +77,7 @@ h1,h2,h3,p{margin:0}
 .tab{flex:1 0 auto;min-width:104px;border:1px solid var(--line);background:var(--card);border-radius:12px;padding:8px 12px;text-align:left;line-height:1.2}
 .tab b{display:block;font-size:15px;font-weight:650;white-space:nowrap}
 .tab small{color:var(--muted);font-size:12px;white-space:nowrap}
-.tab small .open{font-size:11px;opacity:.8;margin-right:6px}
+.tab small .open{font-size:11px;opacity:.8;margin-left:6px}
 .tab.on{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
 .tab.on small{color:inherit;opacity:.85}
 
@@ -1056,7 +1056,7 @@ function renderTabs(){
   const cell = (id, name) => {
     const cs = customersFor(id, ui.month);
     const paid = cs.filter(c => statusOf(c.id, ui.month) === 'paid').length;
-    return `<button type="button" class="tab${ui.lot === id ? ' on' : ''}" data-lot="${esc(id)}" aria-pressed="${ui.lot === id}"${id === NO_LOT ? ` title="${esc(t('lotNone'))}" aria-label="${esc(t('lotNone'))}"` : ''}><b>${esc(name)}</b><small>${cs.length > paid ? `<span class="open">${esc(t('tabOpen', cs.length - paid))}</span>` : ''}${esc(t('tabCount', paid, cs.length))}</small></button>`;
+    return `<button type="button" class="tab${ui.lot === id ? ' on' : ''}" data-lot="${esc(id)}" aria-pressed="${ui.lot === id}"${id === NO_LOT ? ` title="${esc(t('lotNone'))}" aria-label="${esc(t('lotNone'))}"` : ''}><b>${esc(name)}</b><small>${esc(t('tabCount', paid, cs.length))}${cs.length > paid ? `<span class="open">${esc(t('tabOpen', cs.length - paid))}</span>` : ''}</small></button>`;
   };
   $('#tabs').innerHTML = lots.map(l => cell(l.id, l.id === NO_LOT ? '?' : lotLabel(l))).join('') + (lots.length > 1 ? cell('all', t('all')) : '');
   $('#btnDup').hidden = !(ui.lot === 'all' || lots.length < 2);        /* the check covers all parking lots, so it lives under "All" */
