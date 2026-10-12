@@ -171,6 +171,8 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 .prog.partial .prog-txt{color:var(--partial);font-weight:600}
 .ib.wa{color:#17914e;text-decoration:none}
 .ib.wa.bad{color:var(--muted);border-style:dashed}
+.ib.wa.sent,.btn.wa.sent{color:var(--unpaid);border-color:var(--unpaid);background:var(--unpaid-soft)}
+.row-sub .sent-on{color:var(--unpaid);font-weight:600;white-space:nowrap}
 a.btn{display:inline-flex;align-items:center;gap:8px;text-decoration:none}
 .btn.wa{color:#17914e;border-color:#17914e}
 @media (prefers-color-scheme: dark){.ib.wa,.btn.wa{color:#4ade80}.btn.wa{border-color:#4ade80}}
@@ -1063,7 +1065,7 @@ function rowHtml(c, s, p, similar){
     if(p && p.d) bits.push(esc(t('onDate', fmtDate(p.d))));
     if(p && p.p) bits.push(esc(t('fromPayer', p.p)));
   }else if(p && p.p) bits.push(esc(t('maybeFrom', p.p)));
-  if(s !== 'paid' && p && p.r) bits.push(esc(t('reminded', fmtDate(p.r))));
+  if(s !== 'paid' && p && p.r) bits.push(`<span class="sent-on">${esc(t('reminded', fmtDate(p.r)))}</span>`);
   const alias = (c.aliases && c.aliases.length && !(s === 'paid' && p && p.p)) ? `<span class="row-sub">${esc(t('paysVia', c.aliases.join(', ')))}</span>` : '';
   const note = (p && p.n) ? `<span class="row-note">📝 ${esc(p.n)}</span>` : '';
   const open = s !== 'paid' ? priorOpen(c, ui.month) : 0;
@@ -1074,7 +1076,8 @@ function rowHtml(c, s, p, similar){
   let wa = '';
   if(s !== 'paid' && c.phone){
     const num = waNumber(c.phone, waSettings().area);
-    wa = num ? `<a class="ib wa" data-act="wa" href="${esc(waUrl(num, waText(c, ui.month)))}" target="_blank" rel="noopener" aria-label="${esc(t('waBtn'))}" title="${esc(t('waBtn'))}">${WA_ICON}</a>`
+    const sent = p && p.r ? ' sent' : '', tip = p && p.r ? t('waBtn') + ' – ' + t('reminded', fmtDate(p.r)) : t('waBtn');        /* red once this month's reminder went out */
+    wa = num ? `<a class="ib wa${sent}" data-act="wa" href="${esc(waUrl(num, waText(c, ui.month)))}" target="_blank" rel="noopener" aria-label="${esc(tip)}" title="${esc(tip)}">${WA_ICON}</a>`
              : `<button type="button" class="ib wa bad" data-act="wa-bad" aria-label="${esc(t('waBtn'))}" title="${esc(t('waBtn'))}">${WA_ICON}</button>`;
   }
   let acts = '';
@@ -1561,7 +1564,7 @@ function openCustomer(cid){
         <input id="cz" type="text" autocomplete="off" value="${esc(c ? (c.aliases || []).join(', ') : '')}" placeholder="${esc(t('aliasesPh'))}">
         <div class="hint">${esc(t('aliasesHint'))}</div></div>
       <div class="field"><label for="cp">${esc(t('phone'))}</label><input id="cp" type="tel" autocomplete="off" value="${esc(c ? c.phone || '' : '')}"><div class="hint">${esc(t('phoneHint'))}</div></div>
-      ${c ? `<p style="margin:-2px 0 12px"><a class="btn small wa" id="waGo" href="#" target="_blank" rel="noopener">${WA_ICON}<span>${esc(t(s !== 'paid' ? 'waBtn' : 'waOpen'))}</span></a></p><div id="waMsg"></div>` : ''}
+      ${c ? `<p style="margin:-2px 0 12px"><a class="btn small wa${s !== 'paid' && p.r ? ' sent' : ''}" id="waGo" href="#" target="_blank" rel="noopener">${WA_ICON}<span>${esc(t(s !== 'paid' ? 'waBtn' : 'waOpen'))}</span></a></p><div id="waMsg"></div>` : ''}
       <div class="field"><label for="co">${esc(t('note'))}</label><textarea id="co">${esc(c ? c.note || '' : '')}</textarea></div>
       <div class="two">
         <div class="field"><label for="cf">${esc(t('paysFrom'))}</label><select id="cf">${monthOptions(c ? c.from : month, false)}</select></div>
