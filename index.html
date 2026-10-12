@@ -86,6 +86,7 @@ h1,h2,h3,p{margin:0}
 .sal-row{display:flex;justify-content:space-between;gap:8px;padding:12px 14px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
 .sal-row:last-child{border-bottom:0} .sal-row b{white-space:nowrap}
 .sal-card .col-head .btn{margin-left:auto}
+.wd-card{grid-column:1/-1} .wd-card .col-head{background:var(--unclear-soft)} .wd-card .col-head .cnt{margin-left:0;color:var(--muted)} .wd-card .wd-add{margin-left:auto}
 #saldoView{margin-top:12px}
 @media (max-width:560px){#saldoCards.lists.duo{grid-template-columns:minmax(0,1fr)}}
 .pview{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin:0 0 10px}
@@ -652,6 +653,9 @@ const I18N = {
   carTotal:['Total por mes: {0} ({1} autos)','Total per month: {0} ({1} cars)'], monthlyCar1:['Monto auto 1 (ARS)','Amount car 1 (ARS)'], plateCar1:['Patente auto 1','Plate car 1'],
   mgSum:['Son autos distintos: se suman los montos','Different cars: the amounts are added'], mgOne:['Es el mismo auto: queda un solo monto','The same car: one amount stays'],
   mgResult1:['Queda 1 auto: {0}','Result: 1 car: {0}'], mgResultN:['Quedan {0} autos: {1} = {2} por mes','Result: {0} cars: {1} = {2} per month'],
+  wdTitle:['Retiros personales','Personal withdrawals'], wdAdd:['+ Retiro','+ Withdrawal'], wdNew:['Nuevo retiro personal','New personal withdrawal'], wdEdit:['Editar retiro','Edit withdrawal'],
+  wdWho:['Quién / para qué','Who / what for'], wdWhoPh:['p. ej. Juan, Carlos…','e.g. Juan, Carlos…'], wdEmpty:['Sin retiros este mes.','No withdrawals this month.'], wdDeleted:['Retiro eliminado.','Withdrawal deleted.'],
+  wdLeft:['Queda después de los retiros','Left after withdrawals'], wdAfter:['Retiros personales: {0} · queda {1}','Personal withdrawals: {0} · left {1}'],
   areaPark:['Estacionamientos','Parking'], areaSaldo:['Saldo','Balance'], salTotal:['Saldo total de {0}','Total balance for {0}'], salOpen:['Ver','Open'],
   pvIn:['Ingresos','Income'], pvOut:['Gastos','Expenses'],
   costFixL:['Costos fijos','Fixed costs'], costVarL:['Costos variables','Variable costs'], costAll:['Gastos de {0}','Expenses for {0}'],
@@ -859,6 +863,7 @@ const splitNames = s => String(s ?? '').split(/[,;\n]/).map(x => x.trim()).filte
    payments:  { "customerId|YYYY-MM": {s:'paid'|'unpaid'|'unclear', a,d,p,n, t} }
    settings:  { ai: {key,model,t} } - the Anthropic API key, shared by all connected devices; nodup: {pairs[],t} - customer pairs that are not duplicates
    bar:       { id: {id,k:'in'|'out',a,d,c,g,n,deleted?,t} } - income and expenses of the bar Rock La Ve
+   wd:        { id: {id,a,d:'YYYY-MM-DD',c: who / what for,n,deleted?,t} } - personal withdrawals (shown under Saldo)
    costs:     { id: {id,k:'fix'|'var',c,n, fix: from:'YYYY-MM',to?,am:{'YYYY-MM':amount} | var: a,d:'YYYY-MM-DD', deleted?,t} } - expenses of the parking lots
    t = timestamp of the last change; when merging, the newer record wins.
    The three built-in lots keep their internal name until renamed (t = 0) and are shown translated. */
@@ -868,7 +873,7 @@ function emptyState(){
     lots:{ lot1:{id:'lot1',name:'Parkanlage 1',order:1,t:0}, lot2:{id:'lot2',name:'Parkanlage 2',order:2,t:0}, lot3:{id:'lot3',name:'Parkanlage 3',order:3,t:0}, [NO_LOT]:{id:NO_LOT,name:'?',order:0,t:0} },
     customers:{}, payments:{}, settings:{}, bar:{}, costs:{} };
 }
-const COLLECTIONS = ['lots','customers','payments','settings','bar','costs'];
+const COLLECTIONS = ['lots','customers','payments','settings','bar','costs','wd'];
 function normalize(s){
   const base = emptyState();
   const out = { v:1 };
@@ -1228,18 +1233,54 @@ function applyArea(){
   const area = bar ? 'bar' : sal ? 'saldo' : 'park';
   $('#areas').innerHTML = [['park', t('areaPark')], ['bar', BAR_NAME], ['saldo', t('areaSaldo')]].map(([k, name]) => `<button type="button" data-area="${k}" class="${area === k ? 'on' : ''}" aria-pressed="${area === k}">${esc(name)}</button>`).join('');
 }
+/* one window for a personal withdrawal */
+function openWd(id){
+  const e = id ? state.wd[id] : null, month = ui.month;
+  const date = e ? e.d : month === curMonth() ? todayISO() : month + '-01';
+  const el = openModal(`
+    <form novalidate>
+    <div class="sheet-head"><h2>${esc(t(e ? 'wdEdit' : 'wdNew'))}</h2>${closeX()}</div>
+    <div class="fs-body">
+      <div class="two">
+        <div class="field"><label for="wa">${esc(t('barAmount'))}</label><input id="wa" type="text" inputmode="decimal" autocomplete="off" value="${esc(e ? fmtNum(e.a) : '')}"></div>
+        <div class="field"><label for="wdD">${esc(t('barDate'))}</label><input id="wdD" type="date" value="${esc(date)}"></div>
+      </div>
+      <div class="field"><label for="wc">${esc(t('wdWho'))}</label><input id="wc" type="text" list="wSug" autocomplete="off" placeholder="${esc(t('wdWhoPh'))}" value="${esc(e ? e.c || '' : '')}"><datalist id="wSug">${uniqBy(Object.values(state.wd || {}).filter(x => x && !x.deleted).sort((a, b) => (b.t || 0) - (a.t || 0)).map(x => String(x.c || '').trim()), norm).slice(0, 20).map(v => `<option value="${esc(v)}">`).join('')}</datalist></div>
+      <div class="field"><label for="wn">${esc(t('note'))}</label><textarea id="wn">${esc(e ? e.n || '' : '')}</textarea></div>
+      <div id="wErr"></div>
+    </div>
+    <div class="actions fs-foot">${e ? `<button type="button" class="btn danger" id="wDel">${esc(t('del'))}</button>` : ''}<button type="submit" class="btn primary grow">${esc(t('save'))}</button></div>
+    </form>`, 'fixed');
+  const f = i => $('#' + i, el);
+  if(!e) setTimeout(() => { if(!el.contains(document.activeElement)) f('wa').focus(); }, 50);
+  $('form', el).onsubmit = ev => {
+    ev.preventDefault();
+    const fail = key => { f('wErr').innerHTML = `<div class="msg err">${esc(t(key))}</div>`; };
+    const a = parseAmount(f('wa').value), d = f('wdD').value;
+    if(!(a > 0)) return fail('errBarAmount');
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(d)) return fail('errBarDate');
+    const next = { id: e ? e.id : uid(), a, d, c: f('wc').value.trim(), n: f('wn').value.trim() };
+    if(!e || canon(Object.assign({}, e, { t: 0 })) !== canon(Object.assign({}, next, { t: 0 }))) state.wd[next.id] = Object.assign(next, { t: Date.now() });
+    closeModal(el); commit();
+    if(d.slice(0, 7) !== month) toast(t('barSavedIn', fmtMonthLong(d.slice(0, 7))), t('barGo'), () => { ui.month = d.slice(0, 7); render(); });
+  };
+  if(e) f('wDel').onclick = () => { const old = Object.assign({}, e); state.wd[e.id] = Object.assign({}, e, { deleted:true, t: Date.now() }); closeModal(el); commit(); toast(t('wdDeleted'), t('undo'), () => { state.wd[old.id] = Object.assign(old, { t: Date.now() }); commit(); }); };
+}
 /* Saldo: the balance of the parking lots and of the bar for the month, and both together */
 function renderSaldo(){
   const month = ui.month, in_ = e => e.d.slice(0, 7) === month;
   const sumOf = list => { const r = { in: 0, out: 0 }; for(const e of list) if(in_(e)) r[barKind(e)] += e.a || 0; r.in = round2(r.in); r.out = round2(r.out); r.net = round2(r.in - r.out); return r; };
   const park = sumOf(parkLive(month)), bar = sumOf(barLive()), total = round2(park.net + bar.net);
+  const wds = Object.values(state.wd || {}).filter(e => e && !e.deleted && typeof e.d === 'string' && e.d.slice(0, 7) === month).sort((a, b) => b.d.localeCompare(a.d) || (b.t || 0) - (a.t || 0));
+  const wdSum = round2(wds.reduce((x, e) => x + (e.a || 0), 0)), left = round2(total - wdSum);
   const cls = n => n < 0 ? 'neg' : 'bal';
   $('#summary').innerHTML = `
     <div class="bar-sum">
       <div><span>${esc(t('areaPark'))}</span><b class="${cls(park.net)}" id="salPark">${esc(signedMoney(park.net))}</b></div>
       <div><span>${esc(BAR_NAME)}</span><b class="${cls(bar.net)}" id="salBar">${esc(signedMoney(bar.net))}</b></div>
       <div class="saldo"><span>${esc(t('salTotal', fmtMonthLong(month)))}</span><b class="${cls(total)}" id="salTotal">${esc(signedMoney(total))}</b></div>
-    </div>`;
+    </div>
+    ${wds.length ? `<div class="hint" id="salAfter" style="margin-top:8px">${esc(t('wdAfter', fmtMoney(wdSum), signedMoney(left)))}</div>` : ''}`;
   const card = (k, name, r) => `<section class="card col active sal-card" data-area-go="${k}">
       <div class="col-head"><span>${esc(name)}</span><button type="button" class="btn small" data-area-go="${k}">${esc(t('salOpen'))}</button></div>
       <ul><li class="sal-row"><span>${esc(t('barIn'))}</span><b class="pos">${esc(fmtMoney(r.in))}</b></li>
@@ -1247,7 +1288,11 @@ function renderSaldo(){
       <div class="col-foot"><span>${esc(t('vizSaldo'))}</span><b class="${cls(r.net)}">${esc(signedMoney(r.net))}</b></div>
     </section>`;
   $('#saldoCards').innerHTML = card('park', t('areaPark'), park) + card('bar', BAR_NAME, bar)
-    + `<div class="card saldo-end"><span>${esc(t('salTotal', fmtMonthLong(month)))}</span><span class="calc">${esc(signedMoney(park.net))} ${bar.net < 0 ? '−' : '+'} ${esc(fmtMoney(Math.abs(bar.net)))} =</span><b class="${cls(total)}" id="salEnd">${esc(signedMoney(total))}</b></div>`;
+    + `<div class="card saldo-end"><span>${esc(t('salTotal', fmtMonthLong(month)))}</span><span class="calc">${esc(signedMoney(park.net))} ${bar.net < 0 ? '−' : '+'} ${esc(fmtMoney(Math.abs(bar.net)))} =</span><b class="${cls(total)}" id="salEnd">${esc(signedMoney(total))}</b></div>`
+    + `<section class="card col active wd-card"><div class="col-head"><span>${esc(t('wdTitle'))}</span><span class="cnt">${wds.length || ''}</span><button type="button" class="btn small wd-add" id="wdAdd">${esc(t('wdAdd'))}</button></div>
+      ${wds.length ? '<ul>' + wds.map(e => `<li class="row" data-id="${esc(e.id)}"><button type="button" class="row-main" data-act="open"><span class="row-name">${esc(e.c || t('barNoConcept'))}</span><span class="row-sub"><b class="row-date">${esc(fmtDate(e.d))}</b></span>${e.n ? `<span class="row-note">📝 ${esc(e.n)}</span>` : ''}</button><div class="row-amt neg">${esc(fmtMoney(e.a))}</div></li>`).join('') + '</ul>' : `<div class="empty">${esc(t('wdEmpty'))}</div>`}
+      <div class="col-foot"><span>${esc(t('barTotal'))}</span><b class="neg" id="wdSum">${esc(fmtMoney(wdSum))}</b></div></section>`
+    + `<div class="card saldo-end"><span>${esc(t('wdLeft'))}</span><span class="calc">${esc(signedMoney(total))} − ${esc(fmtMoney(wdSum))} =</span><b class="${cls(left)}" id="wdLeft">${esc(signedMoney(left))}</b></div>`;
 }
 function renderBar(){
   const month = ui.month, q = norm($('#barSearch').value);
@@ -3915,7 +3960,10 @@ $('#costFix').onclick = () => openCost(null, 'fix');
 $('#costVar').onclick = () => openCost(null, 'var');
 $('#costLists').addEventListener('click', e => { const b = e.target.closest('[data-act="open"]'); if(b) openCost(b.closest('.row').dataset.id); });
 $('#parkView').addEventListener('click', e => { if(e.target.closest('#pvOverview')){ openBarOverview(); return; } const b = e.target.closest('[data-pview]'); if(!b) return; if(ui.area === 'bar') ui.barView = b.dataset.pview; else ui.parkView = b.dataset.pview; render(); });
-$('#saldoCards').addEventListener('click', e => { const b = e.target.closest('button[data-area-go]'); if(!b) return; ui.area = b.dataset.areaGo; saveUi(); render(); window.scrollTo(0, 0); });
+$('#saldoCards').addEventListener('click', e => {
+  if(e.target.closest('#wdAdd')){ openWd(null); return; }
+  const r = e.target.closest('.wd-card [data-act="open"]'); if(r){ openWd(r.closest('.row').dataset.id); return; }
+  const b = e.target.closest('button[data-area-go]'); if(!b) return; ui.area = b.dataset.areaGo; saveUi(); render(); window.scrollTo(0, 0); });
 $('#areas').addEventListener('click', e => { const b = e.target.closest('[data-area]'); if(!b) return; ui.area = b.dataset.area; saveUi(); render(); window.scrollTo(0, 0); });
 $('#barSearch').addEventListener('input', renderBar);
 $('#barIn').onclick = () => openEntry(null, 'in');
