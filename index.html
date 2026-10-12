@@ -69,7 +69,7 @@ h1,h2,h3,p{margin:0}
 .icon-btn:hover{background:var(--soft)}
 .icon-btn svg{width:22px;height:22px}
 
-.areas{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);border-radius:11px;overflow:hidden;margin-bottom:10px}
+.areas{display:grid;grid-template-columns:1fr 1fr 1fr;border:1px solid var(--line);border-radius:11px;overflow:hidden;margin-bottom:10px}
 .areas button{border:0;background:var(--card);color:var(--muted);min-height:38px;font-weight:650;font-size:14.5px;padding:4px 8px}
 .areas button.on{background:var(--accent);color:var(--on-accent)}
 .tabs{display:flex;gap:8px;overflow-x:auto;padding-bottom:10px;margin-top:2px;scrollbar-width:none}
@@ -83,6 +83,11 @@ h1,h2,h3,p{margin:0}
 
 /* month */
 .fx-note{font-size:12px;color:var(--muted);margin-top:2px}
+.sal-row{display:flex;justify-content:space-between;gap:8px;padding:12px 14px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+.sal-row:last-child{border-bottom:0} .sal-row b{white-space:nowrap}
+.sal-card .col-head .btn{margin-left:auto}
+#saldoView{margin-top:12px}
+@media (max-width:560px){#saldoCards.lists.duo{grid-template-columns:minmax(0,1fr)}}
 .pview{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin:0 0 10px}
 .pview button.pv-ov{padding:0 18px;color:var(--text)}
 .pview button{min-height:44px;border:1px solid var(--line);border-radius:11px;background:var(--card);color:var(--muted);font:inherit;font-size:15.5px;font-weight:700;cursor:pointer}
@@ -119,7 +124,7 @@ h1,h2,h3,p{margin:0}
 .login .link{margin-top:18px;color:var(--muted)}
 .login .msg{text-align:left}
 .code{font:700 23px/1.3 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.08em;text-align:center;padding:12px 8px;border:1.5px dashed var(--muted);border-radius:12px;margin:8px 0;background:var(--card);-webkit-user-select:all;user-select:all}
-body.locked .tabs,body.locked .areas,body.locked .monthbar,body.locked #summary,body.locked .toolbar,body.locked #switch,body.locked #lists,body.locked #barView,body.locked #parkView,body.locked #parkOut{display:none}
+body.locked .tabs,body.locked .areas,body.locked .monthbar,body.locked #summary,body.locked .toolbar,body.locked #switch,body.locked #lists,body.locked #barView,body.locked #saldoView,body.locked #parkView,body.locked #parkOut{display:none}
 
 .toolbar{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0 10px}
 .toolbar input{flex:1 1 240px;min-width:0}
@@ -461,6 +466,7 @@ code{background:var(--soft);border-radius:5px;padding:1px 5px;font-size:13.5px;o
   <div id="switch" class="switch"></div>
   <div id="lists" class="lists"></div>
 
+  <section id="saldoView" hidden><div id="saldoCards" class="lists duo"></div></section>
   <section id="barView" hidden>
     <div class="toolbar">
       <input id="barSearch" type="search" autocomplete="off">
@@ -646,7 +652,7 @@ const I18N = {
   carTotal:['Total por mes: {0} ({1} autos)','Total per month: {0} ({1} cars)'], monthlyCar1:['Monto auto 1 (ARS)','Amount car 1 (ARS)'], plateCar1:['Patente auto 1','Plate car 1'],
   mgSum:['Son autos distintos: se suman los montos','Different cars: the amounts are added'], mgOne:['Es el mismo auto: queda un solo monto','The same car: one amount stays'],
   mgResult1:['Queda 1 auto: {0}','Result: 1 car: {0}'], mgResultN:['Quedan {0} autos: {1} = {2} por mes','Result: {0} cars: {1} = {2} per month'],
-  areaPark:['Estacionamientos','Parking'],
+  areaPark:['Estacionamientos','Parking'], areaSaldo:['Saldo','Balance'], salTotal:['Saldo total de {0}','Total balance for {0}'], salOpen:['Ver','Open'],
   pvIn:['Ingresos','Income'], pvOut:['Gastos','Expenses'],
   costFixL:['Costos fijos','Fixed costs'], costVarL:['Costos variables','Variable costs'], costAll:['Gastos de {0}','Expenses for {0}'],
   costAddFix:['+ Costo fijo','+ Fixed cost'], costAddVar:['+ Costo variable','+ Variable cost'],
@@ -1210,16 +1216,38 @@ const CAM_ICON = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" st
 const barKind = e => e.k === 'in' ? 'in' : 'out';
 const signedMoney = n => signedCur(cv(n));
 function applyArea(){
-  const bar = ui.area === 'bar';
-  $('#barView').hidden = !bar;
-  const out = !bar && ui.parkView === 'out';             /* parking: Ingresos (customers) or Gastos */
-  for(const sel of ['#tabs', '#parkTools', '#switch', '#lists']) $(sel).hidden = bar || out;
+  const bar = ui.area === 'bar', sal = ui.area === 'saldo';
+  $('#barView').hidden = !bar; $('#saldoView').hidden = !sal; $('#parkView').hidden = sal;
+  const out = !bar && !sal && ui.parkView === 'out';             /* parking: Ingresos (customers) or Gastos */
+  for(const sel of ['#tabs', '#parkTools', '#switch', '#lists']) $(sel).hidden = bar || out || sal;
   $('#parkOut').hidden = !out;
   const view = (bar ? ui.barView : ui.parkView) || 'in';        /* the same Ingresos / Gastos buttons in both areas */
   $('#parkView').innerHTML = [['in', 'pvIn'], ['out', 'pvOut']].map(([k, key]) => `<button type="button" class="${k}${view === k ? ' on' : ''}" data-pview="${k}" aria-pressed="${view === k}">${esc(t(key))}</button>`).join('')
     + `<button type="button" class="pv-ov" id="pvOverview">${esc(t('barOverview'))}</button>`;
   $$('#barView .btn-pair').forEach(b => { b.hidden = !b.querySelector(view === 'in' ? '.in' : '.out'); });
-  $('#areas').innerHTML = [['park', t('areaPark')], ['bar', BAR_NAME]].map(([k, name]) => `<button type="button" data-area="${k}" class="${(ui.area === 'bar') === (k === 'bar') ? 'on' : ''}" aria-pressed="${(ui.area === 'bar') === (k === 'bar')}">${esc(name)}</button>`).join('');
+  const area = bar ? 'bar' : sal ? 'saldo' : 'park';
+  $('#areas').innerHTML = [['park', t('areaPark')], ['bar', BAR_NAME], ['saldo', t('areaSaldo')]].map(([k, name]) => `<button type="button" data-area="${k}" class="${area === k ? 'on' : ''}" aria-pressed="${area === k}">${esc(name)}</button>`).join('');
+}
+/* Saldo: the balance of the parking lots and of the bar for the month, and both together */
+function renderSaldo(){
+  const month = ui.month, in_ = e => e.d.slice(0, 7) === month;
+  const sumOf = list => { const r = { in: 0, out: 0 }; for(const e of list) if(in_(e)) r[barKind(e)] += e.a || 0; r.in = round2(r.in); r.out = round2(r.out); r.net = round2(r.in - r.out); return r; };
+  const park = sumOf(parkLive(month)), bar = sumOf(barLive()), total = round2(park.net + bar.net);
+  const cls = n => n < 0 ? 'neg' : 'bal';
+  $('#summary').innerHTML = `
+    <div class="bar-sum">
+      <div><span>${esc(t('areaPark'))}</span><b class="${cls(park.net)}" id="salPark">${esc(signedMoney(park.net))}</b></div>
+      <div><span>${esc(BAR_NAME)}</span><b class="${cls(bar.net)}" id="salBar">${esc(signedMoney(bar.net))}</b></div>
+      <div class="saldo"><span>${esc(t('salTotal', fmtMonthLong(month)))}</span><b class="${cls(total)}" id="salTotal">${esc(signedMoney(total))}</b></div>
+    </div>`;
+  const card = (k, name, r) => `<section class="card col active sal-card" data-area-go="${k}">
+      <div class="col-head"><span>${esc(name)}</span><button type="button" class="btn small" data-area-go="${k}">${esc(t('salOpen'))}</button></div>
+      <ul><li class="sal-row"><span>${esc(t('barIn'))}</span><b class="pos">${esc(fmtMoney(r.in))}</b></li>
+      <li class="sal-row"><span>${esc(t('barOut'))}</span><b class="neg">${esc(fmtMoney(r.out))}</b></li></ul>
+      <div class="col-foot"><span>${esc(t('vizSaldo'))}</span><b class="${cls(r.net)}">${esc(signedMoney(r.net))}</b></div>
+    </section>`;
+  $('#saldoCards').innerHTML = card('park', t('areaPark'), park) + card('bar', BAR_NAME, bar)
+    + `<div class="card saldo-end"><span>${esc(t('salTotal', fmtMonthLong(month)))}</span><span class="calc">${esc(signedMoney(park.net))} ${bar.net < 0 ? '−' : '+'} ${esc(fmtMoney(Math.abs(bar.net)))} =</span><b class="${cls(total)}" id="salEnd">${esc(signedMoney(total))}</b></div>`;
 }
 function renderBar(){
   const month = ui.month, q = norm($('#barSearch').value);
@@ -1662,6 +1690,7 @@ addEventListener('scroll', closeMsgMenu, { passive: true }); addEventListener('r
 const msgCount = p => (p && p.r ? 1 : 0) + (p && p.r2 ? 1 : 0);
 function renderLists(){
   if(ui.area === 'bar'){ renderBanner(); renderBar(); return; }
+  if(ui.area === 'saldo'){ renderBanner(); renderSaldo(); return; }
   if(ui.parkView === 'out'){ renderBanner(); renderCosts(); return; }
   const month = ui.month, q = norm($('#search').value), qPlate = plateKey(q);
   const all = customersFor(ui.lot, month);
@@ -3886,6 +3915,7 @@ $('#costFix').onclick = () => openCost(null, 'fix');
 $('#costVar').onclick = () => openCost(null, 'var');
 $('#costLists').addEventListener('click', e => { const b = e.target.closest('[data-act="open"]'); if(b) openCost(b.closest('.row').dataset.id); });
 $('#parkView').addEventListener('click', e => { if(e.target.closest('#pvOverview')){ openBarOverview(); return; } const b = e.target.closest('[data-pview]'); if(!b) return; if(ui.area === 'bar') ui.barView = b.dataset.pview; else ui.parkView = b.dataset.pview; render(); });
+$('#saldoCards').addEventListener('click', e => { const b = e.target.closest('button[data-area-go]'); if(!b) return; ui.area = b.dataset.areaGo; saveUi(); render(); window.scrollTo(0, 0); });
 $('#areas').addEventListener('click', e => { const b = e.target.closest('[data-area]'); if(!b) return; ui.area = b.dataset.area; saveUi(); render(); window.scrollTo(0, 0); });
 $('#barSearch').addEventListener('input', renderBar);
 $('#barIn').onclick = () => openEntry(null, 'in');
