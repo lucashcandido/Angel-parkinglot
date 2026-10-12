@@ -904,12 +904,25 @@ function monthsInSpanish(list){
   const years = new Set(list.map(m => m.slice(0, 4)));
   return years.size === 1 ? join(list.map(name)) + ' de ' + list[0].slice(0, 4) : join(list.map(m => name(m) + ' de ' + m.slice(0, 4)));
 }
+/* Names are often stored in capitals (bank statements, old lists). In the message only the first letter of each part is
+   capital: "PEREZ JUAN CARLOS" -> "Perez Juan Carlos", "maría DE LOS ángeles" -> "María de los Ángeles".
+   A word typed in mixed case on purpose (McDonald) stays as it is. */
+function niceName(name){
+  const small = new Set(['de', 'del', 'la', 'las', 'los', 'y', 'e', 'da', 'do', 'dos', 'van', 'von']);
+  return String(name ?? '').trim().split(/\s+/).map((w, i) => {
+    const mixed = w !== w.toUpperCase() && w !== w.toLowerCase() && w.charAt(0) === w.charAt(0).toUpperCase();
+    if(mixed) return w;
+    const low = w.toLowerCase();
+    if(i > 0 && small.has(low)) return low;
+    return low.replace(/(^|[-'’])(\p{L})/gu, (m, sep, ch) => sep + ch.toUpperCase());
+  }).join(' ');
+}
 function waText(c, month, template){
   const st = c.id ? statusOf(c.id, month) : 'unpaid', got = c.id ? paidAmount(c, st, payOf(c.id, month)) : 0;
   let text = template || waSettings().text || (st === 'partial' && c.amount ? WA_DEFAULT_PARTIAL : WA_DEFAULT);
   const owed = c.id ? openMonths(c, month) : [];
   if(!c.amount) text = text.replace(/\s+(?:de|por)\s+\{monto\}/gi, '');
-  const map = { nombre: c.name, monto: c.amount ? fmtMoney(c.amount) : '', pagado: fmtMoney(got), falta: fmtMoney(Math.max(0, (c.amount || 0) - got)), mes: monthsInSpanish([month]), meses: monthsInSpanish(owed.length ? owed : [month]),
+  const map = { nombre: niceName(c.name), monto: c.amount ? fmtMoney(c.amount) : '', pagado: fmtMoney(got), falta: fmtMoney(Math.max(0, (c.amount || 0) - got)), mes: monthsInSpanish([month]), meses: monthsInSpanish(owed.length ? owed : [month]),
     lugar: c.spot || '', patente: c.plate || '', estacionamiento: c.lot === NO_LOT ? '' : lotName(c.lot) };
   return text.replace(/\{(\w+)\}/g, (m, k) => k in map ? map[k] : m).replace(/[ \t]{2,}/g, ' ').trim();
 }
