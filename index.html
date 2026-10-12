@@ -6,7 +6,7 @@
 <title>Cast Comercial</title>
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com https://api.anthropic.com; manifest-src 'self'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com https://api.anthropic.com https://dolarapi.com; manifest-src 'self'; base-uri 'none'; form-action 'none'">
 <meta name="theme-color" content="#1d4ed8">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -82,6 +82,7 @@ h1,h2,h3,p{margin:0}
 .tab.on small{color:inherit;opacity:.85}
 
 /* month */
+.fx-note{font-size:12px;color:var(--muted);margin-top:2px}
 .pview{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin:0 0 10px}
 .pview button.pv-ov{padding:0 18px;color:var(--text)}
 .pview button{min-height:44px;border:1px solid var(--line);border-radius:11px;background:var(--card);color:var(--muted);font:inherit;font-size:15.5px;font-weight:700;cursor:pointer}
@@ -433,6 +434,7 @@ code{background:var(--soft);border-radius:5px;padding:1px 5px;font-size:13.5px;o
     <div class="monthmid">
       <div id="monthLabel"></div>
       <div id="monthSub"></div>
+      <div id="fxNote" class="fx-note" hidden></div>
     </div>
     <button id="next" class="nav" type="button">›</button>
   </section>
@@ -480,7 +482,7 @@ code{background:var(--soft);border-radius:5px;padding:1px 5px;font-size:13.5px;o
    devices see the same state. Interface languages: Spanish and English.
    ===================================================================== */
 
-const LS = { data:'apl.data.v1', cfg:'apl.cfg.v1', ui:'apl.ui.v1', dirty:'apl.dirty.v1', ai:'apl.ai.v1', a2hs:'apl.a2hs.v1', code:'apl.code.v1', local:'apl.local.v1' };
+const LS = { data:'apl.data.v1', cfg:'apl.cfg.v1', ui:'apl.ui.v1', dirty:'apl.dirty.v1', ai:'apl.ai.v1', a2hs:'apl.a2hs.v1', code:'apl.code.v1', local:'apl.local.v1', fx:'apl.fx.v1' };
 const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const STANDALONE = navigator.standalone === true || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
 const DATA_FILE = 'data.json';
@@ -595,7 +597,12 @@ const I18N = {
   syncReady:['La sincronización quedó configurada.','Device sync is set up.'],
   unlinkTitle:['¿Desconectar la sincronización?','Disconnect sync?'],
   unlinkText:['Este dispositivo dejará de sincronizar. Los datos se conservan acá y en el repositorio.','This device will stop syncing. The data stays here and in the repository.'],
-  dataTitle:['Clientes y datos','Customers & data'], sortLbl:['Orden de las listas','List order'], sortName:['por nombre','by name'], sortSpot:['por lugar','by space'], sortPlate:['por patente','by licence plate'],
+  dataTitle:['Clientes y datos','Customers & data'],
+  curLbl:['Moneda que se muestra','Currency shown'], curARS:['Pesos argentinos ($)','Argentine pesos ($)'], curUSD:['Dólares (US$), al cambio actual','US dollars (US$), at the current rate'],
+  fxLbl:['Cotización','Exchange rate'], fxCasa_blue:['Dólar blue','Blue dollar'], fxCasa_oficial:['Dólar oficial','Official dollar'], fxCasa_bolsa:['Dólar MEP (bolsa)','MEP dollar'],
+  fxInfo:['1 US$ = {0} (venta), actualizado {1}. Se actualiza cada hora. Los montos se guardan siempre en pesos.','1 US$ = {0} (sell), updated {1}. Refreshed every hour. Amounts are always stored in pesos.'],
+  fxNote:['En US$ · 1 US$ = {0} ({1})','In US$ · 1 US$ = {0} ({1})'], fxS_blue:['blue','blue'], fxS_oficial:['oficial','official'], fxS_bolsa:['MEP','MEP'], fxWait:['Buscando la cotización del dólar… mientras tanto, en pesos.','Fetching the dollar rate… shown in pesos meanwhile.'],
+  sortLbl:['Orden de las listas','List order'], sortName:['por nombre','by name'], sortSpot:['por lugar','by space'], sortPlate:['por patente','by licence plate'],
   xlBtn:['Mes en Excel, por estacionamiento','Month as Excel, by parking lot'], xlTitle:['Cast Comercial · {0}','Cast Comercial · {0}'], xlSummary:['Resumen','Summary'],
   xlSumHead:['Estacionamiento;Clientes;Pagado;Parcial;No pagado;Dudoso;Esperado;Cobrado;Falta','Parking lot;Customers;Paid;Partial;Unpaid;Unclear;Expected;Received;Missing'],
   xlHead:['Lugar;Cliente;Patente;Monto mensual;Estado;Pagado;Falta;Recibido el;Transferido por;Teléfono;Nota','Space;Customer;Licence plate;Monthly amount;Status;Paid;Missing;Received on;Transferred by;Phone;Note'],
@@ -794,7 +801,31 @@ const fmtTime = ts => new Date(ts).toLocaleTimeString(loc(),{hour:'2-digit',minu
 const numFmt0 = new Intl.NumberFormat('es-AR',{maximumFractionDigits:0});
 const numFmt2 = new Intl.NumberFormat('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2});
 const fmtNum = n => n ? (Number.isInteger(n) ? numFmt0 : numFmt2).format(n) : '';
-const fmtMoney = n => '$ ' + (fmtNum(Math.round((n || 0) * 100) / 100) || '0');
+const fmtARS = n => '$ ' + (fmtNum(Math.round((n || 0) * 100) / 100) || '0');          /* always pesos: WhatsApp texts, windows where amounts are typed */
+/* Display currency. All amounts are stored in Argentine pesos; with US$ chosen in the settings they are only shown
+   converted, at the current rate from dolarapi.com (refreshed every hour; the last rate is kept for offline use). */
+const FX_CASAS = ['blue', 'oficial', 'bolsa'];
+let fx = store.get(LS.fx, null);          /* {casa, venta, fecha, at} */
+const usdOn = () => ui.cur === 'USD' && fx && fx.venta > 0 && fx.casa === (ui.fxCasa || 'blue');
+const cv = n => usdOn() ? (n || 0) / fx.venta : (n || 0);                              /* pesos → shown currency */
+const fmtCur = n => usdOn() ? 'US$ ' + numFmt2.format(Math.round((n || 0) * 100) / 100) : fmtARS(n);    /* n already in the shown currency */
+const fmtMoney = n => fmtCur(cv(n));
+const signedCur = n => (n < 0 ? '− ' : '') + fmtCur(Math.abs(n));
+let fxBusy = false;
+async function refreshFx(force){
+  if(ui.cur !== 'USD' || fxBusy) return;
+  const casa = ui.fxCasa || 'blue';
+  if(!force && fx && fx.casa === casa && Date.now() - (fx.at || 0) < 3600e3) return;
+  fxBusy = true;
+  try{
+    const r = await fetch('https://dolarapi.com/v1/dolares/' + casa, { cache:'no-store' });
+    const j = r.ok ? await r.json() : null;
+    if(j && +j.venta > 0){ fx = { casa, venta: +j.venta, compra: +j.compra || 0, fecha: j.fechaActualizacion || '', at: Date.now() }; store.set(LS.fx, fx); }
+  }catch(e){ /* offline: the last rate stays */ }
+  fxBusy = false;
+  render();
+}
+setInterval(() => refreshFx(false), 5 * 60e3);
 
 /* Understands 45000 · 45.000 · 45.000,50 · 45,000.50 */
 function parseAmount(v){
@@ -877,7 +908,7 @@ let rev = 0;
 const sync = { status: cfg ? 'pending' : 'local', msg:'', last:0, busy:false, again:false, timer:null };
 
 function saveLocal(){ if(!store.set(LS.data, state)) toast(t('storageFail')); }
-function saveUi(){ store.set(LS.ui, { lot:ui.lot, list:ui.list, sort:ui.sort, lang:ui.lang, area:ui.area }); }
+function saveUi(){ store.set(LS.ui, { lot:ui.lot, list:ui.list, sort:ui.sort, lang:ui.lang, area:ui.area, cur:ui.cur, fxCasa:ui.fxCasa }); }
 function commit(){
   rev++;
   saveLocal(); store.set(LS.dirty, true);
@@ -998,7 +1029,7 @@ function waText(c, month, template){
   let text = template || (waSecond(c, month) ? w.text2 || (part ? WA_DEFAULT_SECOND_PARTIAL : WA_DEFAULT_SECOND) : w.text || (part ? WA_DEFAULT_PARTIAL : WA_DEFAULT));
   const owed = c.id ? openMonths(c, month) : [];
   if(!c.amount) text = text.replace(/\s+(?:de|por)\s+\{monto\}/gi, '');
-  const map = { nombre: niceName(c.name), monto: c.amount ? fmtMoney(c.amount) : '', pagado: fmtMoney(got), falta: fmtMoney(Math.max(0, (c.amount || 0) - got)), mes: monthsInSpanish([month]), meses: monthsInSpanish(owed.length ? owed : [month]),
+  const map = { nombre: niceName(c.name), monto: c.amount ? fmtARS(c.amount) : '', pagado: fmtARS(got), falta: fmtARS(Math.max(0, (c.amount || 0) - got)), mes: monthsInSpanish([month]), meses: monthsInSpanish(owed.length ? owed : [month]),
     lugar: c.spot || '', patente: c.plate || '', estacionamiento: c.lot === NO_LOT ? '' : lotName(c.lot) };
   return text.replace(/\{(\w+)\}/g, (m, k) => k in map ? map[k] : m).replace(/[ \t]{2,}/g, ' ').trim();
 }
@@ -1065,6 +1096,9 @@ function renderTabs(){
 
 function renderMonth(){
   $('#monthLabel').textContent = fmtMonthLong(ui.month);
+  const fxEl = $('#fxNote');
+  fxEl.hidden = ui.cur !== 'USD';
+  if(ui.cur === 'USD') fxEl.textContent = usdOn() ? t('fxNote', fmtARS(fx.venta), t('fxS_' + fx.casa)) : t('fxWait');
   $('#monthSub').innerHTML = ui.month === curMonth()
     ? `<span class="tag-now">${esc(t('curMonth'))}</span>`
     : `<button type="button" class="link" id="toNow">${esc(t('toNow'))}</button>`;
@@ -1173,7 +1207,7 @@ function rowHtml(c, s, p, similar){
 const BAR_NAME = 'Rock La Ve';
 const CAM_ICON = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l1.6-2.4h6.8L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.6"/></svg>';
 const barKind = e => e.k === 'in' ? 'in' : 'out';
-const signedMoney = n => (n < 0 ? '− ' : '') + fmtMoney(Math.abs(n));
+const signedMoney = n => signedCur(cv(n));
 function applyArea(){
   const bar = ui.area === 'bar';
   $('#barView').hidden = !bar;
@@ -1395,8 +1429,9 @@ function compactMoney(n){
   const a = Math.abs(n), sign = n < 0 ? '−' : '', f = (v, d) => new Intl.NumberFormat(loc(), { maximumFractionDigits: d }).format(v);
   if(a >= 1e6) return sign + f(a / 1e6, 1) + ' M';
   if(a >= 1e3) return sign + f(a / 1e3, a < 1e4 ? 1 : 0) + (ui.lang === 'en' ? 'K' : ' mil');
-  return sign + f(a, 0);
+  return sign + f(a, a < 10 && a % 1 ? 1 : 0);
 }
+const cvPt = p => { for(const k of ['in', 'out', 'net', 'cum']) p[k] = cv(p[k]); return p; };
 function openBarOverview(){
   const month = ui.month;
   let mode = 'days', cfg = null, geo = null, cur = -1;
@@ -1411,21 +1446,21 @@ function openBarOverview(){
   const monthTick = k => { const [y, m] = k.split('-').map(Number); return cap(new Intl.DateTimeFormat(loc(), { month:'short' }).format(new Date(y, m - 1, 1)).replace('.', '').slice(0, 3)); };          /* three letters, so twelve fit on a phone */
   function config(){
     if(mode === 'months'){
-      const pts = barMonths(month, 12), first = pts.findIndex(p => p.any);
+      const pts = barMonths(month, 12).map(cvPt), first = pts.findIndex(p => p.any);
       return { pts, from: Math.max(0, first), to: pts.length, startZero: false, dots: true, val: p => p.net,
         kpiNote: t('vizLast12', fmtMonthLong(month)), titleA: t('vizMonthly'), titleB: t('vizNetMonth'), lineName: t('vizMonthNet'), tableName: t('vizTableM'), empty: t('vizEmpty12'),
         tick: (p, i) => monthTick(p.key), tick2: (p, i) => i === 0 || p.key.endsWith('-01') ? p.key.slice(0, 4) : '', ticks: pts.map((_, i) => i),
-        name: p => fmtMonthLong(p.key), extra: p => [t('vizRunShort'), signedMoney(p.cum)],
-        head: [t('vizMonthCol'), t('barIn'), t('barOut'), t('vizMonthNet'), t('vizRunShort')], row: p => [fmtMonthLong(p.key), fmtMoney(p.in), fmtMoney(p.out), signedMoney(p.net), signedMoney(p.cum)] };
+        name: p => fmtMonthLong(p.key), extra: p => [t('vizRunShort'), signedCur(p.cum)],
+        head: [t('vizMonthCol'), t('barIn'), t('barOut'), t('vizMonthNet'), t('vizRunShort')], row: p => [fmtMonthLong(p.key), fmtCur(p.in), fmtCur(p.out), signedCur(p.net), signedCur(p.cum)] };
     }
-    const pts = barDays(month), used = pts.filter(p => p.any), n = pts.length;
+    const pts = barDays(month).map(cvPt), used = pts.filter(p => p.any), n = pts.length;
     const to = !used.length ? 0 : month === curMonth() ? Math.max(new Date().getDate(), used[used.length - 1].day) : n;        /* the line stops today in the running month */
     const [y, m] = month.split('-').map(Number);
     return { pts, from: 0, to, startZero: true, dots: false, val: p => p.cum,
       kpiNote: '', titleA: t('vizDaily'), titleB: t('vizRun'), lineName: t('vizRunShort'), tableName: t('vizTable'), empty: t('vizEmpty'),
       tick: p => String(p.day), tick2: null, ticks: [1, 5, 10, 15, 20, 25, n].map(d => d - 1),
       name: p => cap(new Intl.DateTimeFormat(loc(), { weekday:'short', day:'numeric', month:'short' }).format(new Date(y, m - 1, p.day)).replace(/\./g, '')), extra: null,
-      head: [t('barDate'), t('barIn'), t('barOut'), t('vizDayNet'), t('vizRunShort')], row: p => [fmtDate(p.iso), fmtMoney(p.in), fmtMoney(p.out), signedMoney(p.net), signedMoney(p.cum)] };
+      head: [t('barDate'), t('barIn'), t('barOut'), t('vizDayNet'), t('vizRunShort')], row: p => [fmtDate(p.iso), fmtCur(p.in), fmtCur(p.out), signedCur(p.net), signedCur(p.cum)] };
   }
   function render(){
     cfg = config(); cur = -1; geo = null;
@@ -1434,9 +1469,9 @@ function openBarOverview(){
     body.innerHTML = `
       ${cfg.kpiNote ? `<p class="hint" id="vizNote" style="margin:0 0 6px">${esc(cfg.kpiNote)}</p>` : ''}
       <div class="viz-kpi">
-        <div><span>${esc(t('barIn'))}</span><b>${esc(fmtMoney(sumIn))}</b></div>
-        <div><span>${esc(t('barOut'))}</span><b>${esc(fmtMoney(sumOut))}</b></div>
-        <div><span>${esc(t('vizSaldo'))}</span><b class="${net < 0 ? 'neg' : 'bal'}">${esc(signedMoney(net))}</b></div>
+        <div><span>${esc(t('barIn'))}</span><b>${esc(fmtCur(sumIn))}</b></div>
+        <div><span>${esc(t('barOut'))}</span><b>${esc(fmtCur(sumOut))}</b></div>
+        <div><span>${esc(t('vizSaldo'))}</span><b class="${net < 0 ? 'neg' : 'bal'}">${esc(signedCur(net))}</b></div>
       </div>
       ${used.length ? `
       <div class="viz-wrap" id="vizWrap" tabindex="0" role="group" aria-label="${esc(t('vizAria'))}">
@@ -1497,7 +1532,7 @@ function openBarOverview(){
     const end = xy[xy.length - 1], right = end[0] > W - R - 90;
     b += `<path class="area" d="M${x0},${yB(0)} L${xy.map(p => p[0] + ',' + p[1]).join(' L')} L${end[0]},${yB(0)} Z"/><path class="line" d="${line}"/>`
       + (cfg.dots ? xy.slice(0, -1).map(p => `<circle class="dot" cx="${p[0]}" cy="${p[1]}" r="4"/>`).join('') : '')
-      + `<circle class="dot" cx="${end[0]}" cy="${end[1]}" r="5"/><text class="lb" x="${right ? end[0] - 9 : end[0] + 9}" y="${end[1] + (end[1] < TB + 22 ? 18 : -9)}" text-anchor="${right ? 'end' : 'start'}">${esc(signedMoney(vals[vals.length - 1]))}</text>`;
+      + `<circle class="dot" cx="${end[0]}" cy="${end[1]}" r="5"/><text class="lb" x="${right ? end[0] - 9 : end[0] + 9}" y="${end[1] + (end[1] < TB + 22 ? 18 : -9)}" text-anchor="${right ? 'end' : 'start'}">${esc(signedCur(vals[vals.length - 1]))}</text>`;
     $('#vizB', el).innerHTML = `<svg viewBox="0 0 ${W} ${TB + HB + BX}" width="${W}" height="${TB + HB + BX}" role="img" aria-label="${esc(cfg.titleB)}">${b}${axisX(TB, HB)}<line class="cross" id="crossB" y1="${TB}" y2="${TB + HB}" hidden/><circle class="dot" id="dotB" r="5" hidden/></svg>`;
     geo = { L, band, x, yB, W };
     if(cur >= 0) show(cur);
@@ -1515,8 +1550,8 @@ function openBarOverview(){
     const add = (cls, text) => { const s = document.createElement('div'); s.className = cls; s.textContent = text; tip.appendChild(s); return s; };
     add('viz-tip-h', cfg.name(p));
     const row = (key, label, value) => { const r = add('viz-tip-r', ''); const k = document.createElement('i'); k.className = 'k ' + key; const v = document.createElement('b'); v.textContent = value; const l = document.createElement('span'); l.textContent = label; r.append(k, v, l); };
-    row('in', t('barIn'), fmtMoney(p.in)); row('out', t('barOut'), fmtMoney(p.out));
-    if(onLine) row('bal', cfg.lineName, signedMoney(cfg.val(p)));
+    row('in', t('barIn'), fmtCur(p.in)); row('out', t('barOut'), fmtCur(p.out));
+    if(onLine) row('bal', cfg.lineName, signedCur(cfg.val(p)));
     if(cfg.extra && onLine){ const [label, value] = cfg.extra(p); row('none', label, value); }
     tip.hidden = false;
     const tw = tip.offsetWidth;
@@ -1814,7 +1849,7 @@ function openCustomer(cid){
   /* several cars: the first one in the fields above, every further one in a row of its own; the monthly amount is the sum */
   let onFee = () => {};
   const feeTotal = () => Math.round((parseAmount(f('ca').value) + extra.reduce((n, x) => n + parseAmount(x.a), 0)) * 100) / 100;
-  const showTotal = () => { f('carTotal').textContent = extra.length ? t('carTotal', fmtMoney(feeTotal()), extra.length + 1) : ''; };
+  const showTotal = () => { f('carTotal').textContent = extra.length ? t('carTotal', fmtARS(feeTotal()), extra.length + 1) : ''; };
   const drawCars = () => {
     f('cars').innerHTML = extra.map((x, i) => `<div class="car-h">${esc(t('carN', i + 2))}</div><div class="car" data-i="${i}">
       <input type="text" data-c="k" autocomplete="off" autocapitalize="characters" spellcheck="false" style="text-transform:uppercase" value="${esc(x.k)}" placeholder="${esc(t('plate'))}" aria-label="${esc(t('plate'))}">
@@ -1854,7 +1889,7 @@ function openCustomer(cid){
     const setSt = v => { const r = $('input[name=s][value=' + v + ']', el); if(r) r.checked = true; };
     const showProg = () => {
       const a = stNow() === 'unpaid' ? 0 : parseAmount(f('pa').value) || (stNow() === 'paid' ? fee() : 0), need = fee();
-      f('payProg').textContent = need ? t('progOf', fmtMoney(a), fmtMoney(need)) + (a < need ? ' · ' + t('progLeft', fmtMoney(need - a)) : '') : '';
+      f('payProg').textContent = need ? t('progOf', fmtARS(a), fmtARS(need)) + (a < need ? ' · ' + t('progLeft', fmtARS(need - a)) : '') : '';
     };
     f('pa').addEventListener('input', () => {
       const a = parseAmount(f('pa').value), need = fee(), st = stNow();
@@ -2803,7 +2838,7 @@ function openBarPhoto(kind){
       <p class="hint" style="margin:-4px 0 10px">${esc(t('barPhotoCheck'))}</p>
       <datalist id="bpCats">${cats}</datalist>
       ${items.map((it, i) => `<div class="tx ${it.act === 'add' ? (k === 'in' ? 'paid' : 'out') : 'skip'}" data-b="${i}">
-        <div class="tx-top"><b>${esc(fmtMoney(it.a))}</b><span>${esc(it.d ? fmtDate(it.d) : t('noDate'))}</span><span class="tx-payer">${esc(it.c || '—')}</span>${it.dup ? `<span class="badge">${esc(t('barPhotoDup'))}</span>` : ''}${it.nodate ? `<span class="badge warn">${esc(t('barPhotoNoDate'))}</span>` : ''}</div>
+        <div class="tx-top"><b>${esc(fmtARS(it.a))}</b><span>${esc(it.d ? fmtDate(it.d) : t('noDate'))}</span><span class="tx-payer">${esc(it.c || '—')}</span>${it.dup ? `<span class="badge">${esc(t('barPhotoDup'))}</span>` : ''}${it.nodate ? `<span class="badge warn">${esc(t('barPhotoNoDate'))}</span>` : ''}</div>
         ${it.n ? `<div class="tx-sub">${esc(it.n)}</div>` : ''}
         <div class="two"><div class="field"><label>${esc(t('barAmount'))}</label><input type="text" inputmode="decimal" autocomplete="off" data-e="a" value="${esc(it.ta)}"></div>
           <div class="field"><label>${esc(t('barDate'))}</label><input type="date" data-e="d" value="${esc(it.d)}"></div></div>
@@ -2853,7 +2888,7 @@ function openBarPhoto(kind){
     const key = e.target.dataset && e.target.dataset.e, card = e.target.closest('.tx[data-b]');
     if(!key || !card || !items || key === 'act') return;
     const it = items[+card.dataset.b], v = e.target.value, top = $('.tx-top', card);
-    if(key === 'a'){ it.ta = v; $('b', top).textContent = fmtMoney(parseAmount(v)); }          /* the line on top follows what is typed */
+    if(key === 'a'){ it.ta = v; $('b', top).textContent = fmtARS(parseAmount(v)); }          /* the line on top follows what is typed */
     else it[key] = v;
     if(key === 'd'){ it.nodate = false; top.children[1].textContent = v ? fmtDate(v) : t('noDate'); const w = $('.badge.warn', top); if(w) w.remove(); }
     if(key === 'c') $('.tx-payer', top).textContent = v || '—';
@@ -3055,7 +3090,7 @@ function createFromTransfers(items, month){
     if(it.action === 'skip'){ it.cid = ''; continue; }
     const nw = it.nw || {};
     const lot = state.lots[nw.lot] && !state.lots[nw.lot].deleted ? nw.lot : (lotsList()[0] || {}).id;
-    const name = String(nw.name || '').replace(/\s+/g, ' ').trim() || t('dataNoName', fmtMoney(it.amount), it.date ? fmtDate(it.date) : t('noDate'));
+    const name = String(nw.name || '').replace(/\s+/g, ' ').trim() || t('dataNoName', fmtARS(it.amount), it.date ? fmtDate(it.date) : t('noDate'));
     let c = Object.values(state.customers).find(x => !x.deleted && nameKey(x.name) === nameKey(name));        /* same name → the same customer */
     if(!c){
       const id = uid();
@@ -3155,7 +3190,7 @@ function openImport(){
       const other = it.date && it.date.slice(0, 7) !== month;
       const showRemember = c && act !== 'skip' && it.payer && !knowsPayer(c, it.payer);
       return `<div class="tx ${act}" data-i="${i}">
-        <div class="tx-top"><b>${esc(fmtMoney(it.amount))}</b><span>${esc(it.date ? fmtDate(it.date) : t('noDate'))}</span><span class="tx-payer">${esc(it.payer || '—')}</span>${it.dup ? `<span class="badge">${esc(t('stmtDup'))}</span>` : ''}${other ? `<span class="badge warn">${esc(t('stmtOther', fmtMonthLong(month)))}</span>` : ''}</div>
+        <div class="tx-top"><b>${esc(fmtARS(it.amount))}</b><span>${esc(it.date ? fmtDate(it.date) : t('noDate'))}</span><span class="tx-payer">${esc(it.payer || '—')}</span>${it.dup ? `<span class="badge">${esc(t('stmtDup'))}</span>` : ''}${other ? `<span class="badge warn">${esc(t('stmtOther', fmtMonthLong(month)))}</span>` : ''}</div>
         ${it.detail || it.reason ? `<div class="tx-sub">${esc([it.detail, it.reason].filter(Boolean).join(' · '))}</div>` : ''}
         <div class="two">
           <div class="field"><label>${esc(t('stmtCust'))}</label><select data-f="cid">${custOpts(it.cid)}</select></div>
@@ -3333,6 +3368,8 @@ function openSettings(focusSync){
 
       <div class="sec">
         <h3>${esc(t('dataTitle'))}</h3>
+        <div class="field"><label for="sCur">${esc(t('curLbl'))}</label><select id="sCur"><option value="ARS"${ui.cur !== 'USD' ? ' selected' : ''}>${esc(t('curARS'))}</option><option value="USD"${ui.cur === 'USD' ? ' selected' : ''}>${esc(t('curUSD'))}</option></select>
+          <div id="sFxRow" ${ui.cur === 'USD' ? '' : 'hidden'}><label for="sFx" style="margin-top:8px">${esc(t('fxLbl'))}</label><select id="sFx">${FX_CASAS.map(k => `<option value="${k}"${(ui.fxCasa || 'blue') === k ? ' selected' : ''}>${esc(t('fxCasa_' + k))}</option>`).join('')}</select><p class="hint" id="sFxInfo"></p></div></div>
         <div class="field"><label for="sSort">${esc(t('sortLbl'))}</label><select id="sSort"><option value="name"${ui.sort === 'name' ? ' selected' : ''}>${esc(t('sortName'))}</option><option value="spot"${ui.sort === 'spot' ? ' selected' : ''}>${esc(t('sortSpot'))}</option><option value="plate"${ui.sort === 'plate' ? ' selected' : ''}>${esc(t('sortPlate'))}</option></select></div>
         <div class="actions" style="margin-top:0">
           <button type="button" class="btn small" id="bulk">${esc(t('bulkTitle'))}</button>
@@ -3382,6 +3419,11 @@ function openSettings(focusSync){
       listAiModels().then(list => { const sel = $('#aiModel', el); if(!sel || !ai) return; for(const m of list) if(m.id !== ai.model) sel.add(new Option(m.name, m.id)); });
     }else bindAiKeyForm($('#aiSec', el), draw);
     $('#sSort', el).onchange = e => { ui.sort = e.target.value; saveUi(); renderLists(); };
+    const fxInfo = () => { const i = $('#sFxInfo', el); if(i) i.textContent = usdOn() ? t('fxInfo', fmtARS(fx.venta), fx.fecha ? new Date(fx.fecha).toLocaleString(loc(), { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit', hour12:false }) : '—') : ui.cur === 'USD' ? t('fxWait') : ''; };
+    fxInfo();
+    const fxGo = async () => { saveUi(); render(); fxInfo(); await refreshFx(true); fxInfo(); };
+    $('#sCur', el).onchange = e => { ui.cur = e.target.value; $('#sFxRow', el).hidden = ui.cur !== 'USD'; fxGo(); };
+    $('#sFx', el).onchange = e => { ui.fxCasa = e.target.value; fxGo(); };
     $('#bulk', el).onclick = openBulk;
     $('#csv', el).onclick = exportCsv; $('#xlsx', el).onclick = exportXlsx;
     $('#backup', el).onclick = () => download('cast-comercial-backup-' + todayISO() + '.json', JSON.stringify(Object.assign({}, state, { settings:{} })), 'application/json');     /* never put the API key into a file */
@@ -3872,6 +3914,7 @@ document.addEventListener('keydown', e => { if(e.key === 'Escape' && modals.leng
 let sessionMonth = curMonth();
 document.addEventListener('visibilitychange', () => {
   if(document.visibilityState !== 'visible') return;
+  refreshFx(false);
   if(sessionMonth !== curMonth()){            /* month changed while the app was open */
     sessionMonth = curMonth();
     if(!modals.length){ ui.month = sessionMonth; render(); }
@@ -3888,6 +3931,7 @@ setInterval(() => { if(cfg && document.visibilityState === 'visible' && !sync.bu
 
 applyStatic();
 render();
+refreshFx(false);
 startAccess().then(() => { if(cfg) runSync(); });
 if('serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('sw.js').catch(() => {});
 </script>
