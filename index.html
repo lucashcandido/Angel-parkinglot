@@ -1488,7 +1488,10 @@ function renderLists(){
   }
   const emptyKey = { paid:'emptyPaid', partial:'emptyPartial', unpaid:'emptyUnpaid', unclear:'emptyUnclear' };
   lists.innerHTML = ORDER.map(k => {
-    const rows = sortCustomers(groups[k]).sort((a, b) => near.has(a.id) - near.has(b.id)).map(c => rowHtml(c, k, payOf(c.id, month), near.has(c.id))).join('');
+    const lastMsg = c => { const p = payOf(c.id, month); return (p && (p.r2 || p.r)) || ''; };     /* open lists: last WhatsApp longest ago first, never sent on top */
+    const sorted = sortCustomers(groups[k]);
+    if(k !== 'paid') sorted.sort((a, b) => lastMsg(a).localeCompare(lastMsg(b)));
+    const rows = sorted.sort((a, b) => near.has(a.id) - near.has(b.id)).map(c => rowHtml(c, k, payOf(c.id, month), near.has(c.id))).join('');
     return `<section class="card col ${k}${ui.list === k ? ' active' : ''}">
       <div class="col-head"><span class="mark"></span><span>${esc(t(k))}</span><span class="sum">${counts[k] ? esc(fmtMoney(totals[k])) : ''}</span><span class="tail">${k === 'paid' ? '' : `<button type="button" class="msgf${ui.msg ? ' on' : ''}" data-msgmenu aria-haspopup="menu" title="${esc(t('msgFilter'))}">${esc(ui.msg ? t('msgS' + ui.msg) : t('filter'))}</button>`}<span class="cnt">${q || (ui.msg && k !== 'paid') ? groups[k].length + ' / ' : ''}${counts[k]}</span></span></div>
       ${rows ? '<ul>' + rows + '</ul>' : `<div class="empty">${esc(q || (ui.msg && k !== 'paid') ? t('noMatch') : t(emptyKey[k]))}</div>`}
