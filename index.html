@@ -517,7 +517,7 @@ const I18N = {
   waBad:['Revisá el teléfono de {0}: le faltan números. Escribilo con código de área o, si es de otro país, con + y código de país.','Check the phone number of {0}: digits are missing. Write it with the area code or, for another country, with + and the country code.'],
   waNoPhone:['Cargá primero el teléfono.','Enter the phone number first.'],
   reminded:['recordado el {0}','reminded on {0}'], reminded2:['2º recordatorio el {0}','2nd reminder on {0}'],
-  waBtn2:['Segundo recordatorio por WhatsApp (recargo 20%)','Second reminder via WhatsApp (20% surcharge)'],
+  waBtn2:['Segundo recordatorio por WhatsApp (recargo 10%)','Second reminder via WhatsApp (10% surcharge)'],
   waText2Lbl:['Segundo recordatorio, para quien ya recibió uno este mes','Second reminder, for customers already reminded this month'],
   waTextLbl:['Mensaje de recordatorio (se envía siempre en español)','Reminder message (always sent in Spanish)'],
   waHint:['Se completan solos: {nombre} {monto} {pagado} {falta} {mes} {meses} {lugar} {patente} {estacionamiento}','Filled in automatically: {nombre} {monto} {pagado} {falta} {mes} {meses} {lugar} {patente} {estacionamiento}'],
@@ -871,8 +871,8 @@ const WA_DEFAULT = 'Hola {nombre}, ¿cómo estás? Te escribimos del estacionami
 const WA_DEFAULT_PARTIAL = 'Hola {nombre}, ¿cómo estás? Te escribimos del estacionamiento: del pago mensual de {monto} correspondiente a {mes} recibimos {pagado} y falta abonar {falta}. Si ya lo hiciste, por favor envianos el comprobante. ¡Muchas gracias!';
 const WA_ICON = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 11.6a8.5 8.5 0 0 1-12.6 7.4L3.5 20.5l1.5-4.3A8.5 8.5 0 1 1 20.5 11.6z"/><path d="M9.2 8.6c-.3 2.6 3.2 6 5.9 5.9"/></svg>';
 /* the second reminder, for a customer who was already reminded this month: shorter, with the late-payment surcharge */
-const WA_DEFAULT_SECOND = 'Hola {nombre}, sigue pendiente el pago de {monto} correspondiente a {meses}. Lamentablemente, si se abona fuera de término debemos aplicar un recargo del 20%. Gracias.';
-const WA_DEFAULT_SECOND_PARTIAL = 'Hola {nombre}, del pago de {mes} todavía falta abonar {falta}. Lamentablemente, si se abona fuera de término debemos aplicar un recargo del 20%. Gracias.';
+const WA_DEFAULT_SECOND = 'Hola {nombre}, sigue pendiente el pago de {monto} correspondiente a {meses}. Lamentablemente, si se abona fuera de término debemos aplicar un recargo del 10%. Gracias.';
+const WA_DEFAULT_SECOND_PARTIAL = 'Hola {nombre}, del pago de {mes} todavía falta abonar {falta}. Lamentablemente, si se abona fuera de término debemos aplicar un recargo del 10%. Gracias.';
 const waSettings = () => { const w = (state.settings && state.settings.wa) || {}; return { text: w.text || '', text2: w.text2 || '', area: w.area || '' }; };
 const waSecond = (c, month) => { const p = c.id ? payOf(c.id, month) : null; return !!(p && p.r && p.s !== 'paid'); };       /* already reminded once this month */
 /* Turns a number as people write it into what WhatsApp expects.
