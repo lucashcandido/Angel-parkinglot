@@ -249,8 +249,15 @@ a.btn{display:inline-flex;align-items:center;gap:8px;text-decoration:none}
 .saldo-end .calc{font-weight:500;color:var(--muted);font-size:14px}
 .saldo-end b{font-size:20px}
 /* diagram of the bar's month - colours from a palette checked for colour-blind readers */
-:root{--viz-in:#008300;--viz-out:#e34948;--viz-bal:#2a78d6}
-@media (prefers-color-scheme: dark){:root{--viz-out:#e66767;--viz-bal:#3987e5}}
+:root{--viz-in:#008300;--viz-out:#e34948;--viz-bal:#2a78d6;--who-angel:#6250d6;--who-jorge:#eb6834}
+@media (prefers-color-scheme: dark){:root{--viz-out:#e66767;--viz-bal:#3987e5;--who-angel:#9085e9;--who-jorge:#d95926}}
+.wbar.who-angel,.k.who-angel{fill:var(--who-angel);background:var(--who-angel)} .wbar.who-jorge,.k.who-jorge{fill:var(--who-jorge);background:var(--who-jorge)}
+.wbar.dim{opacity:.35}
+.wd-tot{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:14px;margin-top:6px;font-variant-numeric:tabular-nums}
+.who-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:7px;vertical-align:0} .who-dot.who-angel{background:var(--who-angel)} .who-dot.who-jorge{background:var(--who-jorge)} .who-dot.who-none{background:var(--line)}
+.seg input:checked+span.who-angel{background:color-mix(in srgb,var(--who-angel) 14%,transparent);border-color:var(--who-angel);color:var(--who-angel)}
+.seg input:checked+span.who-jorge{background:color-mix(in srgb,var(--who-jorge) 14%,transparent);border-color:var(--who-jorge);color:var(--who-jorge)}
+.wd-who span{font-size:16px;min-height:48px;display:flex;align-items:center;justify-content:center}
 .sheet.wide{max-width:760px}
 .viz-mode{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);border-radius:11px;overflow:hidden;margin-bottom:12px}
 .viz-mode button{border:0;background:var(--card);color:var(--muted);min-height:38px;font-weight:650;font-size:14.5px;padding:4px 8px}
@@ -661,7 +668,9 @@ const I18N = {
   mgResult1:['Queda 1 auto: {0}','Result: 1 car: {0}'], mgResultN:['Quedan {0} autos: {1} = {2} por mes','Result: {0} cars: {1} = {2} per month'],
   salChart:['Totales por mes (estacionamientos + bar)','Totals per month (parking + bar)'], salTot_barIn:['Ingresos totales','Total income'], salTot_barOut:['Gastos totales','Total expenses'], salTot_vizSaldo:['Saldo total','Total balance'],
   wdTitle:['Retiros personales','Personal withdrawals'], wdAdd:['+ Retiro','+ Withdrawal'], wdNew:['Nuevo retiro personal','New personal withdrawal'], wdEdit:['Editar retiro','Edit withdrawal'],
-  wdWho:['Quién / para qué','Who / what for'], wdWhoPh:['p. ej. Juan, Carlos…','e.g. Juan, Carlos…'], wdEmpty:['Sin retiros este mes.','No withdrawals this month.'], wdDeleted:['Retiro eliminado.','Withdrawal deleted.'],
+  wdWho:['¿Quién retira?','Who takes it out?'], wdWhoErr:['Elegí quién retira: Angel o Jorge.','Choose who takes it out: Angel or Jorge.'], wdNoWho:['(sin nombre)','(no name)'],
+  wdFor:['Para qué (opcional)','What for (optional)'], wdForPh:['p. ej. gastos personales','e.g. personal expenses'],
+  wdChart:['Retiros por persona (12 meses)','Withdrawals per person (12 months)'], wdChartEmpty:['Sin retiros en estos 12 meses.','No withdrawals in these 12 months.'], wdTot12:['Total 12 meses','12-month total'], wdEmpty:['Sin retiros este mes.','No withdrawals this month.'], wdDeleted:['Retiro eliminado.','Withdrawal deleted.'],
   wdLeft:['Queda después de los retiros','Left after withdrawals'], wdAfter:['Retiros personales: {0} · queda {1}','Personal withdrawals: {0} · left {1}'],
   areaPark:['Estacionamientos','Parking'], areaSaldo:['Saldo','Balance'], salTotal:['Saldo total de {0}','Total balance for {0}'], salOpen:['Ver','Open'],
   pvIn:['Ingresos','Income'], pvOut:['Gastos','Expenses'],
@@ -1240,6 +1249,10 @@ function applyArea(){
   const area = bar ? 'bar' : sal ? 'saldo' : 'park';
   $('#areas').innerHTML = [['park', t('areaPark')], ['bar', BAR_NAME], ['saldo', t('areaSaldo')]].map(([k, name]) => `<button type="button" data-area="${k}" class="${area === k ? 'on' : ''}" aria-pressed="${area === k}">${esc(name)}</button>`).join('');
 }
+/* only two people take money out: every withdrawal belongs to one of them (w); c is an optional "what for" */
+const WD_PEOPLE = [['angel', 'Angel'], ['jorge', 'Jorge']];
+const wdWho = e => e.w === 'angel' || e.w === 'jorge' ? e.w : /^\s*angel/i.test(e.c || '') ? 'angel' : /^\s*jorge/i.test(e.c || '') ? 'jorge' : '';
+const wdName = k => (WD_PEOPLE.find(p => p[0] === k) || [0, ''])[1];
 /* one window for a personal withdrawal */
 function openWd(id){
   const e = id ? state.wd[id] : null, month = ui.month;
@@ -1252,7 +1265,8 @@ function openWd(id){
         <div class="field"><label for="wa">${esc(t('barAmount'))}</label><input id="wa" type="text" inputmode="decimal" autocomplete="off" value="${esc(e ? fmtNum(e.a) : '')}"></div>
         <div class="field"><label for="wdD">${esc(t('barDate'))}</label><input id="wdD" type="date" value="${esc(date)}"></div>
       </div>
-      <div class="field"><label for="wc">${esc(t('wdWho'))}</label><input id="wc" type="text" list="wSug" autocomplete="off" placeholder="${esc(t('wdWhoPh'))}" value="${esc(e ? e.c || '' : '')}"><datalist id="wSug">${uniqBy(Object.values(state.wd || {}).filter(x => x && !x.deleted).sort((a, b) => (b.t || 0) - (a.t || 0)).map(x => String(x.c || '').trim()), norm).slice(0, 20).map(v => `<option value="${esc(v)}">`).join('')}</datalist></div>
+      <div class="field"><label>${esc(t('wdWho'))}</label><div class="seg duo wd-who">${WD_PEOPLE.map(([k, name]) => `<label><input type="radio" name="ww" value="${k}"${e && wdWho(e) === k ? ' checked' : ''}><span class="who-${k}">${esc(name)}</span></label>`).join('')}</div></div>
+      <div class="field"><label for="wc">${esc(t('wdFor'))}</label><input id="wc" type="text" autocomplete="off" placeholder="${esc(t('wdForPh'))}" value="${esc(e && !e.w && wdWho(e) ? '' : e ? e.c || '' : '')}"></div>
       <div class="field"><label for="wn">${esc(t('note'))}</label><textarea id="wn">${esc(e ? e.n || '' : '')}</textarea></div>
       <div id="wErr"></div>
     </div>
@@ -1263,10 +1277,11 @@ function openWd(id){
   $('form', el).onsubmit = ev => {
     ev.preventDefault();
     const fail = key => { f('wErr').innerHTML = `<div class="msg err">${esc(t(key))}</div>`; };
-    const a = parseAmount(f('wa').value), d = f('wdD').value;
+    const a = parseAmount(f('wa').value), d = f('wdD').value, who = ($('input[name=ww]:checked', el) || {}).value;
     if(!(a > 0)) return fail('errBarAmount');
+    if(!who) return fail('wdWhoErr');
     if(!/^\d{4}-\d{2}-\d{2}$/.test(d)) return fail('errBarDate');
-    const next = { id: e ? e.id : uid(), a, d, c: f('wc').value.trim(), n: f('wn').value.trim() };
+    const next = { id: e ? e.id : uid(), a, d, w: who, c: f('wc').value.trim(), n: f('wn').value.trim() };
     if(!e || canon(Object.assign({}, e, { t: 0 })) !== canon(Object.assign({}, next, { t: 0 }))) state.wd[next.id] = Object.assign(next, { t: Date.now() });
     closeModal(el); commit();
     if(d.slice(0, 7) !== month) toast(t('barSavedIn', fmtMonthLong(d.slice(0, 7))), t('barGo'), () => { ui.month = d.slice(0, 7); render(); });
@@ -1321,6 +1336,48 @@ function salShow(i){                       /* like the other diagrams: a line, a
   const tw = tip.offsetWidth;
   tip.style.left = Math.max(4, Math.min(salGeo.W - tw - 4, X + (X > salGeo.W / 2 ? -tw - 12 : 12))) + 'px';
 }
+/* withdrawals per person: twelve months, a column for Angel and one for Jorge in each month */
+let wdPts = [], wdCur = -1, wdGeo = null;
+function wdChartHtml(month){
+  const keys = Array.from({ length: 12 }, (_, i) => addMonth(month, i - 11)), map = {};
+  for(const k of keys) map[k] = { key: k, angel: 0, jorge: 0 };
+  for(const e of Object.values(state.wd || {})){ if(!e || e.deleted || typeof e.d !== 'string') continue; const r = map[e.d.slice(0, 7)], w = wdWho(e); if(r && w) r[w] += e.a || 0; }
+  const pts = wdPts = keys.map(k => { const r = map[k]; r.angel = cv(round2(r.angel)); r.jorge = cv(round2(r.jorge)); return r; });
+  const tot = { angel: round2(pts.reduce((x, p) => x + p.angel, 0)), jorge: round2(pts.reduce((x, p) => x + p.jorge, 0)) };
+  const head = `<h3 class="viz-h">${esc(t('wdChart'))}</h3><div class="viz-legend">${WD_PEOPLE.map(([k, name]) => `<span><i class="k who-${k}"></i>${esc(name)}</span>`).join('')}</div>`;
+  if(!tot.angel && !tot.jorge) return `<section class="card viz sal-chart wd-chart">${head}<div class="empty">${esc(t('wdChartEmpty'))}</div></section>`;
+  const avail = ($('#saldoCards') && $('#saldoCards').clientWidth) || 720;
+  const W = Math.max(300, Math.min(1200, avail - 30)), H = W < 520 ? 220 : 250, L = W < 520 ? 46 : 58, R = 14, T = 12, B = 34, n = pts.length;
+  const hi = Math.max(...pts.map(p => Math.max(p.angel, p.jorge))), step = niceStep(hi || 1, 4), top = Math.ceil(hi / step) * step || step;
+  const band = (W - L - R) / n, x = i => L + band * (i + .5), y = v => T + (top - v) / top * (H - T - B), bw = Math.max(3, Math.min(18, band * .32));
+  let g = '';
+  for(let v = 0; v <= top + 1e-9; v += step) g += `<line class="${v === 0 ? 'ax' : 'gr'}" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="tk" x="${L - 8}" y="${y(v) + 4}" text-anchor="end">${esc(compactMoney(v))}</text>`;
+  pts.forEach((p, i) => { const [yy, mm] = p.key.split('-').map(Number);
+    g += `<text class="tk" x="${x(i)}" y="${H - B + 16}" text-anchor="middle">${esc(cap(new Intl.DateTimeFormat(loc(), { month:'short' }).format(new Date(yy, mm - 1, 1)).replace('.', '').slice(0, 3)))}</text>`;
+    if(i === 0 || mm === 1) g += `<text class="tk" x="${x(i)}" y="${H - B + 29}" text-anchor="middle">${yy}</text>`;
+    [['angel', -1], ['jorge', 1]].forEach(([k, side]) => { if(p[k] > 0){ const h = y(0) - y(p[k]); g += `<rect class="wbar who-${k}" data-wi="${i}" x="${x(i) + (side < 0 ? -bw - 1 : 1)}" y="${y(p[k])}" width="${bw}" height="${Math.max(1, h)}" rx="2"/>`; } }); });
+  wdGeo = { W, x };
+  g += `<line class="cross" id="wdCross" y1="${T}" y2="${H - B}" hidden/>` + pts.map((p, i) => `<rect class="hit" data-wi="${i}" x="${L + band * i}" y="${T}" width="${band}" height="${H - T - B}"/>`).join('');
+  return `<section class="card viz sal-chart wd-chart">${head}
+    <div class="viz-wrap" id="wdWrap"><svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" id="wdSvg" role="img" aria-label="${esc(t('wdChart'))}">${g}</svg><div class="viz-tip" id="wdTip" role="status" hidden></div></div>
+    <div class="wd-tot" id="wdTot">${esc(t('wdTot12'))}: ${WD_PEOPLE.map(([k, name]) => `<span><i class="k who-${k}"></i>${esc(name)} <b>${esc(fmtCur(tot[k]))}</b></span>`).join('')}</div>
+    <p class="hint">${esc(t('vizHint'))}</p></section>`;
+}
+function wdShow(i){
+  const tip = $('#wdTip'); if(!wdPts.length || !tip || !wdGeo) return;
+  wdCur = Math.max(0, Math.min(wdPts.length - 1, i));
+  const p = wdPts[wdCur], X = wdGeo.x(wdCur), c = $('#wdCross');
+  c.setAttribute('x1', X); c.setAttribute('x2', X); c.removeAttribute('hidden');
+  $$('#wdSvg .wbar').forEach(b => b.classList.toggle('dim', +b.dataset.wi !== wdCur));
+  tip.textContent = '';
+  const add = (cls, text) => { const s = document.createElement('div'); s.className = cls; s.textContent = text; tip.appendChild(s); return s; };
+  add('viz-tip-h', fmtMonthLong(p.key));
+  for(const [k, name] of WD_PEOPLE){ const r = add('viz-tip-r', ''); const q = document.createElement('i'); q.className = 'k who-' + k; const v = document.createElement('b'); v.textContent = fmtCur(p[k]); const l = document.createElement('span'); l.textContent = name; r.append(q, v, l); }
+  tip.hidden = false;
+  const tw = tip.offsetWidth;
+  tip.style.left = Math.max(4, Math.min(wdGeo.W - tw - 4, X + (X > wdGeo.W / 2 ? -tw - 12 : 12))) + 'px';
+}
+function wdHide(){ wdCur = -1; const tip = $('#wdTip'); if(!tip) return; tip.hidden = true; $('#wdCross').setAttribute('hidden', ''); $$('#wdSvg .wbar').forEach(b => b.classList.remove('dim')); }
 function salHide(){
   salCur = -1; const tip = $('#salTip'); if(!tip) return;
   tip.hidden = true; $('#salCross').setAttribute('hidden', ''); for(const k of ['in', 'out', 'net']) $('#salDot_' + k).setAttribute('hidden', '');
@@ -1349,11 +1406,11 @@ function renderSaldo(){
   $('#saldoCards').innerHTML = card('park', t('areaPark'), park) + card('bar', BAR_NAME, bar)
     + `<div class="card saldo-end"><span>${esc(t('salTotal', fmtMonthLong(month)))}</span><span class="calc">${esc(signedMoney(park.net))} ${bar.net < 0 ? '−' : '+'} ${esc(fmtMoney(Math.abs(bar.net)))} =</span><b class="${cls(total)}" id="salEnd">${esc(signedMoney(total))}</b></div>`
     + `<section class="card col active wd-card"><div class="col-head"><span>${esc(t('wdTitle'))}</span><span class="cnt">${wds.length || ''}</span><button type="button" class="btn small wd-add" id="wdAdd">${esc(t('wdAdd'))}</button></div>
-      ${wds.length ? '<ul>' + wds.map(e => `<li class="row" data-id="${esc(e.id)}"><button type="button" class="row-main" data-act="open"><span class="row-name">${esc(e.c || t('barNoConcept'))}</span><span class="row-sub"><b class="row-date">${esc(fmtDate(e.d))}</b></span>${e.n ? `<span class="row-note">📝 ${esc(e.n)}</span>` : ''}</button><div class="row-amt neg">${esc(fmtMoney(e.a))}</div></li>`).join('') + '</ul>' : `<div class="empty">${esc(t('wdEmpty'))}</div>`}
+      ${wds.length ? '<ul>' + wds.map(e => `<li class="row" data-id="${esc(e.id)}"><button type="button" class="row-main" data-act="open"><span class="row-name"><i class="who-dot who-${wdWho(e) || 'none'}"></i>${esc(wdName(wdWho(e)) || t('wdNoWho'))}</span><span class="row-sub"><b class="row-date">${esc(fmtDate(e.d))}</b>${e.w && e.c ? ' · ' + esc(e.c) : ''}</span>${e.n ? `<span class="row-note">📝 ${esc(e.n)}</span>` : ''}</button><div class="row-amt neg">${esc(fmtMoney(e.a))}</div></li>`).join('') + '</ul>' : `<div class="empty">${esc(t('wdEmpty'))}</div>`}
       <div class="col-foot"><span>${esc(t('barTotal'))}</span><b class="neg" id="wdSum">${esc(fmtMoney(wdSum))}</b></div></section>`
     + `<div class="card saldo-end"><span>${esc(t('wdLeft'))}</span><span class="calc">${esc(signedMoney(total))} − ${esc(fmtMoney(wdSum))} =</span><b class="${cls(left)}" id="wdLeft">${esc(signedMoney(left))}</b></div>`
-    + salChartHtml(month);
-  salCur = -1;
+    + salChartHtml(month) + wdChartHtml(month);
+  salCur = -1; wdCur = -1;
 }
 function renderBar(){
   const month = ui.month, q = norm($('#barSearch').value);
@@ -4022,11 +4079,13 @@ $('#costFix').onclick = () => openCost(null, 'fix');
 $('#costVar').onclick = () => openCost(null, 'var');
 $('#costLists').addEventListener('click', e => { const b = e.target.closest('[data-act="open"]'); if(b) openCost(b.closest('.row').dataset.id); });
 $('#parkView').addEventListener('click', e => { if(e.target.closest('#pvOverview')){ openBarOverview(); return; } const b = e.target.closest('[data-pview]'); if(!b) return; if(ui.area === 'bar') ui.barView = b.dataset.pview; else ui.parkView = b.dataset.pview; render(); });
-$('#saldoCards').addEventListener('pointermove', e => { const h = e.target.closest('rect[data-si]'); if(h && +h.dataset.si !== salCur) salShow(+h.dataset.si); });
+$('#saldoCards').addEventListener('pointermove', e => { const h = e.target.closest('rect[data-si]'); if(h && +h.dataset.si !== salCur) salShow(+h.dataset.si); const w = e.target.closest('rect[data-wi]'); if(w && +w.dataset.wi !== wdCur) wdShow(+w.dataset.wi); });
+$('#saldoCards').addEventListener('pointerout', e => { if(e.target.closest && e.target.closest('#wdSvg') && !(e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest('#wdSvg'))) wdHide(); });
 $('#saldoCards').addEventListener('pointerleave', () => salHide(), true);
 $('#saldoCards').addEventListener('pointerout', e => { if(e.target.closest && e.target.closest('#salSvg') && !(e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest('#salSvg'))) salHide(); });
 $('#saldoCards').addEventListener('click', e => {
   const h = e.target.closest('rect[data-si]'); if(h){ salShow(+h.dataset.si); return; }
+  const w = e.target.closest('rect[data-wi]'); if(w){ wdShow(+w.dataset.wi); return; }
   if(e.target.closest('#wdAdd')){ openWd(null); return; }
   const r = e.target.closest('.wd-card [data-act="open"]'); if(r){ openWd(r.closest('.row').dataset.id); return; }
   const b = e.target.closest('button[data-area-go]'); if(!b) return; ui.area = b.dataset.areaGo; saveUi(); render(); window.scrollTo(0, 0); });
