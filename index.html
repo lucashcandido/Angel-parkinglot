@@ -680,6 +680,7 @@ const I18N = {
   barOverview:['Resumen','Overview'], vizSaldo:['Saldo','Balance'],
   vizAria:['Diagrama del mes. Con las flechas izquierda y derecha se recorre día por día.','Chart of the month. Use the left and right arrow keys to go day by day.'],
   vizDaily:['Ingresos y gastos por día','Income and expenses per day'], vizInUp:['Ingresos (hacia arriba)','Income (upwards)'], vizOutDown:['Gastos (hacia abajo)','Expenses (downwards)'],
+  vizPaid1:['cliente pagó','customer paid'], vizPaidN:['clientes pagaron','customers paid'], vizPayCol:['Pagos','Payments'],
   vizRun:['Saldo acumulado del mes','Running balance of the month'], vizRunShort:['Saldo acumulado','Running balance'], vizDayNet:['Saldo del día','Day balance'],
   vizHint:['Tocá o pasá el dedo sobre el diagrama para ver los montos.','Tap or move over the chart to see the amounts.'],
   vizModeDays:['Días del mes','Days of the month'], vizModeMonths:['Meses','Months'], vizMonthly:['Ingresos y gastos por mes','Income and expenses per month'],
@@ -1389,7 +1390,7 @@ function parkLive(upTo){
     const p = state.payments[key], [cid, m] = key.split('|'), c = state.customers[cid];
     if(!p || !c || c.deleted || !/^\d{4}-\d{2}$/.test(m || '') || (p.s !== 'paid' && p.s !== 'partial')) continue;
     const a = paidAmount(c, p.s, p); if(!a) continue;
-    out.push({ k:'in', a, d: typeof p.d === 'string' && p.d.slice(0, 7) === m ? p.d : m + '-01' });
+    out.push({ k:'in', a, d: typeof p.d === 'string' && p.d.slice(0, 7) === m ? p.d : m + '-01', n: 1 });          /* n: one customer who paid */
   }
   for(const e of costLive()){
     if(e.k === 'fix'){ if(/^\d{4}-\d{2}$/.test(e.from || '')) for(let m = e.from; m <= upTo && (!e.to || m <= e.to); m = addMonth(m, 1)){ const a = fixAmount(e, m); if(a) out.push({ k:'out', a, d: m + '-01' }); } }
@@ -1400,11 +1401,11 @@ function parkLive(upTo){
 const overviewLive = month => ui.area === 'bar' ? barLive() : parkLive(month);
 function barDays(month){
   const [y, m] = month.split('-').map(Number), n = new Date(y, m, 0).getDate();
-  const days = Array.from({ length: n }, (_, i) => ({ day: i + 1, iso: month + '-' + pad2(i + 1), in: 0, out: 0, cum: 0, any: false }));
+  const days = Array.from({ length: n }, (_, i) => ({ day: i + 1, iso: month + '-' + pad2(i + 1), in: 0, out: 0, cum: 0, cnt: 0, any: false }));
   for(const e of overviewLive(month)){
     if(e.d.slice(0, 7) !== month) continue;
     const d = days[+e.d.slice(8) - 1]; if(!d) continue;
-    d[barKind(e)] += e.a || 0; d.any = true;
+    d[barKind(e)] += e.a || 0; d.any = true; if(e.n) d.cnt += e.n;
   }
   let run = 0;
   for(const d of days){ d.net = round2(d.in - d.out); run = round2(run + d.net); d.cum = run; }
@@ -1412,12 +1413,12 @@ function barDays(month){
 }
 function barMonths(month, count){         /* the count months that end with the month given; cum includes everything before */
   const keys = Array.from({ length: count }, (_, i) => addMonth(month, i - count + 1)), map = {};
-  for(const k of keys) map[k] = { key: k, in: 0, out: 0, any: false };
+  for(const k of keys) map[k] = { key: k, in: 0, out: 0, cnt: 0, any: false };
   let run = 0;
   for(const e of overviewLive(month)){
     const m = e.d.slice(0, 7), k = barKind(e);
     if(m < keys[0]) run += k === 'in' ? e.a || 0 : -(e.a || 0);
-    else if(map[m]){ map[m][k] += e.a || 0; map[m].any = true; }
+    else if(map[m]){ map[m][k] += e.a || 0; map[m].any = true; if(e.n) map[m].cnt += e.n; }
   }
   return keys.map(k => { const d = map[k]; d.net = round2(d.in - d.out); run = round2(run + d.net); d.cum = run; return d; });
 }
@@ -1464,6 +1465,7 @@ function openBarOverview(){
   }
   function render(){
     cfg = config(); cur = -1; geo = null;
+    if(ui.area !== 'bar'){ const h = cfg.head.slice(), r0 = cfg.row; h.splice(2, 0, t('vizPayCol')); cfg.head = h; cfg.row = p => { const r = r0(p); r.splice(2, 0, String(p.cnt || 0)); return r; }; }
     $$('#vizMode button', el).forEach(b => { const on = b.dataset.mode === mode; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
     const used = cfg.pts.filter(p => p.any), sumIn = cfg.pts.reduce((s, p) => s + p.in, 0), sumOut = cfg.pts.reduce((s, p) => s + p.out, 0), net = round2(sumIn - sumOut);
     body.innerHTML = `
@@ -1550,7 +1552,9 @@ function openBarOverview(){
     const add = (cls, text) => { const s = document.createElement('div'); s.className = cls; s.textContent = text; tip.appendChild(s); return s; };
     add('viz-tip-h', cfg.name(p));
     const row = (key, label, value) => { const r = add('viz-tip-r', ''); const k = document.createElement('i'); k.className = 'k ' + key; const v = document.createElement('b'); v.textContent = value; const l = document.createElement('span'); l.textContent = label; r.append(k, v, l); };
-    row('in', t('barIn'), fmtCur(p.in)); row('out', t('barOut'), fmtCur(p.out));
+    row('in', t('barIn'), fmtCur(p.in));
+    if(ui.area !== 'bar') row('none', t(p.cnt === 1 ? 'vizPaid1' : 'vizPaidN'), String(p.cnt || 0));       /* parking: how many customers paid */
+    row('out', t('barOut'), fmtCur(p.out));
     if(onLine) row('bal', cfg.lineName, signedCur(cfg.val(p)));
     if(cfg.extra && onLine){ const [label, value] = cfg.extra(p); row('none', label, value); }
     tip.hidden = false;
