@@ -86,6 +86,7 @@ h1,h2,h3,p{margin:0}
 .sal-row{display:flex;justify-content:space-between;gap:8px;padding:12px 14px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
 .sal-row:last-child{border-bottom:0} .sal-row b{white-space:nowrap}
 .sal-card .col-head .btn{margin-left:auto}
+.sal-mode{max-width:340px;margin:6px 0 10px}
 .sal-chart{grid-column:1/-1;padding:4px 14px 12px} .sal-chart svg{width:100%;height:auto} .sal-chart .viz-h{margin:10px 0 4px}
 .viz .sl{fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round} .viz .sl.in{stroke:var(--viz-in)} .viz .sl.out{stroke:var(--viz-out)} .viz .sl.net{stroke:var(--viz-bal)}
 .viz .sd{stroke:var(--card);stroke-width:2} .viz .sd.in{fill:var(--viz-in)} .viz .sd.out{fill:var(--viz-out)} .viz .sd.net{fill:var(--viz-bal)}
@@ -670,7 +671,9 @@ const I18N = {
   wdTitle:['Retiros personales','Personal withdrawals'], wdAdd:['+ Retiro','+ Withdrawal'], wdNew:['Nuevo retiro personal','New personal withdrawal'], wdEdit:['Editar retiro','Edit withdrawal'],
   wdWho:['¿Quién retira?','Who takes it out?'], wdWhoErr:['Elegí quién retira: Angel o Jorge.','Choose who takes it out: Angel or Jorge.'], wdNoWho:['(sin nombre)','(no name)'],
   wdFor:['Para qué (opcional)','What for (optional)'], wdForPh:['p. ej. gastos personales','e.g. personal expenses'],
-  wdChart:['Retiros por persona (12 meses)','Withdrawals per person (12 months)'], wdChartEmpty:['Sin retiros en estos 12 meses.','No withdrawals in these 12 months.'], wdTot12:['Total 12 meses','12-month total'], wdEmpty:['Sin retiros este mes.','No withdrawals this month.'], wdDeleted:['Retiro eliminado.','Withdrawal deleted.'],
+  wdChart:['Retiros por persona (12 meses)','Withdrawals per person (12 months)'], wdChartD:['Retiros por persona, día por día','Withdrawals per person, day by day'],
+  wdChartEmptyD:['Sin retiros en este mes.','No withdrawals this month.'], wdTotM:['Total de {0}','Total for {0}'],
+  salChartD:['Totales del mes, sumados día a día (estacionamientos + bar)','Month totals, added up day by day (parking + bar)'], salUpTo:['Hasta el {0}','Up to {0}'], wdChartEmpty:['Sin retiros en estos 12 meses.','No withdrawals in these 12 months.'], wdTot12:['Total 12 meses','12-month total'], wdEmpty:['Sin retiros este mes.','No withdrawals this month.'], wdDeleted:['Retiro eliminado.','Withdrawal deleted.'],
   wdLeft:['Queda después de los retiros','Left after withdrawals'], wdAfter:['Retiros personales: {0} · queda {1}','Personal withdrawals: {0} · left {1}'],
   areaPark:['Estacionamientos','Parking'], areaSaldo:['Saldo','Balance'], salTotal:['Saldo total de {0}','Total balance for {0}'], salOpen:['Ver','Open'],
   pvIn:['Ingresos','Income'], pvOut:['Gastos','Expenses'],
@@ -1291,45 +1294,60 @@ function openWd(id){
 /* Saldo: diagram of the twelve months up to the month shown - total income, total expenses and total balance
    (parking lots + bar) as three lines; tapping or pointing at a month shows its figures underneath. */
 let salPts = [], salCur = -1, salGeo = null;
-function salMonths(month){
-  const keys = Array.from({ length: 12 }, (_, i) => addMonth(month, i - 11)), map = {};
-  for(const k of keys) map[k] = { key: k, in: 0, out: 0, any: false };
-  for(const e of parkLive(month).concat(barLive())){ const r = map[e.d.slice(0, 7)]; if(r){ r[barKind(e)] += e.a || 0; r.any = true; } }
-  return keys.map(k => { const r = map[k]; r.in = cv(round2(r.in)); r.out = cv(round2(r.out)); r.net = round2(r.in - r.out); return r; });
+/* the periods of a diagram: the twelve months up to the month shown, or the days of that month */
+const chartMode = { sal: 'months', wd: 'months' };
+function chartPeriods(month, mode){
+  if(mode === 'days'){
+    const [y, m] = month.split('-').map(Number), n = new Date(y, m, 0).getDate(), ticks = [1, 5, 10, 15, 20, 25, n];
+    return Array.from({ length: n }, (_, i) => ({ key: month + '-' + pad2(i + 1), tick: ticks.includes(i + 1) ? String(i + 1) : '', tick2: '',
+      name: cap(new Intl.DateTimeFormat(loc(), { weekday:'short', day:'numeric', month:'short' }).format(new Date(y, m - 1, i + 1)).replace(/\./g, '')) }));
+  }
+  return Array.from({ length: 12 }, (_, i) => { const k = addMonth(month, i - 11), [yy, mm] = k.split('-').map(Number);
+    return { key: k, tick: cap(new Intl.DateTimeFormat(loc(), { month:'short' }).format(new Date(yy, mm - 1, 1)).replace('.', '').slice(0, 3)), tick2: i === 0 || mm === 1 ? String(yy) : '', name: fmtMonthLong(k) }; });
+}
+const modeToggle = (chart, mode) => `<div class="viz-mode sal-mode" data-chart="${chart}">${[['days', 'vizModeDays'], ['months', 'vizModeMonths']].map(([k, key]) => `<button type="button" data-cmode="${k}" class="${mode === k ? 'on' : ''}" aria-pressed="${mode === k}">${esc(t(key))}</button>`).join('')}</div>`;
+function salSeries(month, mode){
+  const days = mode === 'days', pts = chartPeriods(month, mode), map = {};
+  for(const p of pts){ p.in = 0; p.out = 0; p.any = false; map[p.key] = p; }
+  for(const e of parkLive(month).concat(barLive())){ const r = map[e.d.slice(0, days ? 10 : 7)]; if(r){ r[barKind(e)] += e.a || 0; r.any = true; } }
+  let ci = 0, co = 0;                       /* days: added up through the month, so the lines end at the month's totals */
+  for(const p of pts){ p.in = cv(round2(p.in)); p.out = cv(round2(p.out)); if(days){ ci = round2(ci + p.in); co = round2(co + p.out); p.in = ci; p.out = co; } p.net = round2(p.in - p.out); }
+  return pts;
 }
 function salChartHtml(month){
-  const pts = salPts = salMonths(month);
-  if(!pts.some(p => p.any)) return `<section class="card viz sal-chart"><h3 class="viz-h">${esc(t('salChart'))}</h3><div class="empty">${esc(t('vizEmpty12'))}</div></section>`;
+  const mode = chartMode.sal, days = mode === 'days', pts = salPts = salSeries(month, mode);
+  const head = `<h3 class="viz-h">${esc(t(days ? 'salChartD' : 'salChart'))}</h3>${modeToggle('sal', mode)}`;
+  if(!pts.some(p => p.any)) return `<section class="card viz sal-chart">${head}<div class="empty">${esc(t(days ? 'vizEmpty' : 'vizEmpty12'))}</div></section>`;
+  const used = pts.map((p, i) => p.any ? i : -1).filter(i => i >= 0);
+  const to = !days ? pts.length : month === curMonth() ? Math.max(new Date().getDate(), used[used.length - 1] + 1) : pts.length;      /* the lines stop today in the running month */
   const avail = ($('#saldoCards') && $('#saldoCards').clientWidth) || 720;           /* drawn at the real width, so the text keeps its size */
   const W = Math.max(300, Math.min(1200, avail - 30)), H = W < 520 ? 240 : 280, L = W < 520 ? 46 : 58, R = 14, T = 12, B = 34, n = pts.length;
-  const hi = Math.max(0, ...pts.map(p => Math.max(p.in, p.out, p.net))), lo = Math.min(0, ...pts.map(p => p.net));
+  const shown = pts.slice(0, to), hi = Math.max(0, ...shown.map(p => Math.max(p.in, p.out, p.net))), lo = Math.min(0, ...shown.map(p => p.net));
   const step = niceStep((hi - lo) || 1, 4), top = Math.ceil(hi / step) * step || step, bot = Math.floor(lo / step) * step;
   const band = (W - L - R) / n, x = i => L + band * (i + .5), y = v => T + (top - v) / (top - bot) * (H - T - B);
   let g = '';
   for(let v = bot; v <= top + 1e-9; v += step) g += `<line class="${Math.abs(v) < 1e-9 ? 'ax' : 'gr'}" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="tk" x="${L - 8}" y="${y(v) + 4}" text-anchor="end">${esc(compactMoney(v))}</text>`;
-  pts.forEach((p, i) => { const [yy, mm] = p.key.split('-').map(Number);
-    g += `<text class="tk" x="${x(i)}" y="${H - B + 16}" text-anchor="middle">${esc(cap(new Intl.DateTimeFormat(loc(), { month:'short' }).format(new Date(yy, mm - 1, 1)).replace('.', '').slice(0, 3)))}</text>`;
-    if(i === 0 || mm === 1) g += `<text class="tk" x="${x(i)}" y="${H - B + 29}" text-anchor="middle">${yy}</text>`; });
-  const path = k => pts.map((p, i) => (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(p[k]).toFixed(1)).join(' ');
-  const last = n - 1, right = x(last) > W - 120;
+  pts.forEach((p, i) => { if(p.tick) g += `<text class="tk" x="${x(i)}" y="${H - B + 16}" text-anchor="middle">${esc(p.tick)}</text>`; if(p.tick2) g += `<text class="tk" x="${x(i)}" y="${H - B + 29}" text-anchor="middle">${esc(p.tick2)}</text>`; });
+  const path = k => shown.map((p, i) => (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(p[k]).toFixed(1)).join(' ');
+  const last = to - 1, right = x(last) > W - 120;
   for(const k of ['in', 'out', 'net']) g += `<path class="sl ${k}" d="${path(k)}"/>`;
   g += `<circle class="sd net" cx="${x(last)}" cy="${y(pts[last].net)}" r="5"/><text class="lb" x="${right ? x(last) - 9 : x(last) + 9}" y="${y(pts[last].net) + (y(pts[last].net) < T + 22 ? 18 : -9)}" text-anchor="${right ? 'end' : 'start'}">${esc(signedCur(pts[last].net))}</text>`;      /* like the other diagrams: the balance line ends with its figure */
-  salGeo = { W, x, y };
-  g += `<line class="cross" id="salCross" y1="${T}" y2="${H - B}" hidden/>` + ['in', 'out', 'net'].map(k => `<circle class="sd ${k}" id="salDot_${k}" r="5" hidden/>`).join('') + pts.map((p, i) => `<rect class="hit" data-si="${i}" x="${L + band * i}" y="${T}" width="${band}" height="${H - T - B}"/>`).join('');
+  salGeo = { W, x, y, to };
+  g += `<line class="cross" id="salCross" y1="${T}" y2="${H - B}" hidden/>` + ['in', 'out', 'net'].map(k => `<circle class="sd ${k}" id="salDot_${k}" r="5" hidden/>`).join('') + shown.map((p, i) => `<rect class="hit" data-si="${i}" x="${L + band * i}" y="${T}" width="${band}" height="${H - T - B}"/>`).join('');
   const legend = [['in', 'barIn'], ['out', 'barOut'], ['bal', 'vizSaldo']].map(([k, key]) => `<span><i class="k ${k}"></i>${esc(t('salTot_' + key))}</span>`).join('');
-  return `<section class="card viz sal-chart"><h3 class="viz-h">${esc(t('salChart'))}</h3><div class="viz-legend">${legend}</div>
-    <div class="viz-wrap" id="salWrap"><svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" id="salSvg" role="img" aria-label="${esc(t('salChart'))}">${g}</svg><div class="viz-tip" id="salTip" role="status" hidden></div></div>
+  return `<section class="card viz sal-chart">${head}<div class="viz-legend">${legend}</div>
+    <div class="viz-wrap" id="salWrap"><svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" id="salSvg" role="img" aria-label="${esc(t(days ? 'salChartD' : 'salChart'))}">${g}</svg><div class="viz-tip" id="salTip" role="status" hidden></div></div>
     <p class="hint">${esc(t('vizHint'))}</p></section>`;
 }
 function salShow(i){                       /* like the other diagrams: a line, a dot on each graph and a small box with the figures */
   const tip = $('#salTip'); if(!salPts.length || !tip || !salGeo) return;
-  salCur = Math.max(0, Math.min(salPts.length - 1, i));
+  salCur = Math.max(0, Math.min((salGeo.to || salPts.length) - 1, i));
   const p = salPts[salCur], X = salGeo.x(salCur), c = $('#salCross');
   c.setAttribute('x1', X); c.setAttribute('x2', X); c.removeAttribute('hidden');
   for(const k of ['in', 'out', 'net']){ const d = $('#salDot_' + k); d.setAttribute('cx', X); d.setAttribute('cy', salGeo.y(p[k])); d.removeAttribute('hidden'); }
   tip.textContent = '';
   const add = (cls, text) => { const s = document.createElement('div'); s.className = cls; s.textContent = text; tip.appendChild(s); return s; };
-  add('viz-tip-h', fmtMonthLong(p.key));
+  add('viz-tip-h', chartMode.sal === 'days' ? t('salUpTo', p.name) : p.name);
   const row = (key, label, value) => { const r = add('viz-tip-r', ''); const k = document.createElement('i'); k.className = 'k ' + key; const v = document.createElement('b'); v.textContent = value; const l = document.createElement('span'); l.textContent = label; r.append(k, v, l); };
   row('in', t('salTot_barIn'), fmtCur(p.in)); row('out', t('salTot_barOut'), fmtCur(p.out)); row('bal', t('salTot_vizSaldo'), signedCur(p.net));
   tip.hidden = false;
@@ -1339,28 +1357,28 @@ function salShow(i){                       /* like the other diagrams: a line, a
 /* withdrawals per person: twelve months, a column for Angel and one for Jorge in each month */
 let wdPts = [], wdCur = -1, wdGeo = null;
 function wdChartHtml(month){
-  const keys = Array.from({ length: 12 }, (_, i) => addMonth(month, i - 11)), map = {};
-  for(const k of keys) map[k] = { key: k, angel: 0, jorge: 0 };
-  for(const e of Object.values(state.wd || {})){ if(!e || e.deleted || typeof e.d !== 'string') continue; const r = map[e.d.slice(0, 7)], w = wdWho(e); if(r && w) r[w] += e.a || 0; }
-  const pts = wdPts = keys.map(k => { const r = map[k]; r.angel = cv(round2(r.angel)); r.jorge = cv(round2(r.jorge)); return r; });
+  const mode = chartMode.wd, days = mode === 'days', map = {};
+  const pts = wdPts = chartPeriods(month, mode);
+  for(const p of pts){ p.angel = 0; p.jorge = 0; map[p.key] = p; }
+  for(const e of Object.values(state.wd || {})){ if(!e || e.deleted || typeof e.d !== 'string') continue; const r = map[e.d.slice(0, days ? 10 : 7)], w = wdWho(e); if(r && w) r[w] += e.a || 0; }
+  for(const p of pts){ p.angel = cv(round2(p.angel)); p.jorge = cv(round2(p.jorge)); }
   const tot = { angel: round2(pts.reduce((x, p) => x + p.angel, 0)), jorge: round2(pts.reduce((x, p) => x + p.jorge, 0)) };
-  const head = `<h3 class="viz-h">${esc(t('wdChart'))}</h3><div class="viz-legend">${WD_PEOPLE.map(([k, name]) => `<span><i class="k who-${k}"></i>${esc(name)}</span>`).join('')}</div>`;
-  if(!tot.angel && !tot.jorge) return `<section class="card viz sal-chart wd-chart">${head}<div class="empty">${esc(t('wdChartEmpty'))}</div></section>`;
+  const head = `<h3 class="viz-h">${esc(t(days ? 'wdChartD' : 'wdChart'))}</h3>${modeToggle('wd', mode)}<div class="viz-legend">${WD_PEOPLE.map(([k, name]) => `<span><i class="k who-${k}"></i>${esc(name)}</span>`).join('')}</div>`;
+  if(!tot.angel && !tot.jorge) return `<section class="card viz sal-chart wd-chart">${head}<div class="empty">${esc(t(days ? 'wdChartEmptyD' : 'wdChartEmpty'))}</div></section>`;
   const avail = ($('#saldoCards') && $('#saldoCards').clientWidth) || 720;
   const W = Math.max(300, Math.min(1200, avail - 30)), H = W < 520 ? 220 : 250, L = W < 520 ? 46 : 58, R = 14, T = 12, B = 34, n = pts.length;
   const hi = Math.max(...pts.map(p => Math.max(p.angel, p.jorge))), step = niceStep(hi || 1, 4), top = Math.ceil(hi / step) * step || step;
-  const band = (W - L - R) / n, x = i => L + band * (i + .5), y = v => T + (top - v) / top * (H - T - B), bw = Math.max(3, Math.min(18, band * .32));
+  const band = (W - L - R) / n, x = i => L + band * (i + .5), y = v => T + (top - v) / top * (H - T - B), bw = Math.max(2, Math.min(18, band * (days ? .4 : .32)));
   let g = '';
   for(let v = 0; v <= top + 1e-9; v += step) g += `<line class="${v === 0 ? 'ax' : 'gr'}" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="tk" x="${L - 8}" y="${y(v) + 4}" text-anchor="end">${esc(compactMoney(v))}</text>`;
-  pts.forEach((p, i) => { const [yy, mm] = p.key.split('-').map(Number);
-    g += `<text class="tk" x="${x(i)}" y="${H - B + 16}" text-anchor="middle">${esc(cap(new Intl.DateTimeFormat(loc(), { month:'short' }).format(new Date(yy, mm - 1, 1)).replace('.', '').slice(0, 3)))}</text>`;
-    if(i === 0 || mm === 1) g += `<text class="tk" x="${x(i)}" y="${H - B + 29}" text-anchor="middle">${yy}</text>`;
-    [['angel', -1], ['jorge', 1]].forEach(([k, side]) => { if(p[k] > 0){ const h = y(0) - y(p[k]); g += `<rect class="wbar who-${k}" data-wi="${i}" x="${x(i) + (side < 0 ? -bw - 1 : 1)}" y="${y(p[k])}" width="${bw}" height="${Math.max(1, h)}" rx="2"/>`; } }); });
+  pts.forEach((p, i) => {
+    if(p.tick) g += `<text class="tk" x="${x(i)}" y="${H - B + 16}" text-anchor="middle">${esc(p.tick)}</text>`; if(p.tick2) g += `<text class="tk" x="${x(i)}" y="${H - B + 29}" text-anchor="middle">${esc(p.tick2)}</text>`;
+    [['angel', -1], ['jorge', 1]].forEach(([k, side]) => { if(p[k] > 0){ const h = y(0) - y(p[k]); g += `<rect class="wbar who-${k}" data-wi="${i}" x="${x(i) + (side < 0 ? -bw - .5 : .5)}" y="${y(p[k])}" width="${bw}" height="${Math.max(1, h)}" rx="${days ? 1 : 2}"/>`; } }); });
   wdGeo = { W, x };
   g += `<line class="cross" id="wdCross" y1="${T}" y2="${H - B}" hidden/>` + pts.map((p, i) => `<rect class="hit" data-wi="${i}" x="${L + band * i}" y="${T}" width="${band}" height="${H - T - B}"/>`).join('');
   return `<section class="card viz sal-chart wd-chart">${head}
-    <div class="viz-wrap" id="wdWrap"><svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" id="wdSvg" role="img" aria-label="${esc(t('wdChart'))}">${g}</svg><div class="viz-tip" id="wdTip" role="status" hidden></div></div>
-    <div class="wd-tot" id="wdTot">${esc(t('wdTot12'))}: ${WD_PEOPLE.map(([k, name]) => `<span><i class="k who-${k}"></i>${esc(name)} <b>${esc(fmtCur(tot[k]))}</b></span>`).join('')}</div>
+    <div class="viz-wrap" id="wdWrap"><svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" id="wdSvg" role="img" aria-label="${esc(t(days ? 'wdChartD' : 'wdChart'))}">${g}</svg><div class="viz-tip" id="wdTip" role="status" hidden></div></div>
+    <div class="wd-tot" id="wdTot">${esc(t(days ? 'wdTotM' : 'wdTot12', fmtMonthLong(month)))}: ${WD_PEOPLE.map(([k, name]) => `<span><i class="k who-${k}"></i>${esc(name)} <b>${esc(fmtCur(tot[k]))}</b></span>`).join('')}</div>
     <p class="hint">${esc(t('vizHint'))}</p></section>`;
 }
 function wdShow(i){
@@ -1371,7 +1389,7 @@ function wdShow(i){
   $$('#wdSvg .wbar').forEach(b => b.classList.toggle('dim', +b.dataset.wi !== wdCur));
   tip.textContent = '';
   const add = (cls, text) => { const s = document.createElement('div'); s.className = cls; s.textContent = text; tip.appendChild(s); return s; };
-  add('viz-tip-h', fmtMonthLong(p.key));
+  add('viz-tip-h', p.name);
   for(const [k, name] of WD_PEOPLE){ const r = add('viz-tip-r', ''); const q = document.createElement('i'); q.className = 'k who-' + k; const v = document.createElement('b'); v.textContent = fmtCur(p[k]); const l = document.createElement('span'); l.textContent = name; r.append(q, v, l); }
   tip.hidden = false;
   const tw = tip.offsetWidth;
@@ -4084,6 +4102,7 @@ $('#saldoCards').addEventListener('pointerout', e => { if(e.target.closest && e.
 $('#saldoCards').addEventListener('pointerleave', () => salHide(), true);
 $('#saldoCards').addEventListener('pointerout', e => { if(e.target.closest && e.target.closest('#salSvg') && !(e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest('#salSvg'))) salHide(); });
 $('#saldoCards').addEventListener('click', e => {
+  const mb = e.target.closest('.sal-mode [data-cmode]'); if(mb){ chartMode[mb.closest('.sal-mode').dataset.chart] = mb.dataset.cmode; renderLists(); return; }
   const h = e.target.closest('rect[data-si]'); if(h){ salShow(+h.dataset.si); return; }
   const w = e.target.closest('rect[data-wi]'); if(w){ wdShow(+w.dataset.wi); return; }
   if(e.target.closest('#wdAdd')){ openWd(null); return; }
