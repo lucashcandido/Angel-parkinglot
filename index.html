@@ -141,10 +141,15 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 .col-head > span{white-space:nowrap}
 .col-head .tail{margin-left:auto;display:inline-flex;align-items:center;gap:10px}
 .col-head .tail .cnt{margin-left:0}
-.col-head .msgf{display:inline-flex;align-items:center;gap:3px;font-weight:600}
-.msgf .ic{font-size:13px;opacity:.75;margin-right:1px}
-.msgf button{min-width:26px;height:26px;padding:0 6px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);font:inherit;font-size:13px;font-variant-numeric:tabular-nums;cursor:pointer}
-.msgf button.on{background:var(--unpaid);border-color:var(--unpaid);color:#fff}
+.msgf{height:30px;padding:0 10px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--text);font:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
+.msgf::after{content:' ▾';opacity:.6}
+.msgf.on{background:var(--unpaid);border-color:var(--unpaid);color:#fff}
+.msgmenu{position:fixed;z-index:60;min-width:210px;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 28px rgba(16,24,40,.18);padding:6px}
+.msgmenu .mh{font-size:12px;color:var(--muted);padding:6px 10px 4px}
+.msgmenu button{display:flex;align-items:center;gap:8px;width:100%;text-align:left;border:0;background:none;color:var(--text);font:inherit;font-size:15px;padding:11px 10px;border-radius:8px;cursor:pointer}
+.msgmenu button:hover{background:var(--soft)}
+.msgmenu button.on{font-weight:700;color:var(--unpaid)}
+.msgmenu button .ck{width:16px}
 .col-head .sum{font-weight:500;color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums}
 .col-head .mark{width:10px;height:10px;border-radius:50%}
 .col.partial .mark{background:var(--partial)} .col.partial .col-head{background:var(--partial-soft)}
@@ -493,7 +498,12 @@ const I18N = {
   emptyUnpaid:['Nadie debe. 🎉','Nobody outstanding. 🎉'],
   emptyUnclear:['No hay casos dudosos.','No unclear cases.'],
   noMatch:['Sin resultados.','No matches.'],
-  msgFilter:['Filtrar por mensajes de WhatsApp enviados (tocar de nuevo = todos)','Filter by WhatsApp messages sent (tap again = all)'],
+  filter:['Filtro','Filter'],
+  msgFilter:['Mostrar según mensajes de WhatsApp enviados','Show by WhatsApp messages sent'],
+  msgAll:['Todos','Everyone'],
+  msgS0:['0 mensajes','0 messages'],
+  msgS1:['1 mensaje','1 message'],
+  msgS2:['2 mensajes','2 messages'],
   msgN0:['Sin mensaje enviado','No message sent'],
   msgN1:['1 mensaje enviado','1 message sent'],
   msgN2:['2 mensajes enviados','2 messages sent'],
@@ -1412,6 +1422,23 @@ function renderBanner(){
   if(IS_IOS && !STANDALONE && !store.get(LS.a2hs, false)) banner += `<div class="banner info"><span>${esc(t('a2hs'))}</span><button type="button" class="icon-btn" data-dismiss="a2hs" aria-label="${esc(t('aClose'))}" title="${esc(t('aClose'))}">✕</button></div>`;
   $('#banner').innerHTML = banner;
 }
+/* small menu under the "Filtro" button: everyone / no message / 1 / 2 */
+function closeMsgMenu(){ const m = $('.msgmenu'); if(m) m.remove(); }
+function openMsgMenu(btn){
+  if($('.msgmenu')){ closeMsgMenu(); return; }
+  const m = document.createElement('div');
+  m.className = 'msgmenu'; m.setAttribute('role', 'menu');
+  m.innerHTML = `<div class="mh">${esc(t('msgFilter'))}</div>` + ['', '0', '1', '2'].map(v => `<button type="button" role="menuitemradio" aria-checked="${ui.msg === v}" data-msg="${v}" class="${ui.msg === v ? 'on' : ''}"><span class="ck">${ui.msg === v ? '✓' : ''}</span>${esc(t(v ? 'msgN' + v : 'msgAll'))}</button>`).join('');
+  document.body.appendChild(m);
+  const r = btn.getBoundingClientRect(), w = m.offsetWidth, h = m.offsetHeight;
+  m.style.left = Math.max(8, Math.min(r.right - w, innerWidth - w - 8)) + 'px';
+  m.style.top = (r.bottom + 6 + h > innerHeight - 8 ? Math.max(8, r.top - 6 - h) : r.bottom + 6) + 'px';
+  m.addEventListener('click', e => { const b = e.target.closest('[data-msg]'); if(!b) return; ui.msg = b.dataset.msg; closeMsgMenu(); renderLists(); });
+  m.querySelector('button.on').focus();
+}
+document.addEventListener('click', e => { if($('.msgmenu') && !e.target.closest('.msgmenu, [data-msgmenu]')) closeMsgMenu(); }, true);
+document.addEventListener('keydown', e => { if(e.key === 'Escape') closeMsgMenu(); });
+addEventListener('scroll', closeMsgMenu, { passive: true }); addEventListener('resize', closeMsgMenu);
 const msgCount = p => (p && p.r ? 1 : 0) + (p && p.r2 ? 1 : 0);
 function renderLists(){
   if(ui.area === 'bar'){ renderBanner(); renderBar(); return; }
@@ -1463,7 +1490,7 @@ function renderLists(){
   lists.innerHTML = ORDER.map(k => {
     const rows = sortCustomers(groups[k]).sort((a, b) => near.has(a.id) - near.has(b.id)).map(c => rowHtml(c, k, payOf(c.id, month), near.has(c.id))).join('');
     return `<section class="card col ${k}${ui.list === k ? ' active' : ''}">
-      <div class="col-head"><span class="mark"></span><span>${esc(t(k))}</span><span class="sum">${counts[k] ? esc(fmtMoney(totals[k])) : ''}</span><span class="tail">${k === 'paid' ? '' : `<span class="msgf" role="group" title="${esc(t('msgFilter'))}" aria-label="${esc(t('msgFilter'))}"><span class="ic" aria-hidden="true">💬</span>${['0','1','2'].map(m => `<button type="button" data-msg="${m}" class="${ui.msg === m ? 'on' : ''}" aria-pressed="${ui.msg === m}" title="${esc(t('msgN' + m))}">${m}</button>`).join('')}</span>`}<span class="cnt">${q || (ui.msg && k !== 'paid') ? groups[k].length + ' / ' : ''}${counts[k]}</span></span></div>
+      <div class="col-head"><span class="mark"></span><span>${esc(t(k))}</span><span class="sum">${counts[k] ? esc(fmtMoney(totals[k])) : ''}</span><span class="tail">${k === 'paid' ? '' : `<button type="button" class="msgf${ui.msg ? ' on' : ''}" data-msgmenu aria-haspopup="menu" title="${esc(t('msgFilter'))}">${esc(ui.msg ? t('msgS' + ui.msg) : t('filter'))}</button>`}<span class="cnt">${q || (ui.msg && k !== 'paid') ? groups[k].length + ' / ' : ''}${counts[k]}</span></span></div>
       ${rows ? '<ul>' + rows + '</ul>' : `<div class="empty">${esc(q || (ui.msg && k !== 'paid') ? t('noMatch') : t(emptyKey[k]))}</div>`}
     </section>`;
   }).join('');
@@ -3645,8 +3672,8 @@ $('#banner').addEventListener('click', e => {
 $('#lists').addEventListener('click', e => {
   const o = e.target.closest('[data-open]');
   if(o){ if(o.dataset.open === 'add') openCustomer(null); else if(o.dataset.open === 'bulk') openBulk(); return; }
-  const mf = e.target.closest('[data-msg]');
-  if(mf){ ui.msg = ui.msg === mf.dataset.msg ? '' : mf.dataset.msg; renderLists(); return; }      /* tap again = show all */
+  const mf = e.target.closest('[data-msgmenu]');
+  if(mf){ openMsgMenu(mf); return; }
   const b = e.target.closest('[data-act]'); if(!b) return;
   const id = b.closest('.row').dataset.id;
   if(b.dataset.act === 'wa'){ setTimeout(() => markReminded(id, ui.month), 400); return; }      /* the link itself opens WhatsApp */
