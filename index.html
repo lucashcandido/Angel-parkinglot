@@ -225,6 +225,7 @@ a.btn{display:inline-flex;align-items:center;gap:8px;text-decoration:none}
 .row-amt{display:flex;align-items:center;padding:0 14px 0 6px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
 .seg.duo{grid-template-columns:1fr 1fr}
 .lists.duo{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
+.lists.lists.one{grid-template-columns:minmax(0,1fr)}
 .bar-sum .saldo{grid-column:1/-1;border-top:1px solid var(--line);padding-top:8px;display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap}
 .bar-sum .saldo span{font-size:15px;font-weight:650;color:var(--text)}
 .bar-sum .saldo b{font-size:24px}
@@ -281,7 +282,7 @@ a.btn{display:inline-flex;align-items:center;gap:8px;text-decoration:none}
   .lists.duo .empty{padding:14px 10px}
 }
 .btn.in{color:var(--paid);border-color:var(--paid)} .btn.out{color:var(--unpaid);border-color:var(--unpaid)}
-.btn-pair{display:flex}
+.btn-pair{display:flex} .btn-pair[hidden]{display:none}
 .btn-pair .btn:first-child{border-radius:11px 0 0 11px;flex:1}
 .btn-pair .btn.cam{flex:none;border-left:0;border-radius:0 11px 11px 0;padding:0 12px;display:grid;place-items:center}
 #ePhoto{display:inline-flex;align-items:center;gap:8px}
@@ -464,7 +465,7 @@ code{background:var(--soft);border-radius:5px;padding:1px 5px;font-size:13.5px;o
       <span class="btn-pair"><button id="barIn" class="btn in" type="button"></button><button id="barInPhoto" class="btn in cam" type="button"></button></span>
       <span class="btn-pair"><button id="barOut" class="btn out" type="button"></button><button id="barOutPhoto" class="btn out cam" type="button"></button></span>
     </div>
-    <div id="barLists" class="lists duo"></div>
+    <div id="barLists" class="lists one"></div>
   </section>
 </main>
 
@@ -1178,8 +1179,10 @@ function applyArea(){
   $('#barView').hidden = !bar;
   const out = !bar && ui.parkView === 'out';             /* parking: Ingresos (customers) or Gastos */
   for(const sel of ['#tabs', '#parkTools', '#switch', '#lists']) $(sel).hidden = bar || out;
-  $('#parkView').hidden = bar; $('#parkOut').hidden = !out;
-  $('#parkView').innerHTML = [['in', 'pvIn'], ['out', 'pvOut']].map(([k, key]) => `<button type="button" class="${k}${(ui.parkView || 'in') === k ? ' on' : ''}" data-pview="${k}" aria-pressed="${(ui.parkView || 'in') === k}">${esc(t(key))}</button>`).join('');
+  $('#parkOut').hidden = !out;
+  const view = (bar ? ui.barView : ui.parkView) || 'in';        /* the same Ingresos / Gastos buttons in both areas */
+  $('#parkView').innerHTML = [['in', 'pvIn'], ['out', 'pvOut']].map(([k, key]) => `<button type="button" class="${k}${view === k ? ' on' : ''}" data-pview="${k}" aria-pressed="${view === k}">${esc(t(key))}</button>`).join('');
+  $$('#barView .btn-pair').forEach(b => { b.hidden = !b.querySelector(view === 'in' ? '.in' : '.out'); });
   $('#areas').innerHTML = [['park', t('areaPark')], ['bar', BAR_NAME]].map(([k, name]) => `<button type="button" data-area="${k}" class="${(ui.area === 'bar') === (k === 'bar') ? 'on' : ''}" aria-pressed="${(ui.area === 'bar') === (k === 'bar')}">${esc(name)}</button>`).join('');
 }
 function renderBar(){
@@ -1205,7 +1208,10 @@ function renderBar(){
     ${earlier ? `<div class="hint" id="barAcum" style="margin-top:8px">${esc(t('barAcum', signedMoney(round(before + net))))}</div>` : ''}`;
   /* two lists side by side: income and expenses, every entry with its date, newest first; the balance closes the month */
   const cls = { in:'paid', out:'unpaid' }, label = { in:'barIn', out:'barOut' };
-  $('#barLists').innerHTML = ['in', 'out'].map(k => {
+  const shown = ui.barView === 'out' ? 'out' : 'in';
+  const kinds = q ? ['in', 'out'] : [shown];              /* a search looks in both lists */
+  $('#barLists').classList.toggle('one', kinds.length === 1); $('#barLists').classList.toggle('duo', kinds.length === 2);
+  $('#barLists').innerHTML = kinds.map(k => {
     const rows = groups[k].sort((a, b) => b.d.localeCompare(a.d) || (b.t || 0) - (a.t || 0)).map(e => `<li class="row" data-id="${esc(e.id)}">
       <button type="button" class="row-main" data-act="open">
         <span class="row-name">${esc(e.c || e.g || t('barNoConcept'))}</span>
@@ -3815,7 +3821,7 @@ $('#search').addEventListener('input', renderLists);
 $('#costFix').onclick = () => openCost(null, 'fix');
 $('#costVar').onclick = () => openCost(null, 'var');
 $('#costLists').addEventListener('click', e => { const b = e.target.closest('[data-act="open"]'); if(b) openCost(b.closest('.row').dataset.id); });
-$('#parkView').addEventListener('click', e => { const b = e.target.closest('[data-pview]'); if(!b) return; ui.parkView = b.dataset.pview; render(); });
+$('#parkView').addEventListener('click', e => { const b = e.target.closest('[data-pview]'); if(!b) return; if(ui.area === 'bar') ui.barView = b.dataset.pview; else ui.parkView = b.dataset.pview; render(); });
 $('#areas').addEventListener('click', e => { const b = e.target.closest('[data-area]'); if(!b) return; ui.area = b.dataset.area; saveUi(); render(); window.scrollTo(0, 0); });
 $('#barSearch').addEventListener('input', renderBar);
 $('#barIn').onclick = () => openEntry(null, 'in');
