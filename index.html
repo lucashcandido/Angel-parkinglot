@@ -173,6 +173,7 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 .ib.wa.bad{color:var(--muted);border-style:dashed}
 .ib.wa.sent,.btn.wa.sent{color:var(--unpaid);border-color:var(--unpaid);background:var(--unpaid-soft)}
 .row-sub .sent-on{color:var(--unpaid);font-weight:600;white-space:nowrap}
+.row.warned{box-shadow:inset 0 0 0 2px var(--unpaid);border-radius:12px}
 a.btn{display:inline-flex;align-items:center;gap:8px;text-decoration:none}
 .btn.wa{color:#17914e;border-color:#17914e}
 @media (prefers-color-scheme: dark){.ib.wa,.btn.wa{color:#4ade80}.btn.wa{border-color:#4ade80}}
@@ -515,13 +516,15 @@ const I18N = {
   waBtn:['Recordar por WhatsApp','Remind via WhatsApp'], waOpen:['Abrir WhatsApp','Open WhatsApp'],
   waBad:['Revisá el teléfono de {0}: le faltan números. Escribilo con código de área o, si es de otro país, con + y código de país.','Check the phone number of {0}: digits are missing. Write it with the area code or, for another country, with + and the country code.'],
   waNoPhone:['Cargá primero el teléfono.','Enter the phone number first.'],
-  reminded:['recordado el {0}','reminded on {0}'],
+  reminded:['recordado el {0}','reminded on {0}'], reminded2:['2º recordatorio el {0}','2nd reminder on {0}'],
+  waBtn2:['Segundo recordatorio por WhatsApp (recargo 20%)','Second reminder via WhatsApp (20% surcharge)'],
+  waText2Lbl:['Segundo recordatorio, para quien ya recibió uno este mes','Second reminder, for customers already reminded this month'],
   waTextLbl:['Mensaje de recordatorio (se envía siempre en español)','Reminder message (always sent in Spanish)'],
   waHint:['Se completan solos: {nombre} {monto} {pagado} {falta} {mes} {meses} {lugar} {patente} {estacionamiento}','Filled in automatically: {nombre} {monto} {pagado} {falta} {mes} {meses} {lugar} {patente} {estacionamiento}'],
   waPreview:['Vista previa','Preview'],
   waArea:['Código de área por defecto','Default area code'],
   waAreaHint:['Se usa cuando un teléfono está cargado sin código de área. Vacío = 11 (Buenos Aires).','Used when a phone number was entered without an area code. Empty = 11 (Buenos Aires).'],
-  waReset:['Restablecer el texto','Reset the text'],
+  waReset:['Restablecer los textos','Reset the texts'],
   note:['Nota','Note'], paysFrom:['Paga desde','Pays from'], lastMonth:['Último mes','Last month'], ongoing:['– sigue vigente –','– ongoing –'],
   errName:['Ingresá un nombre.','Please enter a name.'], errUntil:['«Último mes» es anterior a «Paga desde».','“Last month” is before “Pays from”.'],
   delTitle:['¿Eliminar cliente?','Delete customer?'],
@@ -854,7 +857,8 @@ function setPayment(cid, month, rec){                 /* leaves the record untou
   if(rec.n) clean.n = rec.n;
   if(rec.x && rec.x.length) clean.x = rec.x;      /* transfers already imported from a statement */
   const key = payKey(cid, month), old = state.payments[key];
-  if(old && old.r && clean.s !== 'paid') clean.r = old.r;        /* the reminder date stays until it is paid */
+  if(old && old.r && clean.s !== 'paid') clean.r = old.r;        /* the reminder dates stay until it is paid */
+  if(old && old.r2 && clean.s !== 'paid') clean.r2 = old.r2;
   const bare = o => canon(Object.assign({}, o, { t: undefined }));
   if(old ? bare(old) === bare(clean) : (clean.s === 'unpaid' && Object.keys(clean).length === 1)) return false;
   clean.t = Date.now();
@@ -866,7 +870,11 @@ function setPayment(cid, month, rec){                 /* leaves the record untou
 const WA_DEFAULT = 'Hola {nombre}, ¿cómo estás? Te escribimos del estacionamiento para recordarte que está pendiente el pago mensual de {monto} correspondiente a {meses}. Si ya lo hiciste, por favor envianos el comprobante. ¡Muchas gracias!';
 const WA_DEFAULT_PARTIAL = 'Hola {nombre}, ¿cómo estás? Te escribimos del estacionamiento: del pago mensual de {monto} correspondiente a {mes} recibimos {pagado} y falta abonar {falta}. Si ya lo hiciste, por favor envianos el comprobante. ¡Muchas gracias!';
 const WA_ICON = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 11.6a8.5 8.5 0 0 1-12.6 7.4L3.5 20.5l1.5-4.3A8.5 8.5 0 1 1 20.5 11.6z"/><path d="M9.2 8.6c-.3 2.6 3.2 6 5.9 5.9"/></svg>';
-const waSettings = () => { const w = (state.settings && state.settings.wa) || {}; return { text: w.text || '', area: w.area || '' }; };
+/* the second reminder, for a customer who was already reminded this month: shorter, with the late-payment surcharge */
+const WA_DEFAULT_SECOND = 'Hola {nombre}, sigue pendiente el pago de {monto} correspondiente a {meses}. Lamentablemente, si se abona fuera de término debemos aplicar un recargo del 20%. Gracias.';
+const WA_DEFAULT_SECOND_PARTIAL = 'Hola {nombre}, del pago de {mes} todavía falta abonar {falta}. Lamentablemente, si se abona fuera de término debemos aplicar un recargo del 20%. Gracias.';
+const waSettings = () => { const w = (state.settings && state.settings.wa) || {}; return { text: w.text || '', text2: w.text2 || '', area: w.area || '' }; };
+const waSecond = (c, month) => { const p = c.id ? payOf(c.id, month) : null; return !!(p && p.r && p.s !== 'paid'); };       /* already reminded once this month */
 /* Turns a number as people write it into what WhatsApp expects.
    Argentina: 54 9 + area code + number, without the leading 0 and without the 15. A number without area code gets the default one
    from the settings, otherwise 11 (Buenos Aires). Other countries: written with + (or 00) it is taken as it is; a longer number
@@ -921,7 +929,8 @@ function niceName(name){
 }
 function waText(c, month, template){
   const st = c.id ? statusOf(c.id, month) : 'unpaid', got = c.id ? paidAmount(c, st, payOf(c.id, month)) : 0;
-  let text = template || waSettings().text || (st === 'partial' && c.amount ? WA_DEFAULT_PARTIAL : WA_DEFAULT);
+  const w = waSettings(), part = st === 'partial' && c.amount;
+  let text = template || (waSecond(c, month) ? w.text2 || (part ? WA_DEFAULT_SECOND_PARTIAL : WA_DEFAULT_SECOND) : w.text || (part ? WA_DEFAULT_PARTIAL : WA_DEFAULT));
   const owed = c.id ? openMonths(c, month) : [];
   if(!c.amount) text = text.replace(/\s+(?:de|por)\s+\{monto\}/gi, '');
   const map = { nombre: niceName(c.name), monto: c.amount ? fmtMoney(c.amount) : '', pagado: fmtMoney(got), falta: fmtMoney(Math.max(0, (c.amount || 0) - got)), mes: monthsInSpanish([month]), meses: monthsInSpanish(owed.length ? owed : [month]),
@@ -930,10 +939,10 @@ function waText(c, month, template){
 }
 const waUrl = (number, text) => 'https://wa.me/' + number + (text ? '?text=' + encodeURIComponent(text) : '');
 /* remembers the day of the last reminder, so the other person sees it too */
-function markReminded(cid, month){
+function markReminded(cid, month){            /* first reminder: r, second one (with the surcharge): r2 */
   const key = payKey(cid, month), old = state.payments[key] || { s:'unpaid' };
-  if(old.s === 'paid' || old.r === todayISO()) return;
-  state.payments[key] = Object.assign({}, old, { r: todayISO(), t: Date.now() });
+  if(old.s === 'paid' || (old.r && old.r2)) return;
+  state.payments[key] = Object.assign({}, old, old.r ? { r2: todayISO() } : { r: todayISO() }, { t: Date.now() });
   commit();
 }
 
@@ -1065,7 +1074,7 @@ function rowHtml(c, s, p, similar){
     if(p && p.d) bits.push(esc(t('onDate', fmtDate(p.d))));
     if(p && p.p) bits.push(esc(t('fromPayer', p.p)));
   }else if(p && p.p) bits.push(esc(t('maybeFrom', p.p)));
-  if(s !== 'paid' && p && p.r) bits.push(`<span class="sent-on">${esc(t('reminded', fmtDate(p.r)))}</span>`);
+  if(s !== 'paid' && p && p.r) bits.push(`<span class="sent-on">${esc(p.r2 ? t('reminded2', fmtDate(p.r2)) : t('reminded', fmtDate(p.r)))}</span>`);
   const alias = (c.aliases && c.aliases.length && !(s === 'paid' && p && p.p)) ? `<span class="row-sub">${esc(t('paysVia', c.aliases.join(', ')))}</span>` : '';
   const note = (p && p.n) ? `<span class="row-note">📝 ${esc(p.n)}</span>` : '';
   const open = s !== 'paid' ? priorOpen(c, ui.month) : 0;
@@ -1076,7 +1085,7 @@ function rowHtml(c, s, p, similar){
   let wa = '';
   if(s !== 'paid' && c.phone){
     const num = waNumber(c.phone, waSettings().area);
-    const sent = p && p.r ? ' sent' : '', tip = p && p.r ? t('waBtn') + ' – ' + t('reminded', fmtDate(p.r)) : t('waBtn');        /* red once this month's reminder went out */
+    const sent = p && p.r ? ' sent' : '', tip = !(p && p.r) ? t('waBtn') : p.r2 ? t('waBtn2') + ' – ' + t('reminded2', fmtDate(p.r2)) : t('waBtn2') + ' – ' + t('reminded', fmtDate(p.r));        /* red once this month's reminder went out; the next one is the second */
     wa = num ? `<a class="ib wa${sent}" data-act="wa" href="${esc(waUrl(num, waText(c, ui.month)))}" target="_blank" rel="noopener" aria-label="${esc(tip)}" title="${esc(tip)}">${WA_ICON}</a>`
              : `<button type="button" class="ib wa bad" data-act="wa-bad" aria-label="${esc(t('waBtn'))}" title="${esc(t('waBtn'))}">${WA_ICON}</button>`;
   }
@@ -1084,7 +1093,7 @@ function rowHtml(c, s, p, similar){
   if(s === 'unpaid') acts = btn('paid','ok','✓',t('actPaid')) + btn('unclear','q','?',t('actUnclear'));
   else if(s === 'unclear' || s === 'partial') acts = btn('paid','ok','✓',t('actPaid')) + btn('unpaid','no','✕',t('actUnpaid'));
   else acts = btn('unpaid','back','↩',t('actBack'));
-  return `<li class="row" data-id="${esc(c.id)}">
+  return `<li class="row${s !== 'paid' && p && p.r2 ? ' warned' : ''}" data-id="${esc(c.id)}">
     <button type="button" class="row-main" data-act="open" title="${esc(t('editCustomer'))}">
       <span class="row-name">${esc(c.name)}${platesHtml(c)}${badges}</span>
       ${bits.length ? `<span class="row-sub">${bits.join(' · ')}</span>` : ''}${progressHtml(c, s, p)}${alias}${note}
@@ -1564,7 +1573,7 @@ function openCustomer(cid){
         <input id="cz" type="text" autocomplete="off" value="${esc(c ? (c.aliases || []).join(', ') : '')}" placeholder="${esc(t('aliasesPh'))}">
         <div class="hint">${esc(t('aliasesHint'))}</div></div>
       <div class="field"><label for="cp">${esc(t('phone'))}</label><input id="cp" type="tel" autocomplete="off" value="${esc(c ? c.phone || '' : '')}"><div class="hint">${esc(t('phoneHint'))}</div></div>
-      ${c ? `<p style="margin:-2px 0 12px"><a class="btn small wa${s !== 'paid' && p.r ? ' sent' : ''}" id="waGo" href="#" target="_blank" rel="noopener">${WA_ICON}<span>${esc(t(s !== 'paid' ? 'waBtn' : 'waOpen'))}</span></a></p><div id="waMsg"></div>` : ''}
+      ${c ? `<p style="margin:-2px 0 12px"><a class="btn small wa${s !== 'paid' && p.r ? ' sent' : ''}" id="waGo" href="#" target="_blank" rel="noopener">${WA_ICON}<span>${esc(t(s === 'paid' ? 'waOpen' : p.r ? 'waBtn2' : 'waBtn'))}</span></a></p><div id="waMsg"></div>` : ''}
       <div class="field"><label for="co">${esc(t('note'))}</label><textarea id="co">${esc(c ? c.note || '' : '')}</textarea></div>
       <div class="two">
         <div class="field"><label for="cf">${esc(t('paysFrom'))}</label><select id="cf">${monthOptions(c ? c.from : month, false)}</select></div>
@@ -1776,6 +1785,7 @@ function joinPayments(a, b, fee){
   }
   const n = uniqBy([A.n, b.n].map(v => String(v || '').trim()), norm).join(' · '); if(n) rec.n = n;
   const r = [A.r, b.r].filter(Boolean).sort().pop(); if(r && s !== 'paid') rec.r = r;
+  const r2 = [A.r2, b.r2].filter(Boolean).sort().pop(); if(r2 && s !== 'paid') rec.r2 = r2;
   return rec;
 }
 /* A customer who brings several cars: each car has its plate, space and price (customer.cars = [{k,s,a}], only when there are two or more).
@@ -1830,6 +1840,7 @@ function addPayments(a, b, feeA, feeB){
   }
   const n = uniqBy([A.n, B.n].map(v => String(v || '').trim()), norm).join(' · '); if(n) rec.n = n;
   const r = [A.r, B.r].filter(Boolean).sort().pop(); if(r && s !== 'paid') rec.r = r;
+  const r2 = [A.r2, B.r2].filter(Boolean).sort().pop(); if(r2 && s !== 'paid') rec.r2 = r2;
   return rec;
 }
 /* Merges the other customers into the one that stays: empty fields are filled, plates and payer names are collected,
@@ -3081,6 +3092,8 @@ function openSettings(focusSync){
         <h3>WhatsApp</h3>
         <div class="field"><label for="waText">${esc(t('waTextLbl'))}</label><textarea id="waText" style="min-height:150px">${esc(waSettings().text || WA_DEFAULT)}</textarea><div class="hint">${esc(t('waHint'))}</div></div>
         <div class="msg" id="waPrev"></div>
+        <div class="field"><label for="waText2">${esc(t('waText2Lbl'))}</label><textarea id="waText2" style="min-height:120px">${esc(waSettings().text2 || WA_DEFAULT_SECOND)}</textarea></div>
+        <div class="msg" id="waPrev2"></div>
         <div class="field"><label for="waArea">${esc(t('waArea'))}</label><input id="waArea" type="text" inputmode="numeric" autocomplete="off" value="${esc(waSettings().area)}" placeholder="11"><div class="hint">${esc(t('waAreaHint'))}</div></div>
         <button type="button" class="btn small" id="waReset">${esc(t('waReset'))}</button>
       </div>
@@ -3126,13 +3139,16 @@ function openSettings(focusSync){
     const waPreview = () => {
       const sample = customersFor(ui.lot, ui.month).find(c => statusOf(c.id, ui.month) !== 'paid') || { name:'Juan Pérez', amount:45000, spot:'12', plate:'AB 123 CD', lot:(lotsList()[0] || {}).id };
       $('#waPrev', el).textContent = t('waPreview') + ': ' + waText(sample, ui.month, $('#waText', el).value.trim() || WA_DEFAULT);
+      $('#waPrev2', el).textContent = t('waPreview') + ': ' + waText(sample, ui.month, $('#waText2', el).value.trim() || WA_DEFAULT_SECOND);
     };
     const waSave = () => {
       const typed = $('#waText', el).value.trim(), text = typed === WA_DEFAULT ? '' : typed, area = $('#waArea', el).value.replace(/\D/g,''), cur = waSettings();
-      if(text !== cur.text || area !== cur.area){ state.settings.wa = { text, area, t: Date.now() }; commit(); }
+      const typed2 = $('#waText2', el).value.trim(), text2 = typed2 === WA_DEFAULT_SECOND ? '' : typed2;
+      if(text !== cur.text || text2 !== cur.text2 || area !== cur.area){ state.settings.wa = { text, text2, area, t: Date.now() }; commit(); }
     };
     $('#waText', el).oninput = waPreview; $('#waText', el).onchange = waSave; $('#waArea', el).onchange = waSave;
-    $('#waReset', el).onclick = () => { $('#waText', el).value = WA_DEFAULT; waSave(); waPreview(); };
+    $('#waText2', el).oninput = waPreview; $('#waText2', el).onchange = waSave;
+    $('#waReset', el).onclick = () => { $('#waText', el).value = WA_DEFAULT; $('#waText2', el).value = WA_DEFAULT_SECOND; waSave(); waPreview(); };
     waPreview();
     if(ai){
       $('#aiRemove', el).onclick = async () => { if(await confirmBox(t('aiRemoveTitle'), t('aiRemoveText'), t('aiRemove'), true)){ setAi('', ''); draw(); } };
