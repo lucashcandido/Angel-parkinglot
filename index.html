@@ -86,12 +86,11 @@ h1,h2,h3,p{margin:0}
 .sal-row{display:flex;justify-content:space-between;gap:8px;padding:12px 14px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
 .sal-row:last-child{border-bottom:0} .sal-row b{white-space:nowrap}
 .sal-card .col-head .btn{margin-left:auto}
-.sal-chart{grid-column:1/-1;padding:4px 14px 12px} .sal-chart .viz-h{margin:10px 0 4px}
-.viz .sl{fill:none;stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round} .viz .sl.in{stroke:var(--viz-in)} .viz .sl.out{stroke:var(--viz-out);stroke-dasharray:6 4} .viz .sl.net{stroke:var(--viz-bal);stroke-width:3.5}
-.viz .sd{stroke:var(--card);stroke-width:1.5} .viz .sd.in{fill:var(--viz-in)} .viz .sd.out{fill:var(--viz-out)} .viz .sd.net{fill:var(--viz-bal)}
+.sal-chart{grid-column:1/-1;padding:4px 14px 12px} .sal-chart svg{width:100%;height:auto} .sal-chart .viz-h{margin:10px 0 4px}
+.viz .sl{fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round} .viz .sl.in{stroke:var(--viz-in)} .viz .sl.out{stroke:var(--viz-out)} .viz .sl.net{stroke:var(--viz-bal)}
+.viz .sd{stroke:var(--card);stroke-width:2} .viz .sd.in{fill:var(--viz-in)} .viz .sd.out{fill:var(--viz-out)} .viz .sd.net{fill:var(--viz-bal)}
 .viz .hit{fill:transparent;cursor:pointer}
-.sk{display:inline-block;width:16px;height:3px;border-radius:2px;margin-right:6px;vertical-align:3px} .sk.in{background:var(--viz-in)} .sk.out{background:repeating-linear-gradient(90deg,var(--viz-out) 0 5px,transparent 5px 8px)} .sk.net{background:var(--viz-bal);height:4px}
-.sal-read{display:flex;flex-wrap:wrap;gap:4px 16px;align-items:baseline;font-size:14px;font-variant-numeric:tabular-nums;margin-top:6px}
+.sk{display:inline-block;width:16px;height:3px;border-radius:2px;margin-right:6px;vertical-align:3px} .sk.in{background:var(--viz-in)} .sk.out{background:var(--viz-out)} .sk.net{background:var(--viz-bal)}
 .wd-card{grid-column:1/-1} .wd-card .col-head{background:var(--unclear-soft)} .wd-card .col-head .cnt{margin-left:0;color:var(--muted)} .wd-card .wd-add{margin-left:auto}
 #saldoView{margin-top:12px}
 @media (max-width:560px){#saldoCards.lists.duo{grid-template-columns:minmax(0,1fr)}}
@@ -264,6 +263,7 @@ a.btn{display:inline-flex;align-items:center;gap:8px;text-decoration:none}
 .viz-legend{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:13px;color:var(--muted);margin-bottom:2px}
 .viz .k{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
 .viz .k.in{background:var(--viz-in)} .viz .k.out{background:var(--viz-out)}
+.sal-chart .k.in,.sal-chart .k.out{height:3px;width:14px;vertical-align:3px}
 .viz .k.bal{background:var(--viz-bal);height:3px;width:14px;vertical-align:3px}
 .viz .k.none{background:none;width:14px}
 .viz svg{display:block;max-width:100%}
@@ -1275,7 +1275,7 @@ function openWd(id){
 }
 /* Saldo: diagram of the twelve months up to the month shown - total income, total expenses and total balance
    (parking lots + bar) as three lines; tapping or pointing at a month shows its figures underneath. */
-let salPts = [], salCur = -1;
+let salPts = [], salCur = -1, salGeo = null;
 function salMonths(month){
   const keys = Array.from({ length: 12 }, (_, i) => addMonth(month, i - 11)), map = {};
   for(const k of keys) map[k] = { key: k, in: 0, out: 0, any: false };
@@ -1296,18 +1296,34 @@ function salChartHtml(month){
     g += `<text class="tk" x="${x(i)}" y="${H - B + 16}" text-anchor="middle">${esc(cap(new Intl.DateTimeFormat(loc(), { month:'short' }).format(new Date(yy, mm - 1, 1)).replace('.', '').slice(0, 3)))}</text>`;
     if(i === 0 || mm === 1) g += `<text class="tk" x="${x(i)}" y="${H - B + 29}" text-anchor="middle">${yy}</text>`; });
   const path = k => pts.map((p, i) => (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(p[k]).toFixed(1)).join(' ');
-  for(const k of ['in', 'out', 'net']) g += `<path class="sl ${k}" d="${path(k)}"/>` + pts.map((p, i) => `<circle class="sd ${k}" cx="${x(i)}" cy="${y(p[k])}" r="3.5"/>`).join('');
-  g += `<line class="cross" id="salCross" y1="${T}" y2="${H - B}" hidden/>` + pts.map((p, i) => `<rect class="hit" data-si="${i}" x="${L + band * i}" y="${T}" width="${band}" height="${H - T - B}"/>`).join('');
-  const legend = [['in', 'barIn'], ['out', 'barOut'], ['net', 'vizSaldo']].map(([k, key]) => `<span><i class="sk ${k}"></i>${esc(t('salTot_' + key))}</span>`).join('');
+  const last = n - 1, right = x(last) > W - 120;
+  for(const k of ['in', 'out', 'net']) g += `<path class="sl ${k}" d="${path(k)}"/>`;
+  g += `<circle class="sd net" cx="${x(last)}" cy="${y(pts[last].net)}" r="5"/><text class="lb" x="${right ? x(last) - 9 : x(last) + 9}" y="${y(pts[last].net) + (y(pts[last].net) < T + 22 ? 18 : -9)}" text-anchor="${right ? 'end' : 'start'}">${esc(signedCur(pts[last].net))}</text>`;      /* like the other diagrams: the balance line ends with its figure */
+  salGeo = { W, x, y };
+  g += `<line class="cross" id="salCross" y1="${T}" y2="${H - B}" hidden/>` + ['in', 'out', 'net'].map(k => `<circle class="sd ${k}" id="salDot_${k}" r="5" hidden/>`).join('') + pts.map((p, i) => `<rect class="hit" data-si="${i}" x="${L + band * i}" y="${T}" width="${band}" height="${H - T - B}"/>`).join('');
+  const legend = [['in', 'barIn'], ['out', 'barOut'], ['bal', 'vizSaldo']].map(([k, key]) => `<span><i class="k ${k}"></i>${esc(t('salTot_' + key))}</span>`).join('');
   return `<section class="card viz sal-chart"><h3 class="viz-h">${esc(t('salChart'))}</h3><div class="viz-legend">${legend}</div>
-    <svg viewBox="0 0 ${W} ${H}" id="salSvg" role="img" aria-label="${esc(t('salChart'))}">${g}</svg><div class="sal-read" id="salRead"></div></section>`;
+    <div class="viz-wrap" id="salWrap"><svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" id="salSvg" role="img" aria-label="${esc(t('salChart'))}">${g}</svg><div class="viz-tip" id="salTip" role="status" hidden></div></div>
+    <p class="hint">${esc(t('vizHint'))}</p></section>`;
 }
-function salShow(i){
-  if(!salPts.length || !$('#salRead')) return;
+function salShow(i){                       /* like the other diagrams: a line, a dot on each graph and a small box with the figures */
+  const tip = $('#salTip'); if(!salPts.length || !tip || !salGeo) return;
   salCur = Math.max(0, Math.min(salPts.length - 1, i));
-  const p = salPts[salCur], hit = $(`#salSvg rect[data-si="${salCur}"]`), c = $('#salCross');
-  if(hit && c){ const X = +hit.getAttribute('x') + +hit.getAttribute('width') / 2; c.setAttribute('x1', X); c.setAttribute('x2', X); c.removeAttribute('hidden'); }
-  $('#salRead').innerHTML = `<b>${esc(fmtMonthLong(p.key))}</b><span><i class="sk in"></i>${esc(fmtCur(p.in))}</span><span><i class="sk out"></i>${esc(fmtCur(p.out))}</span><span><i class="sk net"></i><b class="${p.net < 0 ? 'neg' : 'bal'}">${esc(signedCur(p.net))}</b></span>`;
+  const p = salPts[salCur], X = salGeo.x(salCur), c = $('#salCross');
+  c.setAttribute('x1', X); c.setAttribute('x2', X); c.removeAttribute('hidden');
+  for(const k of ['in', 'out', 'net']){ const d = $('#salDot_' + k); d.setAttribute('cx', X); d.setAttribute('cy', salGeo.y(p[k])); d.removeAttribute('hidden'); }
+  tip.textContent = '';
+  const add = (cls, text) => { const s = document.createElement('div'); s.className = cls; s.textContent = text; tip.appendChild(s); return s; };
+  add('viz-tip-h', fmtMonthLong(p.key));
+  const row = (key, label, value) => { const r = add('viz-tip-r', ''); const k = document.createElement('i'); k.className = 'k ' + key; const v = document.createElement('b'); v.textContent = value; const l = document.createElement('span'); l.textContent = label; r.append(k, v, l); };
+  row('in', t('salTot_barIn'), fmtCur(p.in)); row('out', t('salTot_barOut'), fmtCur(p.out)); row('bal', t('salTot_vizSaldo'), signedCur(p.net));
+  tip.hidden = false;
+  const tw = tip.offsetWidth;
+  tip.style.left = Math.max(4, Math.min(salGeo.W - tw - 4, X + (X > salGeo.W / 2 ? -tw - 12 : 12))) + 'px';
+}
+function salHide(){
+  salCur = -1; const tip = $('#salTip'); if(!tip) return;
+  tip.hidden = true; $('#salCross').setAttribute('hidden', ''); for(const k of ['in', 'out', 'net']) $('#salDot_' + k).setAttribute('hidden', '');
 }
 /* Saldo: the balance of the parking lots and of the bar for the month, and both together */
 function renderSaldo(){
@@ -1337,7 +1353,7 @@ function renderSaldo(){
       <div class="col-foot"><span>${esc(t('barTotal'))}</span><b class="neg" id="wdSum">${esc(fmtMoney(wdSum))}</b></div></section>`
     + `<div class="card saldo-end"><span>${esc(t('wdLeft'))}</span><span class="calc">${esc(signedMoney(total))} − ${esc(fmtMoney(wdSum))} =</span><b class="${cls(left)}" id="wdLeft">${esc(signedMoney(left))}</b></div>`
     + salChartHtml(month);
-  salShow(salPts.length - 1);
+  salCur = -1;
 }
 function renderBar(){
   const month = ui.month, q = norm($('#barSearch').value);
@@ -4007,6 +4023,8 @@ $('#costVar').onclick = () => openCost(null, 'var');
 $('#costLists').addEventListener('click', e => { const b = e.target.closest('[data-act="open"]'); if(b) openCost(b.closest('.row').dataset.id); });
 $('#parkView').addEventListener('click', e => { if(e.target.closest('#pvOverview')){ openBarOverview(); return; } const b = e.target.closest('[data-pview]'); if(!b) return; if(ui.area === 'bar') ui.barView = b.dataset.pview; else ui.parkView = b.dataset.pview; render(); });
 $('#saldoCards').addEventListener('pointermove', e => { const h = e.target.closest('rect[data-si]'); if(h && +h.dataset.si !== salCur) salShow(+h.dataset.si); });
+$('#saldoCards').addEventListener('pointerleave', () => salHide(), true);
+$('#saldoCards').addEventListener('pointerout', e => { if(e.target.closest && e.target.closest('#salSvg') && !(e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest('#salSvg'))) salHide(); });
 $('#saldoCards').addEventListener('click', e => {
   const h = e.target.closest('rect[data-si]'); if(h){ salShow(+h.dataset.si); return; }
   if(e.target.closest('#wdAdd')){ openWd(null); return; }
