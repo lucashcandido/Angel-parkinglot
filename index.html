@@ -85,8 +85,10 @@ h1,h2,h3,p{margin:0}
 .pview button{min-height:44px;border:1px solid var(--line);border-radius:11px;background:var(--card);color:var(--muted);font:inherit;font-size:15.5px;font-weight:700;cursor:pointer}
 .pview button.in.on{background:var(--paid-soft);border-color:var(--paid);color:var(--paid)}
 .pview button.out.on{background:var(--unpaid-soft);border-color:var(--unpaid);color:var(--unpaid)}
-.park-out{padding:28px 18px;text-align:center;color:var(--muted)}
-.park-out h2{margin:0 0 6px;font-size:18px;color:var(--text)}
+.btn.fix{color:var(--partial);border-color:var(--partial)} .btn.var{color:var(--unclear);border-color:var(--unclear)}
+#parkOut .toolbar .btn{flex:1 1 0}
+.col.fix .mark{background:var(--partial)} .col.fix .col-head{background:var(--partial-soft)}
+.col.var .mark{background:var(--unclear)} .col.var .col-head{background:var(--unclear-soft)}
 .monthbar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:14px 0 10px}
 .monthbar .nav{width:44px;height:44px;border-radius:12px;border:1px solid var(--line);background:var(--card);font-size:22px;line-height:1;flex:none}
 .monthmid{text-align:center;min-width:0}
@@ -157,7 +159,7 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 .msgmenu button.on{font-weight:700;color:var(--unpaid)}
 .msgmenu button .ck{width:16px}
 .col-head .sum{font-weight:500;color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums}
-.col-head .mark{width:10px;height:10px;border-radius:50%}
+.col-head .mark{width:10px;height:10px;border-radius:50%;flex:none}
 .col.partial .mark{background:var(--partial)} .col.partial .col-head{background:var(--partial-soft)}
 .col.paid .mark{background:var(--paid)} .col.unpaid .mark{background:var(--unpaid)} .col.unclear .mark{background:var(--unclear)}
 .col.paid .col-head{background:var(--paid-soft)} .col.unpaid .col-head{background:var(--unpaid-soft)} .col.unclear .col-head{background:var(--unclear-soft)}
@@ -433,11 +435,17 @@ code{background:var(--soft);border-radius:5px;padding:1px 5px;font-size:13.5px;o
   </section>
   <nav id="parkView" class="pview"></nav>
   <nav id="tabs" class="tabs"></nav>
-  <section id="parkOut" class="card park-out" hidden></section>
 
   <section id="summary" class="card summary"></section>
   <div id="banner"></div>
 
+  <section id="parkOut" hidden>
+    <div class="toolbar">
+      <button id="costFix" class="btn fix grow" type="button"></button>
+      <button id="costVar" class="btn var grow" type="button"></button>
+    </div>
+    <div id="costLists" class="lists duo"></div>
+  </section>
   <div class="toolbar" id="parkTools">
     <input id="search" type="search" autocomplete="off">
     <button id="btnImport" class="btn" type="button"></button>
@@ -630,7 +638,22 @@ const I18N = {
   mgSum:['Son autos distintos: se suman los montos','Different cars: the amounts are added'], mgOne:['Es el mismo auto: queda un solo monto','The same car: one amount stays'],
   mgResult1:['Queda 1 auto: {0}','Result: 1 car: {0}'], mgResultN:['Quedan {0} autos: {1} = {2} por mes','Result: {0} cars: {1} = {2} per month'],
   areaPark:['Estacionamientos','Parking'],
-  pvIn:['Ingresos','Income'], pvOut:['Gastos','Expenses'], pvOutTitle:['Gastos de los estacionamientos','Parking expenses'], pvOutSoon:['Esta vista está en preparación.','This view is being prepared.'], barIn:['Ingresos','Income'], barOut:['Gastos','Expenses'],
+  pvIn:['Ingresos','Income'], pvOut:['Gastos','Expenses'],
+  costFixL:['Costos fijos','Fixed costs'], costVarL:['Costos variables','Variable costs'], costAll:['Gastos de {0}','Expenses for {0}'],
+  costAddFix:['+ Costo fijo','+ Fixed cost'], costAddVar:['+ Costo variable','+ Variable cost'],
+  costKindFix:['Fijo (todos los meses)','Fixed (every month)'], costKindVar:['Variable (una vez)','Variable (one-off)'],
+  costNewFix:['Nuevo costo fijo','New fixed cost'], costNewVar:['Nuevo costo variable','New variable cost'], costEdit:['Editar costo','Edit cost'],
+  costMonthly:['Por mes','Per month'], costSince:['mensual desde {0}','monthly since {0}'], costUntil:['hasta {0}','until {0}'],
+  
+  costFixHint:['Se cuenta todos los meses a partir de {0}, sin volver a cargarlo.','Counted every month from {0} on, no need to enter it again.'],
+  costFixChange:['Un monto nuevo vale desde {0}; los meses anteriores quedan como estaban.','A new amount applies from {0}; earlier months stay as they were.'],
+  costEmptyFix:['Sin costos fijos. Ej.: alquiler, luz, sueldos.','No fixed costs. E.g. rent, electricity, wages.'],
+  costEmptyVar:['Sin costos variables este mes.','No variable costs this month.'],
+  costStop:['Ya no se paga desde {0}','No longer paid from {0}'], costStopped:['Costo fijo terminado desde {0}.','Fixed cost ended from {0}.'],
+  costDelAll:['Borrar por completo','Delete completely'], costDeleted:['Costo eliminado.','Cost deleted.'],
+  costConceptPhFix:['p. ej. Alquiler, luz, sueldo','e.g. rent, electricity, wage'], costConceptPhVar:['p. ej. Reparación del portón','e.g. gate repair'],
+  costSugFix:['Alquiler;Luz;Agua;Gas;Sueldos;Seguro;Internet;Teléfono;Impuestos;Monotributo;Expensas;Vigilancia','Rent;Electricity;Water;Gas;Wages;Insurance;Internet;Phone;Taxes;Monotributo;Service charges;Security'],
+  costSugVar:['Reparaciones;Mantenimiento;Limpieza;Materiales;Pintura;Combustible;Honorarios;Varios','Repairs;Maintenance;Cleaning;Materials;Paint;Fuel;Fees;Other'], barIn:['Ingresos','Income'], barOut:['Gastos','Expenses'],
   barAddIn:['+ Ingreso','+ Income'], barAddOut:['+ Gasto','+ Expense'], barSearchPh:['Buscar: concepto, categoría, monto…','Search: what for, category, amount…'],
   barEmptyIn:['Todavía no hay ingresos en este mes.','No income this month yet.'], barEmptyOut:['Todavía no hay gastos en este mes.','No expenses this month yet.'],
   barPhoto:['Leer de una foto con Claude','Read from a photo with Claude'], barPhotoIn:['Ingresos desde una foto','Income from a photo'], barPhotoOut:['Gastos desde una foto','Expenses from a photo'],
@@ -796,19 +819,22 @@ const splitNames = s => String(s ?? '').split(/[,;\n]/).map(x => x.trim()).filte
    payments:  { "customerId|YYYY-MM": {s:'paid'|'unpaid'|'unclear', a,d,p,n, t} }
    settings:  { ai: {key,model,t} } - the Anthropic API key, shared by all connected devices; nodup: {pairs[],t} - customer pairs that are not duplicates
    bar:       { id: {id,k:'in'|'out',a,d,c,g,n,deleted?,t} } - income and expenses of the bar Rock La Ve
+   costs:     { id: {id,k:'fix'|'var',c,n, fix: from:'YYYY-MM',to?,am:{'YYYY-MM':amount} | var: a,d:'YYYY-MM-DD', deleted?,t} } - expenses of the parking lots
    t = timestamp of the last change; when merging, the newer record wins.
    The three built-in lots keep their internal name until renamed (t = 0) and are shown translated. */
 const NO_LOT = 'none';              /* the place "?" for customers that cannot be assigned to a parking lot yet */
 function emptyState(){
   return { v:1,
     lots:{ lot1:{id:'lot1',name:'Parkanlage 1',order:1,t:0}, lot2:{id:'lot2',name:'Parkanlage 2',order:2,t:0}, lot3:{id:'lot3',name:'Parkanlage 3',order:3,t:0}, [NO_LOT]:{id:NO_LOT,name:'?',order:0,t:0} },
-    customers:{}, payments:{}, settings:{}, bar:{} };
+    customers:{}, payments:{}, settings:{}, bar:{}, costs:{} };
 }
+const COLLECTIONS = ['lots','customers','payments','settings','bar','costs'];
 function normalize(s){
   const base = emptyState();
-  const out = { v:1, lots:{}, customers:{}, payments:{}, settings:{}, bar:{} };
-  if(s && typeof s === 'object'){
-    for(const k of ['lots','customers','payments','settings','bar']) if(s[k] && typeof s[k] === 'object' && !Array.isArray(s[k])) out[k] = s[k];
+  const out = { v:1 };
+  for(const k of COLLECTIONS) out[k] = {};
+  if(s && typeof s === 'object'){          /* collections of a newer version are kept as they are */
+    for(const k in s) if(k !== 'v' && s[k] && typeof s[k] === 'object' && !Array.isArray(s[k])) out[k] = s[k];
   }
   for(const id in base.lots) if(!out.lots[id]) out.lots[id] = base.lots[id];
   const q = out.lots[NO_LOT];          /* "?" always exists; a device with an older version may have renamed or removed it */
@@ -833,7 +859,13 @@ function mergeMap(a, b){
   return out;
 }
 function mergeState(a, b){
-  return { v:1, lots:mergeMap(a.lots, b.lots), customers:mergeMap(a.customers, b.customers), payments:mergeMap(a.payments, b.payments), settings:mergeMap(a.settings, b.settings), bar:mergeMap(a.bar, b.bar) };
+  const out = { v:1 };
+  for(const k of new Set([...COLLECTIONS, ...Object.keys(a || {}), ...Object.keys(b || {})])){
+    if(k === 'v') continue;
+    const x = a && a[k], y = b && b[k], ok = o => o && typeof o === 'object' && !Array.isArray(o);
+    if(ok(x) || ok(y) || COLLECTIONS.includes(k)) out[k] = mergeMap(ok(x) ? x : {}, ok(y) ? y : {});
+  }
+  return out;
 }
 
 let state = normalize(store.get(LS.data, null));
@@ -1006,6 +1038,7 @@ function applyStatic(){
   $('#btnAdd').textContent = t('addCustomer');
   $('#btnImport').textContent = t('stmtBtn');
   $('#btnDup').textContent = t('dupBtn');
+  $('#costFix').textContent = t('costAddFix'); $('#costVar').textContent = t('costAddVar');
   $('#barIn').textContent = t('barAddIn'); $('#barOut').textContent = t('barAddOut'); $('#barOverview').textContent = t('barOverview');
   for(const [id, key] of [['#barInPhoto', 'barPhotoIn'], ['#barOutPhoto', 'barPhotoOut']]){ $(id).innerHTML = CAM_ICON; $(id).setAttribute('aria-label', t(key)); $(id).title = t(key); }
   $('#barSearch').placeholder = t('barSearchPh'); $('#barSearch').setAttribute('aria-label', t('aSearch'));
@@ -1144,9 +1177,8 @@ function applyArea(){
   $('#barView').hidden = !bar;
   const out = !bar && ui.parkView === 'out';             /* parking: Ingresos (customers) or Gastos */
   for(const sel of ['#tabs', '#parkTools', '#switch', '#lists']) $(sel).hidden = bar || out;
-  $('#summary').hidden = out; $('#parkView').hidden = bar; $('#parkOut').hidden = !out;
+  $('#parkView').hidden = bar; $('#parkOut').hidden = !out;
   $('#parkView').innerHTML = [['in', 'pvIn'], ['out', 'pvOut']].map(([k, key]) => `<button type="button" class="${k}${(ui.parkView || 'in') === k ? ' on' : ''}" data-pview="${k}" aria-pressed="${(ui.parkView || 'in') === k}">${esc(t(key))}</button>`).join('');
-  if(out) $('#parkOut').innerHTML = `<h2>${esc(t('pvOutTitle'))}</h2><p>${esc(t('pvOutSoon'))}</p>`;
   $('#areas').innerHTML = [['park', t('areaPark')], ['bar', BAR_NAME]].map(([k, name]) => `<button type="button" data-area="${k}" class="${(ui.area === 'bar') === (k === 'bar') ? 'on' : ''}" aria-pressed="${(ui.area === 'bar') === (k === 'bar')}">${esc(name)}</button>`).join('');
 }
 function renderBar(){
@@ -1186,6 +1218,117 @@ function renderBar(){
       <div class="col-foot"><span>${esc(t('barTotal'))}</span><b class="${k === 'in' ? 'pos' : 'neg'}">${esc(fmtMoney(sum[k]))}</b></div>
     </section>`;
   }).join('') + `<div class="card saldo-end"><span>${esc(t('barSaldo', fmtMonthLong(month)))}</span><span class="calc">${esc(fmtMoney(sum.in))} − ${esc(fmtMoney(sum.out))} =</span><b class="${net < 0 ? 'neg' : 'bal'}" id="barEnd">${esc(signedMoney(net))}</b></div>`;
+}
+/* ---------- parking lots: expenses (Gastos) ----------
+   Two lists side by side. Fixed costs are entered once and count every month from the month they were entered
+   (until they are ended); a new amount applies from the month it was changed, earlier months keep theirs.
+   Variable costs are one-off, with a date, like the bar's entries. */
+const costLive = () => Object.values(state.costs || {}).filter(e => e && !e.deleted);
+function fixAmount(e, month){            /* amount of a fixed cost in a month, 0 when it does not run then */
+  if(!e.from || month < e.from || (e.to && month > e.to)) return 0;
+  const k = Object.keys(e.am || {}).filter(m => m <= month).sort().pop();
+  return k ? +e.am[k] || 0 : 0;
+}
+function costMonth(month){
+  const fix = [], vari = [];
+  for(const e of costLive()){
+    if(e.k === 'fix'){ const a = fixAmount(e, month); if(a || (e.from <= month && (!e.to || month <= e.to))) fix.push({ e, a }); }
+    else if(typeof e.d === 'string' && e.d.slice(0, 7) === month) vari.push({ e, a: e.a || 0 });
+  }
+  return { fix, vari };
+}
+function renderCosts(){
+  const month = ui.month, { fix, vari } = costMonth(month);
+  const sum = { fix: round2(fix.reduce((s, x) => s + x.a, 0)), var: round2(vari.reduce((s, x) => s + x.a, 0)) }, total = round2(sum.fix + sum.var);
+  $('#summary').innerHTML = `
+    <div class="bar-sum">
+      <div><span>${esc(t('costFixL'))}</span><b id="costSumFix">${esc(fmtMoney(sum.fix))}</b></div>
+      <div><span>${esc(t('costVarL'))}</span><b id="costSumVar">${esc(fmtMoney(sum.var))}</b></div>
+      <div class="saldo"><span>${esc(t('costAll', fmtMonthLong(month)))}</span><b class="neg" id="costSumAll">${esc(fmtMoney(total))}</b></div>
+    </div>`;
+  const row = (x, sub) => `<li class="row" data-id="${esc(x.e.id)}">
+      <button type="button" class="row-main" data-act="open">
+        <span class="row-name">${esc(x.e.c || t('barNoConcept'))}</span>
+        <span class="row-sub">${sub}</span>
+        ${x.e.n ? `<span class="row-note">📝 ${esc(x.e.n)}</span>` : ''}
+      </button>
+      <div class="row-amt neg">${esc(fmtMoney(x.a))}</div></li>`;
+  const coll = new Intl.Collator(ui.lang, { sensitivity:'base' });
+  const lists = {
+    fix: fix.sort((a, b) => b.a - a.a || coll.compare(a.e.c || '', b.e.c || '')).map(x => row(x, esc(t('costSince', fmtMonthShort(x.e.from))) + (x.e.to ? ' · ' + esc(t('costUntil', fmtMonthShort(x.e.to))) : ''))).join(''),
+    var: vari.sort((a, b) => b.e.d.localeCompare(a.e.d) || (b.e.t || 0) - (a.e.t || 0)).map(x => row(x, `<b class="row-date">${esc(fmtDate(x.e.d))}</b>`)).join('')
+  };
+  const count = { fix: fix.length, var: vari.length };
+  $('#costLists').innerHTML = ['fix', 'var'].map(k => `<section class="card col active ${k}" data-kind="${k}">
+      <div class="col-head"><span class="mark"></span><span>${esc(t(k === 'fix' ? 'costFixL' : 'costVarL'))}</span><span class="cnt">${count[k]}</span></div>
+      ${lists[k] ? '<ul>' + lists[k] + '</ul>' : `<div class="empty">${esc(t(k === 'fix' ? 'costEmptyFix' : 'costEmptyVar'))}</div>`}
+      <div class="col-foot"><span>${esc(t('barTotal'))}</span><b class="neg">${esc(fmtMoney(sum[k]))}</b></div>
+    </section>`).join('') + `<div class="card saldo-end"><span>${esc(t('costAll', fmtMonthLong(month)))}</span><span class="calc">${esc(fmtMoney(sum.fix))} + ${esc(fmtMoney(sum.var))} =</span><b class="neg" id="costEnd">${esc(fmtMoney(total))}</b></div>`;
+}
+let costLastDate = '';
+function openCost(id, kind){
+  const e = id ? state.costs[id] : null, month = ui.month;
+  let k = e ? (e.k === 'fix' ? 'fix' : 'var') : kind === 'fix' ? 'fix' : 'var';
+  const date = e && e.d ? e.d : costLastDate && costLastDate.slice(0, 7) === month ? costLastDate : month === curMonth() ? todayISO() : month + '-01';
+  const amt = e ? (k === 'fix' ? fixAmount(e, month) : e.a) : 0;
+  const el = openModal(`
+    <form novalidate>
+    <div class="sheet-head"><h2 id="kTitle"></h2>${closeX()}</div>
+    <div class="fs-body">
+      ${e ? '' : `<div class="field"><div class="seg duo">${[['fix', 'costKindFix', 'partial'], ['var', 'costKindVar', 'unclear']].map(([v, key, c]) => `<label><input type="radio" name="kk" value="${v}"${v === k ? ' checked' : ''}><span class="${c}">${esc(t(key))}</span></label>`).join('')}</div></div>`}
+      <div class="field"><label for="kc">${esc(t('barConcept'))}</label><input id="kc" type="text" list="kSug" autocomplete="off" value="${esc(e ? e.c || '' : '')}"><datalist id="kSug"></datalist></div>
+      <div class="two">
+        <div class="field"><label for="ka" id="kaL"></label><input id="ka" type="text" inputmode="decimal" autocomplete="off" value="${esc(amt ? fmtNum(amt) : '')}"></div>
+        <div class="field" id="kdF"><label for="kd">${esc(t('barDate'))}</label><input id="kd" type="date" value="${esc(date)}"></div>
+      </div>
+      <p class="hint" id="kHint"></p>
+      <div class="field"><label for="kn">${esc(t('note'))}</label><textarea id="kn">${esc(e ? e.n || '' : '')}</textarea></div>
+      <div id="kErr"></div>
+    </div>
+    <div class="actions fs-foot">${e ? (k === 'fix' && e.from < month ? `<button type="button" class="btn danger" id="kStop">${esc(t('costStop', fmtMonthLong(month)))}</button><button type="button" class="btn danger" id="kDel">${esc(t('costDelAll'))}</button>` : `<button type="button" class="btn danger" id="kDel">${esc(t('del'))}</button>`) : ''}<button type="submit" class="btn primary grow">${esc(t('save'))}</button></div>
+    </form>`, 'fixed');
+  const f = i => $('#' + i, el);
+  const fill = () => {
+    f('kTitle').textContent = e ? t('costEdit') : t(k === 'fix' ? 'costNewFix' : 'costNewVar');
+    f('kaL').textContent = k === 'fix' ? t('barAmount') + ' · ' + t('costMonthly') : t('barAmount');
+    f('kdF').hidden = k === 'fix';
+    f('kc').placeholder = t(k === 'fix' ? 'costConceptPhFix' : 'costConceptPhVar');
+    f('kHint').textContent = k !== 'fix' ? '' : e ? (e.from < month ? t('costFixChange', fmtMonthLong(month)) : '') : t('costFixHint', fmtMonthLong(month));
+    f('kHint').hidden = !f('kHint').textContent;
+    const mine = costLive().filter(x => (x.k === 'fix') === (k === 'fix')).map(x => x.c);
+    f('kSug').innerHTML = uniqBy(t(k === 'fix' ? 'costSugFix' : 'costSugVar').split(';').concat(mine).map(v => String(v || '').trim()), norm).slice(0, 40).map(v => `<option value="${esc(v)}">`).join('');
+  };
+  fill();
+  $$('input[name=kk]', el).forEach(r => r.addEventListener('change', () => { k = r.value; fill(); }));
+  if(!e) setTimeout(() => { if(!el.contains(document.activeElement)) f('kc').focus(); }, 50);
+  $('form', el).onsubmit = ev => {
+    ev.preventDefault();
+    const fail = key => { f('kErr').innerHTML = `<div class="msg err">${esc(t(key))}</div>`; };
+    const a = parseAmount(f('ka').value), d = f('kd').value, c = f('kc').value.trim(), n = f('kn').value.trim();
+    if(!(a > 0)) return fail('errBarAmount');
+    let next;
+    if(k === 'fix'){
+      next = e ? Object.assign({}, e, { c, n }) : { id: uid(), k:'fix', c, n, from: month, am: {} };
+      if(!e || fixAmount(e, month) !== a){
+        next.am = Object.assign({}, next.am, { [e && e.from > month ? e.from : month]: a });
+        if(e && e.from > month){ next.from = month; }
+      }
+    } else {
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(d)) return fail('errBarDate');
+      next = { id: e ? e.id : uid(), k:'var', a, d, c, n };
+      costLastDate = d;
+    }
+    if(!e || canon(Object.assign({}, e, { t: 0 })) !== canon(Object.assign({}, next, { t: 0 }))) state.costs[next.id] = Object.assign(next, { t: Date.now() });
+    closeModal(el); commit();
+    if(k === 'var' && d.slice(0, 7) !== month) toast(t('barSavedIn', fmtMonthLong(d.slice(0, 7))), t('barGo'), () => { ui.month = d.slice(0, 7); render(); });
+  };
+  const keep = e && Object.assign({}, e);
+  const undo = () => { state.costs[keep.id] = Object.assign({}, keep, { t: Date.now() }); commit(); };
+  if(e) f('kDel').onclick = () => { state.costs[e.id] = Object.assign({}, e, { deleted:true, t: Date.now() }); closeModal(el); commit(); toast(t('costDeleted'), t('undo'), undo); };
+  if(e && f('kStop')) f('kStop').onclick = () => {
+    state.costs[e.id] = Object.assign({}, e, { to: addMonth(month, -1), t: Date.now() }); closeModal(el); commit();
+    toast(t('costStopped', fmtMonthLong(month)), t('undo'), undo);
+  };
 }
 /* ---------- Rock La Ve: overview as a diagram ----------
    Two views, each with two panels that share the time axis:
@@ -1455,6 +1598,7 @@ addEventListener('scroll', closeMsgMenu, { passive: true }); addEventListener('r
 const msgCount = p => (p && p.r ? 1 : 0) + (p && p.r2 ? 1 : 0);
 function renderLists(){
   if(ui.area === 'bar'){ renderBanner(); renderBar(); return; }
+  if(ui.parkView === 'out'){ renderBanner(); renderCosts(); return; }
   const month = ui.month, q = norm($('#search').value), qPlate = plateKey(q);
   const all = customersFor(ui.lot, month);
   const groups = { paid:[], partial:[], unpaid:[], unclear:[] }, totals = { paid:0, partial:0, unpaid:0, unclear:0 }, counts = { paid:0, partial:0, unpaid:0, unclear:0 };
@@ -3667,6 +3811,9 @@ $('#prev').onclick = () => { ui.month = addMonth(ui.month, -1); render(); };
 $('#next').onclick = () => { ui.month = addMonth(ui.month, 1); render(); };
 $('#monthSub').addEventListener('click', e => { if(e.target.id === 'toNow'){ ui.month = curMonth(); render(); } });
 $('#search').addEventListener('input', renderLists);
+$('#costFix').onclick = () => openCost(null, 'fix');
+$('#costVar').onclick = () => openCost(null, 'var');
+$('#costLists').addEventListener('click', e => { const b = e.target.closest('[data-act="open"]'); if(b) openCost(b.closest('.row').dataset.id); });
 $('#parkView').addEventListener('click', e => { const b = e.target.closest('[data-pview]'); if(!b) return; ui.parkView = b.dataset.pview; render(); });
 $('#areas').addEventListener('click', e => { const b = e.target.closest('[data-area]'); if(!b) return; ui.area = b.dataset.area; saveUi(); render(); window.scrollTo(0, 0); });
 $('#barSearch').addEventListener('input', renderBar);
