@@ -82,7 +82,8 @@ h1,h2,h3,p{margin:0}
 .tab.on small{color:inherit;opacity:.85}
 
 /* month */
-.pview{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 10px}
+.pview{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin:0 0 10px}
+.pview button.pv-ov{padding:0 18px;color:var(--text)}
 .pview button{min-height:44px;border:1px solid var(--line);border-radius:11px;background:var(--card);color:var(--muted);font:inherit;font-size:15.5px;font-weight:700;cursor:pointer}
 .pview button.in.on{background:var(--paid-soft);border-color:var(--paid);color:var(--paid)}
 .pview button.out.on{background:var(--unpaid-soft);border-color:var(--unpaid);color:var(--unpaid)}
@@ -289,7 +290,7 @@ a.btn{display:inline-flex;align-items:center;gap:8px;text-decoration:none}
 .tx.out{border-left-color:var(--unpaid)}
 @media (max-width:560px){.btn-pair{flex:1 1 40%}}
 @media (max-width:430px){.bar-sum b{font-size:16px} .bar-sum .saldo b{font-size:21px}}
-@media (max-width:560px){#barView .toolbar input{flex:1 1 50%} #barView #barOverview{flex:none}}
+@media (max-width:560px){#barView .toolbar input{flex:1 1 50%}}
 .empty{padding:18px 14px;color:var(--muted);font-size:14px}
 .welcome{padding:22px 18px;text-align:center}
 .welcome p{color:var(--muted);margin:6px 0 14px}
@@ -461,7 +462,6 @@ code{background:var(--soft);border-radius:5px;padding:1px 5px;font-size:13.5px;o
   <section id="barView" hidden>
     <div class="toolbar">
       <input id="barSearch" type="search" autocomplete="off">
-      <button id="barOverview" class="btn" type="button"></button>
       <span class="btn-pair"><button id="barIn" class="btn in" type="button"></button><button id="barInPhoto" class="btn in cam" type="button"></button></span>
       <span class="btn-pair"><button id="barOut" class="btn out" type="button"></button><button id="barOutPhoto" class="btn out cam" type="button"></button></span>
     </div>
@@ -1041,7 +1041,7 @@ function applyStatic(){
   $('#btnImport').textContent = t('stmtBtn');
   $('#btnDup').textContent = t('dupBtn');
   $('#costFix').textContent = t('costAddFix'); $('#costVar').textContent = t('costAddVar');
-  $('#barIn').textContent = t('barAddIn'); $('#barOut').textContent = t('barAddOut'); $('#barOverview').textContent = t('barOverview');
+  $('#barIn').textContent = t('barAddIn'); $('#barOut').textContent = t('barAddOut'); 
   for(const [id, key] of [['#barInPhoto', 'barPhotoIn'], ['#barOutPhoto', 'barPhotoOut']]){ $(id).innerHTML = CAM_ICON; $(id).setAttribute('aria-label', t(key)); $(id).title = t(key); }
   $('#barSearch').placeholder = t('barSearchPh'); $('#barSearch').setAttribute('aria-label', t('aSearch'));
 }
@@ -1181,7 +1181,8 @@ function applyArea(){
   for(const sel of ['#tabs', '#parkTools', '#switch', '#lists']) $(sel).hidden = bar || out;
   $('#parkOut').hidden = !out;
   const view = (bar ? ui.barView : ui.parkView) || 'in';        /* the same Ingresos / Gastos buttons in both areas */
-  $('#parkView').innerHTML = [['in', 'pvIn'], ['out', 'pvOut']].map(([k, key]) => `<button type="button" class="${k}${view === k ? ' on' : ''}" data-pview="${k}" aria-pressed="${view === k}">${esc(t(key))}</button>`).join('');
+  $('#parkView').innerHTML = [['in', 'pvIn'], ['out', 'pvOut']].map(([k, key]) => `<button type="button" class="${k}${view === k ? ' on' : ''}" data-pview="${k}" aria-pressed="${view === k}">${esc(t(key))}</button>`).join('')
+    + `<button type="button" class="pv-ov" id="pvOverview">${esc(t('barOverview'))}</button>`;
   $$('#barView .btn-pair').forEach(b => { b.hidden = !b.querySelector(view === 'in' ? '.in' : '.out'); });
   $('#areas').innerHTML = [['park', t('areaPark')], ['bar', BAR_NAME]].map(([k, name]) => `<button type="button" data-area="${k}" class="${(ui.area === 'bar') === (k === 'bar') ? 'on' : ''}" aria-pressed="${(ui.area === 'bar') === (k === 'bar')}">${esc(name)}</button>`).join('');
 }
@@ -1346,10 +1347,27 @@ function openCost(id, kind){
    are also told apart by direction. Every figure is in the table underneath as well. */
 const barLive = () => Object.values(state.bar).filter(e => e && !e.deleted && typeof e.d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(e.d));
 const round2 = n => Math.round(n * 100) / 100;
+/* the parking lots as income / expense entries: what was collected for each month (on its payment date when that
+   lies in the month, otherwise on the 1st), variable costs on their date, fixed costs on the 1st of every month they run */
+function parkLive(upTo){
+  const out = [];
+  for(const key in state.payments){
+    const p = state.payments[key], [cid, m] = key.split('|'), c = state.customers[cid];
+    if(!p || !c || c.deleted || !/^\d{4}-\d{2}$/.test(m || '') || (p.s !== 'paid' && p.s !== 'partial')) continue;
+    const a = paidAmount(c, p.s, p); if(!a) continue;
+    out.push({ k:'in', a, d: typeof p.d === 'string' && p.d.slice(0, 7) === m ? p.d : m + '-01' });
+  }
+  for(const e of costLive()){
+    if(e.k === 'fix'){ if(/^\d{4}-\d{2}$/.test(e.from || '')) for(let m = e.from; m <= upTo && (!e.to || m <= e.to); m = addMonth(m, 1)){ const a = fixAmount(e, m); if(a) out.push({ k:'out', a, d: m + '-01' }); } }
+    else if(typeof e.d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(e.d)) out.push({ k:'out', a: e.a || 0, d: e.d });
+  }
+  return out;
+}
+const overviewLive = month => ui.area === 'bar' ? barLive() : parkLive(month);
 function barDays(month){
   const [y, m] = month.split('-').map(Number), n = new Date(y, m, 0).getDate();
   const days = Array.from({ length: n }, (_, i) => ({ day: i + 1, iso: month + '-' + pad2(i + 1), in: 0, out: 0, cum: 0, any: false }));
-  for(const e of barLive()){
+  for(const e of overviewLive(month)){
     if(e.d.slice(0, 7) !== month) continue;
     const d = days[+e.d.slice(8) - 1]; if(!d) continue;
     d[barKind(e)] += e.a || 0; d.any = true;
@@ -1362,7 +1380,7 @@ function barMonths(month, count){         /* the count months that end with the 
   const keys = Array.from({ length: count }, (_, i) => addMonth(month, i - count + 1)), map = {};
   for(const k of keys) map[k] = { key: k, in: 0, out: 0, any: false };
   let run = 0;
-  for(const e of barLive()){
+  for(const e of overviewLive(month)){
     const m = e.d.slice(0, 7), k = barKind(e);
     if(m < keys[0]) run += k === 'in' ? e.a || 0 : -(e.a || 0);
     else if(map[m]){ map[m][k] += e.a || 0; map[m].any = true; }
@@ -1383,7 +1401,7 @@ function openBarOverview(){
   const month = ui.month;
   let mode = 'days', cfg = null, geo = null, cur = -1;
   const el = openModal(`<div class="fs">
-    <div class="sheet-head"><h2>${esc(t('barOverview'))}<span class="sub">${esc(BAR_NAME + ' · ' + fmtMonthLong(month))}</span></h2>${closeX()}</div>
+    <div class="sheet-head"><h2>${esc(t('barOverview'))}<span class="sub">${esc((ui.area === 'bar' ? BAR_NAME : t('areaPark')) + ' · ' + fmtMonthLong(month))}</span></h2>${closeX()}</div>
     <div class="fs-body viz">
       <div class="viz-mode" id="vizMode">${[['days', 'vizModeDays'], ['months', 'vizModeMonths']].map(([k, key]) => `<button type="button" data-mode="${k}">${esc(t(key))}</button>`).join('')}</div>
       <div id="vizBody"></div>
@@ -3821,12 +3839,11 @@ $('#search').addEventListener('input', renderLists);
 $('#costFix').onclick = () => openCost(null, 'fix');
 $('#costVar').onclick = () => openCost(null, 'var');
 $('#costLists').addEventListener('click', e => { const b = e.target.closest('[data-act="open"]'); if(b) openCost(b.closest('.row').dataset.id); });
-$('#parkView').addEventListener('click', e => { const b = e.target.closest('[data-pview]'); if(!b) return; if(ui.area === 'bar') ui.barView = b.dataset.pview; else ui.parkView = b.dataset.pview; render(); });
+$('#parkView').addEventListener('click', e => { if(e.target.closest('#pvOverview')){ openBarOverview(); return; } const b = e.target.closest('[data-pview]'); if(!b) return; if(ui.area === 'bar') ui.barView = b.dataset.pview; else ui.parkView = b.dataset.pview; render(); });
 $('#areas').addEventListener('click', e => { const b = e.target.closest('[data-area]'); if(!b) return; ui.area = b.dataset.area; saveUi(); render(); window.scrollTo(0, 0); });
 $('#barSearch').addEventListener('input', renderBar);
 $('#barIn').onclick = () => openEntry(null, 'in');
 $('#barOut').onclick = () => openEntry(null, 'out');
-$('#barOverview').onclick = openBarOverview;
 $('#barInPhoto').onclick = () => openBarPhoto('in');
 $('#barOutPhoto').onclick = () => openBarPhoto('out');
 $('#barLists').addEventListener('click', e => { const r = e.target.closest('.row'); if(r) openEntry(r.dataset.id); });
