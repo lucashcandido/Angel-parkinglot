@@ -677,7 +677,7 @@ const I18N = {
   wdChartEmptyD:['Sin retiros en este mes.','No withdrawals this month.'], wdTotM:['Total de {0}','Total for {0}'],
   salChartD:['Totales del mes, sumados día a día (estacionamientos + bar)','Month totals, added up day by day (parking + bar)'], salUpTo:['Hasta el {0}','Up to {0}'], wdChartEmpty:['Sin retiros en estos 12 meses.','No withdrawals in these 12 months.'], wdTot12:['Total 12 meses','12-month total'], wdEmpty:['Sin retiros este mes.','No withdrawals this month.'], wdDeleted:['Retiro eliminado.','Withdrawal deleted.'],
   wdLeft:['Queda después de los retiros','Left after withdrawals'], wdAfter:['Retiros personales: {0} · queda {1}','Personal withdrawals: {0} · left {1}'],
-  altaTitle:['Alta de clientes por QR','Customer sign-up by QR code'], altaShow:['Mostrar código QR','Show QR code'],
+  altaTitle:['Alta de clientes por QR','Customer sign-up by QR code'], altaShow:['Mostrar código QR','Show QR code'], altaNeedWa:['Primero escribí arriba el número de WhatsApp que recibe las altas; después se puede mostrar el código.','First enter the WhatsApp number that receives sign-ups above; then the code can be shown.'],
   altaIntro:['Imprimí el código y colgalo en el estacionamiento. El cliente lo escanea, completa nombre, teléfono, patente y forma de pago, y nos lo manda por WhatsApp. Tocando el enlace del mensaje, el cliente se carga acá (lugar «?»).','Print the code and put it up at the parking lot. The customer scans it, fills in name, phone, plate and how they pay, and sends it to us via WhatsApp. Tapping the link in that message loads the customer here (place "?").'],
   altaWa:['Número de WhatsApp que recibe las altas','WhatsApp number that receives sign-ups'], altaBadWa:['Ese número no sirve para WhatsApp; revisalo (con código de área).','That number does not work for WhatsApp; check it (with area code).'],
   altaNoQr:['No se pudo crear el código QR (¿sin conexión?).','Could not create the QR code (offline?).'], altaPrint:['Imprimir cartel','Print poster'], altaTry:['Probar formulario','Try the form'],
@@ -3690,11 +3690,18 @@ function openSettings(focusSync){
       if(!await confirmBox(t('lotDelTitle'), t('lotDelText', lotLabel(l)), t('remove'), true)) return;
       state.lots[l.id] = Object.assign({}, l, { deleted:true, t: Date.now() }); commit(); draw();
     });
+    let altaN = 0;
     const altaDraw = async () => {
       const box = $('#altaQr', el); if(!box) return;
-      const url = altaUrl();
-      if(!url){ box.innerHTML = altaSettings().wa ? `<div class="msg err">${esc(t('altaBadWa'))}</div>` : ''; return; }
+      const url = altaUrl(), my = ++altaN;          /* only the latest drawing counts */
+      if(url && box.dataset.url === url) return;
+      box.dataset.url = url || '';
+      if(!url){        /* the button is always there; without a usable number it says what is missing */
+        box.innerHTML = `<button type="button" class="btn primary" id="altaShow" disabled>${esc(t('altaShow'))}</button>` + `<div class="msg${altaSettings().wa ? ' err' : ''}" style="margin-top:8px">${esc(t(altaSettings().wa ? 'altaBadWa' : 'altaNeedWa'))}</div>`;
+        return;
+      }
       try{ await loadQr(); }catch(e){ box.innerHTML = `<div class="msg err">${esc(t('altaNoQr'))}</div>`; return; }
+      if(my !== altaN) return;
       box.innerHTML = `<button type="button" class="btn primary" id="altaShow">${esc(t('altaShow'))}</button><p class="hint" style="word-break:break-all">${esc(url)}</p>
         <div class="actions" style="margin-top:6px"><button type="button" class="btn small" id="altaPrint">${esc(t('altaPrint'))}</button><button type="button" class="btn small" id="altaCopy">${esc(t('copyLink'))}</button><a class="btn small" href="${esc(url)}" target="_blank" rel="noopener">${esc(t('altaTry'))}</a></div>`;
       $('#altaPrint', box).onclick = () => printAltaQr(url);
@@ -3702,7 +3709,10 @@ function openSettings(focusSync){
       $('#altaCopy', box).onclick = async () => { try{ await navigator.clipboard.writeText(url); toast(t('copied')); }catch(e){ toast(url); } };
     };
     altaDraw();
-    $('#sAltaWa', el).onchange = e => { const wa = e.target.value.trim(); if(wa !== altaSettings().wa){ state.settings.alta = { wa, t: Date.now() }; commit(); } altaDraw(); };
+    let altaT = 0;
+    const altaSave = () => { const inp = $('#sAltaWa', el); if(!inp) return; const wa = inp.value.trim(); if(wa !== altaSettings().wa){ state.settings.alta = { wa, t: Date.now() }; commit(); } altaDraw(); };
+    $('#sAltaWa', el).oninput = () => { clearTimeout(altaT); altaT = setTimeout(altaSave, 500); };      /* the button appears while typing, no need to leave the field */
+    $('#sAltaWa', el).onchange = () => { clearTimeout(altaT); altaSave(); };
     $('#lotAdd', el).onclick = () => {
       const id = 'lot_' + uid(), order = Math.max(0, ...Object.values(state.lots).map(l => l.order || 0)) + 1;
       state.lots[id] = { id, name: t('lotN', lotsList().length + 1), order, t: Date.now() }; commit(); draw();
