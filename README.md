@@ -4,7 +4,7 @@ Zahlungsübersicht für die drei Parkanlagen: pro Monat sieht man, wer **bezahlt
 
 Die Oberfläche gibt es auf **Spanisch und Englisch**; umgeschaltet wird mit dem Knopf **ES | EN** oben rechts. Die Wahl wird pro Gerät gemerkt.
 
-**App öffnen:** https://lucashcandido.github.io/Angel-parkinglot/
+**App öffnen:** https://app.castcomercial.com/ (die alte Adresse https://lucashcandido.github.io/Angel-parkinglot/ leitet automatisch dorthin weiter)
 
 ## Was die App kann
 
