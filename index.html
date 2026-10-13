@@ -95,6 +95,7 @@ h1,h2,h3,p{margin:0}
 .wd-card{grid-column:1/-1} .wd-card .col-head{background:var(--unclear-soft)} .wd-card .col-head .cnt{margin-left:0;color:var(--muted)} .wd-card .wd-add{margin-left:auto}
 #saldoView{margin-top:12px}
 @media (max-width:560px){#saldoCards.lists.duo{grid-template-columns:minmax(0,1fr)}}
+.alta-qr{display:inline-block;background:#fff;padding:8px;border-radius:12px;border:1px solid var(--line)} .alta-qr svg{display:block;max-width:100%;height:auto}
 .pview{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin:0 0 10px}
 .pview button.pv-ov{padding:0 18px;color:var(--text)}
 .pview button{min-height:44px;border:1px solid var(--line);border-radius:11px;background:var(--card);color:var(--muted);font:inherit;font-size:15.5px;font-weight:700;cursor:pointer}
@@ -675,6 +676,17 @@ const I18N = {
   wdChartEmptyD:['Sin retiros en este mes.','No withdrawals this month.'], wdTotM:['Total de {0}','Total for {0}'],
   salChartD:['Totales del mes, sumados día a día (estacionamientos + bar)','Month totals, added up day by day (parking + bar)'], salUpTo:['Hasta el {0}','Up to {0}'], wdChartEmpty:['Sin retiros en estos 12 meses.','No withdrawals in these 12 months.'], wdTot12:['Total 12 meses','12-month total'], wdEmpty:['Sin retiros este mes.','No withdrawals this month.'], wdDeleted:['Retiro eliminado.','Withdrawal deleted.'],
   wdLeft:['Queda después de los retiros','Left after withdrawals'], wdAfter:['Retiros personales: {0} · queda {1}','Personal withdrawals: {0} · left {1}'],
+  altaTitle:['Alta de clientes por QR','Customer sign-up by QR code'],
+  altaIntro:['Imprimí el código y colgalo en el estacionamiento. El cliente lo escanea, completa nombre, teléfono, patente y forma de pago, y nos lo manda por WhatsApp. Tocando el enlace del mensaje, el cliente se carga acá (lugar «?»).','Print the code and put it up at the parking lot. The customer scans it, fills in name, phone, plate and how they pay, and sends it to us via WhatsApp. Tapping the link in that message loads the customer here (place "?").'],
+  altaWa:['Número de WhatsApp que recibe las altas','WhatsApp number that receives sign-ups'], altaBadWa:['Ese número no sirve para WhatsApp; revisalo (con código de área).','That number does not work for WhatsApp; check it (with area code).'],
+  altaNoQr:['No se pudo crear el código QR (¿sin conexión?).','Could not create the QR code (offline?).'], altaPrint:['Imprimir cartel','Print poster'], altaTry:['Probar formulario','Try the form'],
+  altaPopup:['Permití las ventanas emergentes para imprimir.','Allow pop-ups to print.'], altaPrintTitle:['Registro de clientes','Customer registration'],
+  altaPoster1:['¿Cliente nuevo?','New customer?'], altaPoster2:['Escaneá el código con la cámara del celular','Scan the code with your phone camera'], altaPoster3:['Completá tus datos y envialos por WhatsApp.','Fill in your details and send them via WhatsApp.'],
+  altaFrom:['Alta por QR del {0}: revisá los datos y elegí estacionamiento, lugar y monto.','Sign-up by QR on {0}: check the data and choose parking lot, space and amount.'],
+  altaExists:['{0} ya está cargado: se abrió su ficha.','{0} is already in the list: their card is open.'], altaBroken:['El enlace de alta está incompleto.','The sign-up link is incomplete.'],
+  copied:['Copiado.','Copied.'],
+  payKind:['Forma de pago','Payment method'], pay_mp:['Mercado Pago','Mercado Pago'], pay_cash:['Efectivo','Cash'], pay_transfer:['Transferencia bancaria','Bank transfer'],
+  payShort_mp:['MP','MP'], payShort_cash:['Efectivo','Cash'], payShort_transfer:['Transf.','Transfer'],
   areaPark:['Estacionamientos','Parking'], areaSaldo:['Saldo','Balance'], salTotal:['Saldo total de {0}','Total balance for {0}'], salOpen:['Ver','Open'],
   pvIn:['Ingresos','Income'], pvOut:['Gastos','Expenses'],
   costFixL:['Costos fijos','Fixed costs'], costVarL:['Costos variables','Variable costs'], costAll:['Gastos de {0}','Expenses for {0}'],
@@ -1090,7 +1102,7 @@ function quickStatus(cid, s){
 }
 
 /* ---------- rendering ---------- */
-function render(){ ai = aiFromState(); renderLogin(); applyArea(); renderTabs(); renderMonth(); renderLists(); renderSync(); if(dupView) dupView(); }
+function render(){ ai = aiFromState(); renderLogin(); applyArea(); renderTabs(); renderMonth(); renderLists(); renderSync(); if(dupView) dupView(); if(altaPending || /#alta=/.test(location.hash)) setTimeout(altaCheck); }
 
 function applyStatic(){
   document.documentElement.lang = ui.lang;
@@ -1201,6 +1213,7 @@ function progressHtml(c, s, p){
 function rowHtml(c, s, p, similar){
   const bits = [];
   if(c.spot) bits.push(esc(t('space', c.spot)));
+  if(c.pay && PAY_KINDS.includes(c.pay)) bits.push(esc(t('payShort_' + c.pay)));
   if(s === 'paid' || s === 'partial'){
     if(p && p.d) bits.push(esc(t('onDate', fmtDate(p.d))));
     if(p && p.p) bits.push(esc(t('fromPayer', p.p)));
@@ -1996,12 +2009,14 @@ function monthOptions(selected, withNone){
 const lotOptions = sel => lotsList().concat(state.lots[NO_LOT]).map(l => `<option value="${esc(l.id)}"${l.id === sel ? ' selected' : ''}>${esc(lotLabel(l))}</option>`).join('');
 
 /* one sheet for everything about a customer: this month's payment, earlier months, customer details */
-function openCustomer(cid){
+function openCustomer(cid, pre){
   const c = cid ? state.customers[cid] : null;
+  pre = pre || null;                      /* a registration from the QR code: data typed by the customer */
   const month = ui.month;
-  const lot = c ? c.lot : (ui.lot !== 'all' ? ui.lot : (lotsList()[0] || {}).id);
+  const lot = c ? c.lot : pre ? NO_LOT : (ui.lot !== 'all' ? ui.lot : (lotsList()[0] || {}).id);
   const p = c ? (payOf(cid, month) || {}) : {}, s = c ? statusOf(cid, month) : 'unpaid';
-  const cars = c ? carsOf(c) : [{ k:'', s:'', a:0 }];
+  const cars = c ? carsOf(c) : [{ k: pre ? pre.plate || '' : '', s:'', a:0 }];
+  const payKind = (pre && pre.pay) || (c && c.pay) || '';
   const extra = cars.slice(1).map(x => ({ k: x.k, s: x.s, a: fmtNum(x.a) }));        /* further cars, as typed */
   const hist = {};                       /* earlier month -> status as shown; changed ones are saved */
   const mark = { paid:'✓', partial:'½', unpaid:'✕', unclear:'?' };
@@ -2033,7 +2048,8 @@ function openCustomer(cid){
     <form novalidate>
     <div class="sheet-head"><h2>${c ? esc(c.name) + `<span class="sub">${plates(c).map(x => `<span class="plate">${esc(x)}</span>`).join('')}${esc([lotName(c.lot), c.spot && t('space', c.spot)].filter(Boolean).join(' · '))}</span>` : esc(t('newCustomer'))}</h2>${closeX()}</div>
     <div class="fs-body">${paySection}
-      <div class="field"><label for="cn">${esc(t('name'))}</label><input id="cn" type="text" autocomplete="off" value="${esc(c ? c.name : '')}" required></div>
+      ${pre && !c ? `<div class="msg good" id="altaNote">${esc(t('altaFrom', fmtDate(pre.d)))}</div>` : ''}
+      <div class="field"><label for="cn">${esc(t('name'))}</label><input id="cn" type="text" autocomplete="off" value="${esc(c ? c.name : pre ? pre.name : '')}" required></div>
       <div class="two">
         <div class="field"><label for="ck">${esc(t('plate'))}</label><input id="ck" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" style="text-transform:uppercase" value="${esc(cleanPlate(cars[0].k))}" placeholder="${esc(t('platePh'))}"></div>
         <div class="field"><label for="cs">${esc(t('spaceLbl'))}</label><input id="cs" type="text" autocomplete="off" value="${esc(cars[0].s)}"></div>
@@ -2048,7 +2064,8 @@ function openCustomer(cid){
       <div class="field"><label for="cz">${esc(t('aliases'))}</label>
         <input id="cz" type="text" autocomplete="off" value="${esc(c ? (c.aliases || []).join(', ') : '')}" placeholder="${esc(t('aliasesPh'))}">
         <div class="hint">${esc(t('aliasesHint'))}</div></div>
-      <div class="field"><label for="cp">${esc(t('phone'))}</label><input id="cp" type="tel" autocomplete="off" value="${esc(c ? c.phone || '' : '')}"><div class="hint">${esc(t('phoneHint'))}</div></div>
+      <div class="field"><label for="cp">${esc(t('phone'))}</label><input id="cp" type="tel" autocomplete="off" value="${esc(c ? c.phone || (pre && pre.phone) || '' : pre ? pre.phone : '')}"><div class="hint">${esc(t('phoneHint'))}</div></div>
+      <div class="field"><label for="cy">${esc(t('payKind'))}</label><select id="cy"><option value="">—</option>${PAY_KINDS.map(k => `<option value="${k}"${payKind === k ? ' selected' : ''}>${esc(t('pay_' + k))}</option>`).join('')}</select></div>
       ${c ? `<p style="margin:-2px 0 12px"><a class="btn small wa${s !== 'paid' && p.r ? ' sent' : ''}" id="waGo" href="#" target="_blank" rel="noopener">${WA_ICON}<span>${esc(t(s === 'paid' ? 'waOpen' : p.r ? 'waBtn2' : 'waBtn'))}</span></a></p><div id="waMsg"></div>` : ''}
       <div class="field"><label for="co">${esc(t('note'))}</label><textarea id="co">${esc(c ? c.note || '' : '')}</textarea></div>
       <div class="two">
@@ -2162,8 +2179,8 @@ function openCustomer(cid){
         setPayment(id, m, ns === 'unpaid' ? { s: ns, n: o.n } : { s: ns, a: ns === 'paid' ? (amount ? Math.max(amount, o.a || 0) : o.a) : o.a, d: o.d, p: o.p, n: o.n, x: o.x });
       }
     }
-    const next = { id, lot: f('cl').value, name, plate: car.plate, spot: car.spot, amount, cars: car.cars, aliases, phone: f('cp').value.trim(), note: f('co').value.trim(), from, until };
-    const prev = c && { id: c.id, lot: c.lot, name: c.name, plate: c.plate || '', spot: c.spot || '', amount: c.amount || 0, cars: c.cars && c.cars.length ? c.cars : undefined, aliases: c.aliases || [], phone: c.phone || '', note: c.note || '', from: c.from || '', until: c.until || '' };
+    const next = { id, lot: f('cl').value, name, plate: car.plate, spot: car.spot, amount, cars: car.cars, aliases, phone: f('cp').value.trim(), note: f('co').value.trim(), from, until, pay: f('cy').value || undefined };
+    const prev = c && { id: c.id, lot: c.lot, name: c.name, plate: c.plate || '', spot: c.spot || '', amount: c.amount || 0, cars: c.cars && c.cars.length ? c.cars : undefined, aliases: c.aliases || [], phone: c.phone || '', note: c.note || '', from: c.from || '', until: c.until || '', pay: c.pay || undefined };
     if(!prev || canon(prev) !== canon(next)) state.customers[id] = Object.assign(next, { t: Date.now() });
     closeModal(el); commit();
   };
@@ -3208,7 +3225,7 @@ function matchPeople(rows, custs){
       if(!twin){ cars.push(Object.assign(r, { sig })); continue; }
       twin.paid = Array.from(new Set(twin.paid.concat(r.paid))).sort(); twin.unclear = Array.from(new Set(twin.unclear.concat(r.unclear))).filter(m => !twin.paid.includes(m)).sort();
       for(const m in r.amounts) twin.amounts[m] = Math.max(twin.amounts[m] || 0, r.amounts[m]);
-      for(const k of ['plate', 'spot', 'amount', 'phone', 'note', 'lot', 'since']) if(!twin[k] && r[k]) twin[k] = r[k];
+      for(const k of ['plate', 'spot', 'amount', 'phone', 'note', 'lot', 'since', 'pay']) if(!twin[k] && r[k]) twin[k] = r[k];
       for(const a of r.aliases) if(!twin.aliases.some(q => nameKey(q) === nameKey(a))) twin.aliases.push(a);
       if(sig && !twin.sig) twin.sig = sig;
     }
@@ -3516,6 +3533,55 @@ function openImport(){
 }
 
 /* ---------- settings ---------- */
+/* ---------- registration of new customers by QR code ----------
+   The QR code opens alta.html (no data stored there). The customer fills in name, phone, plate and how they pay;
+   "Enviar" opens WhatsApp with a message to the number set here. That message carries a link to this app
+   (#alta=...) which, when tapped by the owners, opens the new-customer window already filled in. */
+const altaSettings = () => { const a = (state.settings && state.settings.alta) || {}; return { wa: a.wa || '' }; };
+const PAY_KINDS = ['mp', 'cash', 'transfer'];
+function altaUrl(){
+  const wa = altaSettings().wa; if(!wa) return '';
+  const num = waNumber(wa, waSettings().area); if(!num) return '';
+  return new URL('alta.html', location.href.split('#')[0]).href.replace(/\?.*$/, '') + '?to=' + num;
+}
+let qrReady = null;
+const loadQr = () => qrReady || (qrReady = new Promise((ok, no) => { if(window.qrcode) return ok(); const sc = document.createElement('script'); sc.src = 'qrcode.js'; sc.onload = () => ok(); sc.onerror = () => { qrReady = null; no(); }; document.head.appendChild(sc); }));
+function qrSvg(text, size){
+  const q = qrcode(0, 'M'); q.addData(text); q.make();
+  const n = q.getModuleCount(), m = 4, all = n + 2 * m; let d = '';
+  for(let r = 0; r < n; r++) for(let c = 0; c < n; c++) if(q.isDark(r, c)) d += `M${c + m} ${r + m}h1v1h-1z`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${all} ${all}" width="${size}" height="${size}" shape-rendering="crispEdges" role="img" aria-label="QR"><rect width="${all}" height="${all}" fill="#fff"/><path d="${d}" fill="#000"/></svg>`;
+}
+function printAltaQr(url){
+  const w = window.open('', '_blank'); if(!w){ toast(t('altaPopup')); return; }
+  w.document.write(`<!doctype html><meta charset="utf-8"><title>${esc(t('altaPrintTitle'))}</title><style>body{font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;text-align:center;margin:40px}h1{font-size:40px;margin:0 0 10px}p{font-size:22px;margin:8px 0}.s{color:#555;font-size:16px}</style>
+    <h1>${esc(t('altaPoster1'))}</h1><p>${esc(t('altaPoster2'))}</p><div style="margin:28px 0">${qrSvg(url, 420)}</div><p>${esc(t('altaPoster3'))}</p><p class="s">Mercado Pago · Efectivo · Transferencia</p>`);
+  w.document.close(); setTimeout(() => { try{ w.focus(); w.print(); }catch(e){} }, 300);
+}
+/* a link #alta=... from the customer's WhatsApp message */
+function altaFromHash(){
+  const m = /#alta=([A-Za-z0-9_-]+)/.exec(location.hash); if(!m) return null;
+  try{
+    const bin = atob(m[1].replace(/-/g, '+').replace(/_/g, '/')), bytes = Uint8Array.from(bin, ch => ch.charCodeAt(0));
+    const o = JSON.parse(new TextDecoder().decode(bytes));
+    const clip = (v, n) => String(v || '').replace(/\s+/g, ' ').trim().slice(0, n);
+    return { name: niceName(clip(o.n, 80)), phone: clip(o.p, 40), plate: fmtPlate(clip(o.k, 20)), pay: PAY_KINDS.includes(o.f) ? o.f : '', d: /^\d{4}-\d{2}-\d{2}$/.test(o.d || '') ? o.d : todayISO() };
+  }catch(e){ return null; }
+}
+let altaPending = null;
+function altaCheck(){
+  const a = altaFromHash(); if(a) altaPending = a;
+  if(/#alta=/.test(location.hash)) history.replaceState(null, '', location.pathname + location.search);
+  if(!altaPending || isLocked()) return;
+  const a2 = altaPending; altaPending = null;
+  if(!a2.name){ toast(t('altaBroken')); return; }
+  const pk = plateKey(a2.plate), ph = (a2.phone || '').replace(/\D/g, '').slice(-8);
+  const same = Object.values(state.customers).find(c => c && !c.deleted && ((pk && plates(c).some(x => plateKey(x) === pk)) || (ph.length >= 8 && String(c.phone || '').replace(/\D/g, '').slice(-8) === ph)));
+  ui.area = 'park'; ui.parkView = 'in'; render();
+  if(same){ openCustomer(same.id, { pay: a2.pay, phone: a2.phone }); toast(t('altaExists', same.name)); }
+  else openCustomer(null, a2);
+}
+addEventListener('hashchange', altaCheck);
 function openSettings(focusSync){
   let acNote = '';
   const el = openModal(`<div class="sheet-head"><h2>${esc(t('settings'))}</h2>${closeX()}</div><div id="setBody"></div>`);
@@ -3526,6 +3592,13 @@ function openSettings(focusSync){
         <h3>${esc(t('aLots'))}</h3>
         ${lots.map(l => `<div class="lotrow"><input type="text" data-lotname="${esc(l.id)}" value="${esc(lotLabel(l))}" aria-label="${esc(t('lotNameAria'))}"><button type="button" class="btn danger" data-lotdel="${esc(l.id)}" aria-label="${esc(t('remove'))}" title="${esc(t('remove'))}">✕</button></div>`).join('')}
         <button type="button" class="btn small" id="lotAdd">${esc(t('addLot'))}</button>
+      </div>
+
+      <div class="sec" id="altaSec">
+        <h3>${esc(t('altaTitle'))}</h3>
+        <p class="hint" style="margin-top:0">${esc(t('altaIntro'))}</p>
+        <div class="field"><label for="sAltaWa">${esc(t('altaWa'))}</label><input id="sAltaWa" type="tel" autocomplete="off" value="${esc(altaSettings().wa)}" placeholder="11 5555-0000"></div>
+        <div id="altaQr"></div>
       </div>
 
       <div class="sec" id="syncSec">
@@ -3609,6 +3682,18 @@ function openSettings(focusSync){
       if(!await confirmBox(t('lotDelTitle'), t('lotDelText', lotLabel(l)), t('remove'), true)) return;
       state.lots[l.id] = Object.assign({}, l, { deleted:true, t: Date.now() }); commit(); draw();
     });
+    const altaDraw = async () => {
+      const box = $('#altaQr', el); if(!box) return;
+      const url = altaUrl();
+      if(!url){ box.innerHTML = altaSettings().wa ? `<div class="msg err">${esc(t('altaBadWa'))}</div>` : ''; return; }
+      try{ await loadQr(); }catch(e){ box.innerHTML = `<div class="msg err">${esc(t('altaNoQr'))}</div>`; return; }
+      box.innerHTML = `<div class="alta-qr">${qrSvg(url, 220)}</div><p class="hint" style="word-break:break-all">${esc(url)}</p>
+        <div class="actions" style="margin-top:6px"><button type="button" class="btn small primary" id="altaPrint">${esc(t('altaPrint'))}</button><button type="button" class="btn small" id="altaCopy">${esc(t('copyLink'))}</button><a class="btn small" href="${esc(url)}" target="_blank" rel="noopener">${esc(t('altaTry'))}</a></div>`;
+      $('#altaPrint', box).onclick = () => printAltaQr(url);
+      $('#altaCopy', box).onclick = async () => { try{ await navigator.clipboard.writeText(url); toast(t('copied')); }catch(e){ toast(url); } };
+    };
+    altaDraw();
+    $('#sAltaWa', el).onchange = e => { const wa = e.target.value.trim(); if(wa !== altaSettings().wa){ state.settings.alta = { wa, t: Date.now() }; commit(); } altaDraw(); };
     $('#lotAdd', el).onclick = () => {
       const id = 'lot_' + uid(), order = Math.max(0, ...Object.values(state.lots).map(l => l.order || 0)) + 1;
       state.lots[id] = { id, name: t('lotN', lotsList().length + 1), order, t: Date.now() }; commit(); draw();
