@@ -95,6 +95,7 @@ h1,h2,h3,p{margin:0}
 .wd-card{grid-column:1/-1} .wd-card .col-head{background:var(--unclear-soft)} .wd-card .col-head .cnt{margin-left:0;color:var(--muted)} .wd-card .wd-add{margin-left:auto}
 #saldoView{margin-top:12px}
 @media (max-width:560px){#saldoCards.lists.duo{grid-template-columns:minmax(0,1fr)}}
+.alta-big{text-align:center} .alta-big p{margin:4px 0 12px;font-size:16px} .alta-big .alta-qr{width:min(100%,340px)} .alta-big .alta-qr svg{width:100%;height:auto}
 .alta-qr{display:inline-block;background:#fff;padding:8px;border-radius:12px;border:1px solid var(--line)} .alta-qr svg{display:block;max-width:100%;height:auto}
 .pview{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin:0 0 10px}
 .pview button.pv-ov{padding:0 18px;color:var(--text)}
@@ -676,7 +677,7 @@ const I18N = {
   wdChartEmptyD:['Sin retiros en este mes.','No withdrawals this month.'], wdTotM:['Total de {0}','Total for {0}'],
   salChartD:['Totales del mes, sumados día a día (estacionamientos + bar)','Month totals, added up day by day (parking + bar)'], salUpTo:['Hasta el {0}','Up to {0}'], wdChartEmpty:['Sin retiros en estos 12 meses.','No withdrawals in these 12 months.'], wdTot12:['Total 12 meses','12-month total'], wdEmpty:['Sin retiros este mes.','No withdrawals this month.'], wdDeleted:['Retiro eliminado.','Withdrawal deleted.'],
   wdLeft:['Queda después de los retiros','Left after withdrawals'], wdAfter:['Retiros personales: {0} · queda {1}','Personal withdrawals: {0} · left {1}'],
-  altaTitle:['Alta de clientes por QR','Customer sign-up by QR code'],
+  altaTitle:['Alta de clientes por QR','Customer sign-up by QR code'], altaShow:['Mostrar código QR','Show QR code'],
   altaIntro:['Imprimí el código y colgalo en el estacionamiento. El cliente lo escanea, completa nombre, teléfono, patente y forma de pago, y nos lo manda por WhatsApp. Tocando el enlace del mensaje, el cliente se carga acá (lugar «?»).','Print the code and put it up at the parking lot. The customer scans it, fills in name, phone, plate and how they pay, and sends it to us via WhatsApp. Tapping the link in that message loads the customer here (place "?").'],
   altaWa:['Número de WhatsApp que recibe las altas','WhatsApp number that receives sign-ups'], altaBadWa:['Ese número no sirve para WhatsApp; revisalo (con código de área).','That number does not work for WhatsApp; check it (with area code).'],
   altaNoQr:['No se pudo crear el código QR (¿sin conexión?).','Could not create the QR code (offline?).'], altaPrint:['Imprimir cartel','Print poster'], altaTry:['Probar formulario','Try the form'],
@@ -3552,6 +3553,13 @@ function qrSvg(text, size){
   for(let r = 0; r < n; r++) for(let c = 0; c < n; c++) if(q.isDark(r, c)) d += `M${c + m} ${r + m}h1v1h-1z`;
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${all} ${all}" width="${size}" height="${size}" shape-rendering="crispEdges" role="img" aria-label="QR"><rect width="${all}" height="${all}" fill="#fff"/><path d="${d}" fill="#000"/></svg>`;
 }
+/* the code big on the screen, so a customer can scan it right from the phone or the PC */
+function showAltaQr(url){
+  const el = openModal(`<div class="sheet-head"><h2>${esc(t('altaPoster1'))}</h2>${closeX()}</div>
+    <div class="alta-big"><p>${esc(t('altaPoster2'))}</p><div class="alta-qr" id="altaBig">${qrSvg(url, 320)}</div><p class="hint">${esc(t('altaPoster3'))}</p></div>
+    <div class="actions"><button type="button" class="btn primary grow" data-close>${esc(t('dupDone'))}</button></div>`);
+  return el;
+}
 function printAltaQr(url){
   const w = window.open('', '_blank'); if(!w){ toast(t('altaPopup')); return; }
   w.document.write(`<!doctype html><meta charset="utf-8"><title>${esc(t('altaPrintTitle'))}</title><style>body{font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;text-align:center;margin:40px}h1{font-size:40px;margin:0 0 10px}p{font-size:22px;margin:8px 0}.s{color:#555;font-size:16px}</style>
@@ -3687,9 +3695,10 @@ function openSettings(focusSync){
       const url = altaUrl();
       if(!url){ box.innerHTML = altaSettings().wa ? `<div class="msg err">${esc(t('altaBadWa'))}</div>` : ''; return; }
       try{ await loadQr(); }catch(e){ box.innerHTML = `<div class="msg err">${esc(t('altaNoQr'))}</div>`; return; }
-      box.innerHTML = `<div class="alta-qr">${qrSvg(url, 220)}</div><p class="hint" style="word-break:break-all">${esc(url)}</p>
-        <div class="actions" style="margin-top:6px"><button type="button" class="btn small primary" id="altaPrint">${esc(t('altaPrint'))}</button><button type="button" class="btn small" id="altaCopy">${esc(t('copyLink'))}</button><a class="btn small" href="${esc(url)}" target="_blank" rel="noopener">${esc(t('altaTry'))}</a></div>`;
+      box.innerHTML = `<button type="button" class="btn primary" id="altaShow">${esc(t('altaShow'))}</button><p class="hint" style="word-break:break-all">${esc(url)}</p>
+        <div class="actions" style="margin-top:6px"><button type="button" class="btn small" id="altaPrint">${esc(t('altaPrint'))}</button><button type="button" class="btn small" id="altaCopy">${esc(t('copyLink'))}</button><a class="btn small" href="${esc(url)}" target="_blank" rel="noopener">${esc(t('altaTry'))}</a></div>`;
       $('#altaPrint', box).onclick = () => printAltaQr(url);
+      $('#altaShow', box).onclick = () => showAltaQr(url);
       $('#altaCopy', box).onclick = async () => { try{ await navigator.clipboard.writeText(url); toast(t('copied')); }catch(e){ toast(url); } };
     };
     altaDraw();
