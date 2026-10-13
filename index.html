@@ -365,6 +365,7 @@ a.btn{display:inline-flex;align-items:center;gap:8px;text-decoration:none}
 .seg input:checked+span.unclear{background:var(--unclear-soft);border-color:var(--unclear);color:var(--unclear)}
 .seg input:checked+span.partial{background:var(--partial-soft);border-color:var(--partial);color:var(--partial)}
 .seg input:focus-visible+span{outline:2px solid var(--accent)}
+.row-name .flag,.flag-check .flag{color:var(--accent);vertical-align:-1px;margin-left:5px;flex:none} .flag-check .flag{margin:0 2px 0 0}
 .check{display:flex;gap:9px;align-items:flex-start;font-size:14.5px;margin-bottom:12px}
 .check input{width:20px;height:20px;margin-top:1px;flex:none;accent-color:var(--accent)}
 .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
@@ -686,6 +687,7 @@ const I18N = {
   altaFrom:['Alta por QR del {0}: revisá los datos y elegí estacionamiento, lugar y monto.','Sign-up by QR on {0}: check the data and choose parking lot, space and amount.'],
   altaExists:['{0} ya está cargado: se abrió su ficha.','{0} is already in the list: their card is open.'], altaBroken:['El enlace de alta está incompleto.','The sign-up link is incomplete.'],
   copied:['Copiado.','Copied.'],
+  flagCust:['Marcar este cliente','Flag this customer'], flagged:['Marcado: revisar notas','Flagged: check notes'], flagHint:['Aparece una banderita azul junto al nombre, para acordarse de revisar las notas.','A small blue flag appears next to the name, as a reminder to check the notes.'],
   payKind:['Forma de pago','Payment method'], pay_mp:['Mercado Pago','Mercado Pago'], pay_cash:['Efectivo','Cash'], pay_transfer:['Transferencia bancaria','Bank transfer'],
   payShort_mp:['MP','MP'], payShort_cash:['Efectivo','Cash'], payShort_transfer:['Transf.','Transfer'],
   areaPark:['Estacionamientos','Parking'], areaSaldo:['Saldo','Balance'], salTotal:['Saldo total de {0}','Total balance for {0}'], salOpen:['Ver','Open'],
@@ -1240,7 +1242,7 @@ function rowHtml(c, s, p, similar){
   else acts = btn('unpaid','back','↩',t('actBack'));
   return `<li class="row${s !== 'paid' && p && p.r2 ? ' warned' : ''}" data-id="${esc(c.id)}">
     <button type="button" class="row-main" data-act="open" title="${esc(t('editCustomer'))}">
-      <span class="row-name">${esc(c.name)}${platesHtml(c)}${badges}</span>
+      <span class="row-name">${esc(c.name)}${c.flag ? flagIcon() : ''}${platesHtml(c)}${badges}</span>
       ${bits.length ? `<span class="row-sub">${bits.join(' · ')}</span>` : ''}${progressHtml(c, s, p)}${alias}${note}
     </button>
     <div class="row-actions">${wa}${acts}</div></li>`;
@@ -2010,6 +2012,8 @@ function monthOptions(selected, withNone){
 const lotOptions = sel => lotsList().concat(state.lots[NO_LOT]).map(l => `<option value="${esc(l.id)}"${l.id === sel ? ' selected' : ''}>${esc(lotLabel(l))}</option>`).join('');
 
 /* one sheet for everything about a customer: this month's payment, earlier months, customer details */
+/* a customer can be flagged: a small blue flag next to the name, a reminder to look at the notes again */
+const flagIcon = () => `<svg class="flag" viewBox="0 0 16 16" width="14" height="14" role="img" aria-label="${esc(t('flagged'))}"><title>${esc(t('flagged'))}</title><path d="M3 1.5v13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M3.8 2.2h8.7l-2.2 3.3 2.2 3.3H3.8z" fill="currentColor"/></svg>`;
 function openCustomer(cid, pre){
   const c = cid ? state.customers[cid] : null;
   pre = pre || null;                      /* a registration from the QR code: data typed by the customer */
@@ -2069,6 +2073,7 @@ function openCustomer(cid, pre){
       <div class="field"><label for="cy">${esc(t('payKind'))}</label><select id="cy"><option value="">—</option>${PAY_KINDS.map(k => `<option value="${k}"${payKind === k ? ' selected' : ''}>${esc(t('pay_' + k))}</option>`).join('')}</select></div>
       ${c ? `<p style="margin:-2px 0 12px"><a class="btn small wa${s !== 'paid' && p.r ? ' sent' : ''}" id="waGo" href="#" target="_blank" rel="noopener">${WA_ICON}<span>${esc(t(s === 'paid' ? 'waOpen' : p.r ? 'waBtn2' : 'waBtn'))}</span></a></p><div id="waMsg"></div>` : ''}
       <div class="field"><label for="co">${esc(t('note'))}</label><textarea id="co">${esc(c ? c.note || '' : '')}</textarea></div>
+      <label class="check flag-check"><input type="checkbox" id="cg"${c && c.flag ? ' checked' : ''}><span>${flagIcon()} ${esc(t('flagCust'))}<span class="hint" style="display:block">${esc(t('flagHint'))}</span></span></label>
       <div class="two">
         <div class="field"><label for="cf">${esc(t('paysFrom'))}</label><select id="cf">${monthOptions(c ? c.from : month, false)}</select></div>
         <div class="field"><label for="cu">${esc(t('lastMonth'))}</label><select id="cu">${monthOptions(c ? c.until || '' : '', true)}</select></div>
@@ -2180,8 +2185,8 @@ function openCustomer(cid, pre){
         setPayment(id, m, ns === 'unpaid' ? { s: ns, n: o.n } : { s: ns, a: ns === 'paid' ? (amount ? Math.max(amount, o.a || 0) : o.a) : o.a, d: o.d, p: o.p, n: o.n, x: o.x });
       }
     }
-    const next = { id, lot: f('cl').value, name, plate: car.plate, spot: car.spot, amount, cars: car.cars, aliases, phone: f('cp').value.trim(), note: f('co').value.trim(), from, until, pay: f('cy').value || undefined };
-    const prev = c && { id: c.id, lot: c.lot, name: c.name, plate: c.plate || '', spot: c.spot || '', amount: c.amount || 0, cars: c.cars && c.cars.length ? c.cars : undefined, aliases: c.aliases || [], phone: c.phone || '', note: c.note || '', from: c.from || '', until: c.until || '', pay: c.pay || undefined };
+    const next = { id, lot: f('cl').value, name, plate: car.plate, spot: car.spot, amount, cars: car.cars, aliases, phone: f('cp').value.trim(), note: f('co').value.trim(), from, until, pay: f('cy').value || undefined, flag: f('cg').checked || undefined };
+    const prev = c && { id: c.id, lot: c.lot, name: c.name, plate: c.plate || '', spot: c.spot || '', amount: c.amount || 0, cars: c.cars && c.cars.length ? c.cars : undefined, aliases: c.aliases || [], phone: c.phone || '', note: c.note || '', from: c.from || '', until: c.until || '', pay: c.pay || undefined, flag: c.flag || undefined };
     if(!prev || canon(prev) !== canon(next)) state.customers[id] = Object.assign(next, { t: Date.now() });
     closeModal(el); commit();
   };
@@ -2353,6 +2358,8 @@ function mergeCustomers(keepId, otherIds, mode){
     before.cust[o.id] = Object.assign({}, o);
     addAlias(o.name); (o.aliases || []).forEach(addAlias);
     if(!next.phone && o.phone) next.phone = o.phone;
+    if(!next.pay && o.pay) next.pay = o.pay;
+    if(o.flag) next.flag = true;
     next.note = uniqBy([next.note, o.note].map(v => String(v || '').trim()), norm).join(' · ');
     next.from = next.from && o.from ? (o.from < next.from ? o.from : next.from) : '';
     next.until = next.until && o.until ? (o.until > next.until ? o.until : next.until) : '';
