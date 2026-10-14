@@ -116,3 +116,7 @@ Der Token wird nur an `api.github.com` gesendet.
 ## Por hora (work.castcomercial.com)
 
 Unter der Auswahl der Parkanlagen schaltet „Mensual / Por hora“ zwischen den Monatskunden und den Parkvorgängen nach Stunden um. „Por hora“ liest die Dateien `<lot>/<YYYY-MM>.json` aus dem privaten Repo `lucashcandido/castcomercial-work-data`, das die Geräte an den Einfahrten (work.castcomercial.com) schreiben. Angezeigt werden die Fahrzeuge, die gerade drin sind, und die abgeschlossenen Parkvorgänge des Monats mit Dauer und Preis (`p`, sobald es Tarife gibt). Der Token der App braucht dafür zusätzlich Lesezugriff auf `castcomercial-work-data`.
+
+### Entradas: Code statt Token
+
+In den Ajustes gibt es unter „Entradas (work.castcomercial.com)“ eine Stelle, an der der Administrator einmal den Token der Einfahrten einfügt. Die App prüft, dass dieser Token nur `castcomercial-work-data` erreicht und nicht die Kundendaten. Danach verschlüsselt sie Repo und Token mit einem 12-stelligen Code und legt das Ergebnis als `work-access.json` in diesem Repo ab. Der Code wird mit den Einstellungen synchronisiert. Für jede Parkanlage gibt es einen QR-Code (`work.castcomercial.com/#c=CODE&l=lotN`), mit dem ein Gerät an der Einfahrt in einem Schritt eingerichtet wird. Wird der Token ersetzt, bleibt der Code gleich, und die Geräte holen sich den neuen Token selbst.

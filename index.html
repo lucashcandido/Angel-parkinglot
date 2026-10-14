@@ -688,6 +688,20 @@ const I18N = {
   wdChartEmptyD:['Sin retiros en este mes.','No withdrawals this month.'], wdTotM:['Total de {0}','Total for {0}'],
   salChartD:['Totales del mes, sumados día a día (estacionamientos + bar)','Month totals, added up day by day (parking + bar)'], salUpTo:['Hasta el {0}','Up to {0}'], wdChartEmpty:['Sin retiros en estos 12 meses.','No withdrawals in these 12 months.'], wdTot12:['Total 12 meses','12-month total'], wdEmpty:['Sin retiros este mes.','No withdrawals this month.'], wdDeleted:['Retiro eliminado.','Withdrawal deleted.'],
   wdLeft:['Queda después de los retiros','Left after withdrawals'], wdAfter:['Retiros personales: {0} · queda {1}','Personal withdrawals: {0} · left {1}'],
+  wkTitle:['Entradas (work.castcomercial.com)','Entrances (work.castcomercial.com)'],
+  wkIntro:['Los dispositivos de las entradas registran patente y hora. No tienen acceso a esta app ni a los datos de clientes.','The entrance devices record plate and time. They have no access to this app or to customer data.'],
+  wkAdmin_html:['<b>Una sola vez, el administrador:</b> pegá el token creado solo para <code>{0}</code> (Contents: Read and write). Se guarda cifrado; después alcanza con el código.','<b>Once, by the administrator:</b> paste the token created only for <code>{0}</code> (Contents: Read and write). It is stored encrypted; afterwards the code is enough.'],
+  wkTokLbl:['Token de las entradas','Entrance token'], wkMake:['Crear código para las entradas','Create code for the entrances'],
+  wkErrTok:['Este token no puede escribir en {0}. Revisá «Repository access» y «Contents: Read and write».','This token cannot write to {0}. Check “Repository access” and “Contents: Read and write”.'],
+  wkErrWide:['Este token también puede ver los datos de clientes. Por seguridad creá uno nuevo SOLO para {0}.','This token can also see the customer data. For safety create a new one ONLY for {0}.'],
+  wkErrPub:['El repositorio {0} es público: tiene que ser privado.','The repository {0} is public: it has to be private.'],
+  wkErrSave:['No se pudo guardar el archivo cifrado ({0}).','Could not save the encrypted file ({0}).'],
+  wkCode:['Código de las entradas','Entrance code'],
+  wkHow:['Para preparar un dispositivo de entrada: abrí el QR del estacionamiento y escanealo con la cámara de ese dispositivo. O abrí work.castcomercial.com en él, elegí el estacionamiento y escribí el código.','To set up an entrance device: open the QR code of the parking lot and scan it with that device’s camera. Or open work.castcomercial.com on it, choose the parking lot and type the code.'],
+  wkQr:['QR {0}','QR {0}'], wkQrTitle:['Entrada {0}','Entrance {0}'], wkQrText:['Escaneá este código con la cámara del dispositivo de la entrada.','Scan this code with the camera of the entrance device.'],
+  wkQrHint:['No lo compartas con los empleados: con este QR se prepara un dispositivo.','Do not share it with the staff: this QR code sets up a device.'],
+  wkNewTok:['Cambiar el token (el código sigue igual)','Replace the token (the code stays the same)'],
+  wkDone:['Listo. Los dispositivos ya se pueden preparar con el código.','Done. Devices can now be set up with the code.'],
   altaTitle:['Alta de clientes por QR','Customer sign-up by QR code'], altaShow:['Mostrar código QR','Show QR code'], altaNeedWa:['Primero escribí arriba el número de WhatsApp que recibe las altas; después se puede mostrar el código.','First enter the WhatsApp number that receives sign-ups above; then the code can be shown.'],
   altaIntro:['Imprimí el código y colgalo en el estacionamiento. El cliente lo escanea, completa nombre, teléfono, patente y forma de pago, y nos lo manda por WhatsApp. Tocando el enlace del mensaje, el cliente se carga acá (lugar «?»).','Print the code and put it up at the parking lot. The customer scans it, fills in name, phone, plate and how they pay, and sends it to us via WhatsApp. Tapping the link in that message loads the customer here (place "?").'],
   altaWa:['Número de WhatsApp que recibe las altas','WhatsApp number that receives sign-ups'], altaBadWa:['Ese número no sirve para WhatsApp; revisalo (con código de área).','That number does not work for WhatsApp; check it (with area code).'],
@@ -3716,7 +3730,8 @@ function altaCheck(){
 }
 addEventListener('hashchange', altaCheck);
 function openSettings(focusSync){
-  let acNote = '';
+  let acNote = '', wkNote = '';
+  const wkForm = () => `<div class="field" style="margin-top:8px"><label for="wkTok">${esc(t('wkTokLbl'))}</label><input id="wkTok" type="password" autocomplete="off" placeholder="github_pat_…"></div><button type="button" class="btn primary" id="wkMake">${esc(t('wkMake'))}</button>`;
   const el = openModal(`<div class="sheet-head"><h2>${esc(t('settings'))}</h2>${closeX()}</div><div id="setBody"></div>`);
   const draw = () => {
     const lots = lotsList();
@@ -3733,6 +3748,17 @@ function openSettings(focusSync){
         <div class="field"><label for="sAltaWa">${esc(t('altaWa'))}</label><input id="sAltaWa" type="tel" autocomplete="off" value="${esc(altaSettings().wa)}" placeholder="11 5555-0000"></div>
         <div id="altaQr"></div>
       </div>
+
+      ${cfg ? `<div class="sec" id="wkSec">
+        <h3>${esc(t('wkTitle'))}</h3>
+        <p class="hint" style="margin-top:0">${esc(t('wkIntro'))}</p>
+        ${workCode() ? `<p style="margin-bottom:4px"><b>${esc(t('wkCode'))}</b></p><div class="code" id="wkCode">${esc(showCode(workCode()))}</div>
+          <p class="hint">${esc(t('wkHow'))}</p>
+          <div class="actions" style="margin-top:8px">${lotsList().map(l => `<button type="button" class="btn small primary" data-wkqr="${esc(l.id)}">${esc(t('wkQr', lotLabel(l)))}</button>`).join('')}</div>
+          <details style="margin-top:10px"><summary>${esc(t('wkNewTok'))}</summary>${wkForm()}</details>`
+        : `<p>${t('wkAdmin_html', esc(WORK_REPO.split('/')[1]))}</p>${wkForm()}`}
+        <div id="wkMsg">${wkNote}</div>
+      </div>` : ''}
 
       <div class="sec" id="syncSec">
         <h3>${esc(t('syncTitle'))}</h3>
@@ -3838,6 +3864,21 @@ function openSettings(focusSync){
     const altaSave = () => { const inp = $('#sAltaWa', el); if(!inp) return; const wa = inp.value.trim(); if(wa !== altaSettings().wa){ state.settings.alta = { wa, t: Date.now() }; commit(); } altaDraw(); };
     $('#sAltaWa', el).oninput = () => { clearTimeout(altaT); altaT = setTimeout(altaSave, 500); };      /* the button appears while typing, no need to leave the field */
     $('#sAltaWa', el).onchange = () => { clearTimeout(altaT); altaSave(); };
+    if($('#wkMake', el)) $('#wkMake', el).onclick = async () => {
+      const tok = $('#wkTok', el).value.trim(), btn = $('#wkMake', el);
+      if(!tok){ wkNote = `<div class="msg err">${esc(t('errNoToken'))}</div>`; draw(); return; }
+      btn.disabled = true; $('#wkMsg', el).innerHTML = `<div class="msg">${esc(t('checking'))}</div>`;
+      const r = await setupWork(tok);
+      wkNote = r ? `<div class="msg err">${esc(r)}</div>` : `<div class="msg good">${esc(t('wkDone'))}</div>`;
+      draw();
+    };
+    $$('[data-wkqr]', el).forEach(b => b.onclick = async () => {
+      try{ await loadQr(); }catch(e){ toast(t('altaNoQr')); return; }
+      const l = state.lots[b.dataset.wkqr], url = WORK_URL + '#c=' + showCode(workCode()) + '&l=' + encodeURIComponent(l.id);
+      openModal(`<div class="sheet-head"><h2>${esc(t('wkQrTitle', lotLabel(l)))}</h2>${closeX()}</div>
+        <div class="alta-big"><p>${esc(t('wkQrText'))}</p><div class="alta-qr" id="wkBig">${qrSvg(url, 320)}</div><p class="hint">${esc(t('wkQrHint'))}</p></div>
+        <div class="actions"><button type="button" class="btn primary grow" data-close>${esc(t('dupDone'))}</button></div>`);
+    });
     $('#lotAdd', el).onclick = () => {
       const id = 'lot_' + uid(), order = Math.max(0, ...Object.values(state.lots).map(l => l.order || 0)) + 1;
       state.lots[id] = { id, name: t('lotN', lotsList().length + 1), order, t: Date.now() }; commit(); draw();
@@ -4223,6 +4264,36 @@ async function publishAccess(code){
   }catch(e){ return { ok:false, text }; }
 }
 
+/* ---------- entrance devices (work.castcomercial.com) ----------
+   Same idea as the access code above, but for a separate, limited token that can only reach the stays repository.
+   The app encrypts {repo, token} with its own code and publishes work-access.json in the app repository; an entrance
+   device downloads it, decrypts it with the code and never sees anything else. The code itself stays in the synced
+   settings, so every owner's device can show it and the QR codes. */
+const WORK_URL = 'https://work.castcomercial.com/', WORK_ACCESS_FILE = 'work-access.json';
+const workCode = () => { const w = state.settings && state.settings.work; return w && w.code ? cleanCode(w.code) : ''; };
+async function setupWork(tok){
+  const conf = { repo: WORK_REPO, token: tok };
+  try{
+    const r = await gh(conf, `/repos/${WORK_REPO}`);
+    if(!r.ok) return t('wkErrTok', WORK_REPO.split('/')[1]);
+    const info = await r.json();
+    if(info.private === false) return t('wkErrPub', WORK_REPO.split('/')[1]);
+    if(info.permissions && info.permissions.push === false) return t('wkErrTok', WORK_REPO.split('/')[1]);
+    const wide = await gh(conf, `/repos/${cfg.repo}`);          /* the entrance token must not reach the customer data */
+    if(wide.ok) return t('wkErrWide', WORK_REPO.split('/')[1]);
+  }catch(e){ return t('eNet'); }
+  const code = workCode() || newCode(), text = JSON.stringify(await sealAccess(code, conf)), path = `/repos/${APP_REPO}/contents/${WORK_ACCESS_FILE}`;
+  try{
+    const got = await gh(cfg, path);
+    if(!got.ok && got.status !== 404) return t('wkErrSave', 'HTTP ' + got.status);
+    const body = { message:'Update entrance access file', content: b64enc(text) };
+    if(got.ok) body.sha = (await got.json()).sha;
+    const put = await gh(cfg, path, { method:'PUT', body: JSON.stringify(body) });
+    if(!put.ok) return t('wkErrSave', 'HTTP ' + put.status);
+  }catch(e){ return t('eNet'); }
+  if(code !== workCode()){ state.settings.work = { code, t: Date.now() }; commit(); }
+  return '';
+}
 const accessCode = () => { const a = state.settings && state.settings.access; return a && a.code ? cleanCode(a.code) : ''; };
 function setAccessCode(code){ state.settings.access = { code, t: Date.now() }; commit(); }
 /* The code a device has used is kept, so it can fetch a replaced token by itself later on. */
