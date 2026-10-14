@@ -3547,14 +3547,14 @@ function openImport(){
    (#alta=...) which, when tapped by the owners, opens the new-customer window already filled in. */
 const altaSettings = () => { const a = (state.settings && state.settings.alta) || {}; return { wa: a.wa || '' }; };
 const PAY_KINDS = ['mp', 'cash', 'transfer'];
-const REG_URL = 'https://reg.castcomercial.com/', REG_DEFAULT_TO = '5491178170831';
+const REG_URL = 'https://reg.castcomercial.com/', REG_DEFAULT_TO = '5491178170831', REG_LOTS = 'Lope de Vega|Bolivia|Condarco';
 function altaUrl(){
   const wa = altaSettings().wa; if(!wa) return '';
   const num = waNumber(wa, waSettings().area); if(!num) return '';
   const q = new URLSearchParams();           /* reg.castcomercial.com has the business number built in */
   if(num !== REG_DEFAULT_TO) q.set('to', num);
   const names = lotsList().map(l => (!l.t && /^Parkanlage \d+$/.test(l.name)) ? 'Estacionamiento ' + l.order : l.name).filter(Boolean);    /* the parking lots as they are now, always in Spanish */
-  if(names.length) q.set('e', names.join('|'));
+  if(names.length && names.join('|') !== REG_LOTS) q.set('e', names.join('|'));      /* the form already knows the three lots; only other names go into the code */
   return REG_URL + (q.toString() ? '?' + q.toString() : '');
 }
 let qrReady = null;
