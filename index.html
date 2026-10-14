@@ -725,7 +725,10 @@ const I18N = {
   hrNoSync:['Para ver los estacionamientos por hora, primero conectá la sincronización en los ajustes.','To see hourly parking, connect sync in the settings first.'],
   hrNoAccess_html:['El token no tiene acceso a <code>{0}</code>. En GitHub: Settings → Developer settings → Fine-grained tokens → abrí el token de la app → «Repository access» → agregá <code>{1}</code> (Contents: Read) → Update.','The token has no access to <code>{0}</code>. On GitHub: Settings → Developer settings → Fine-grained tokens → open the app token → “Repository access” → add <code>{1}</code> (Contents: Read) → Update.'],
   hrErr:['No se pudieron cargar los datos por hora ({0}).','Could not load the hourly data ({0}).'],
-  hrUpd:['Actualizado {0}','Updated {0}'], hrRefresh:['Actualizar','Refresh'],
+  hrUpd:['Actualizado {0}','Updated {0}'],
+  hrDel:['Borrar (prueba)','Delete (test)'], hrDelAll:['Borrar todas las pruebas {0} ({1})','Delete all tests {0} ({1})'],
+  hrDelTitle:['¿Borrar prueba?','Delete test?'], hrDelText:['{0} entradas con la patente {1} se borran (también en los dispositivos de las entradas).','{0} entries with plate {1} will be deleted (also on the entrance devices).'],
+  hrDelDone:['Pruebas borradas.','Tests deleted.'], hrDelErr:['No se pudo borrar ({0}).','Could not delete ({0}).'], hrRefresh:['Actualizar','Refresh'],
   costFixL:['Costos fijos','Fixed costs'], costVarL:['Costos variables','Variable costs'], costAll:['Gastos de {0}','Expenses for {0}'],
   costAddFix:['+ Costo fijo','+ Fixed cost'], costAddVar:['+ Costo variable','+ Variable cost'],
   costKindFix:['Fijo (todos los meses)','Fixed (every month)'], costKindVar:['Variable (una vez)','Variable (one-off)'],
@@ -1599,6 +1602,34 @@ function hourStays(lot){
   ins.sort((a, b) => a.in - b.in); outs.sort((a, b) => b.out - a.out);
   return { ins, outs };
 }
+/* stays with the test plate can be deleted (only those: real stays stay untouchable). Deleting = del:true with a newer
+   time, the same way the entrance devices merge, so they drop it as well. */
+const TEST_PLATE = 'AB123CD';
+const isTestStay = x => String(x.k || '').toUpperCase().replace(/[^A-Z0-9]/g, '') === TEST_PLATE;
+async function delTestStays(id){
+  const { ins, outs } = hourStays(ui.lot), list = ins.concat(outs).filter(x => isTestStay(x) && (!id || x.id === id));
+  if(!list.length || !cfg) return;
+  if(!await confirmBox(t('hrDelTitle'), t('hrDelText', list.length, fmtPlate(TEST_PLATE)), t('del'), true)) return;
+  const byFile = {};
+  for(const x of list){ const f = x.lot + '/' + ym(x.in); (byFile[f] = byFile[f] || []).push(x.id); }
+  try{
+    for(const f of Object.keys(byFile)){
+      for(let tries = 0; ; tries++){
+        const path = `/repos/${WORK_REPO}/contents/${f}.json`, got = await gh(cfg, path);
+        if(!got.ok) throw new Error('HTTP ' + got.status);
+        const j = await got.json(), o = JSON.parse(b64dec(j.content) || '{}'), now = Date.now();
+        o.s = o.s || {};
+        for(const sid of byFile[f]) if(o.s[sid]) o.s[sid] = Object.assign({}, o.s[sid], { del: true, t: now });
+        const put = await gh(cfg, path, { method: 'PUT', body: JSON.stringify({ message: 'Delete test stays ' + f, sha: j.sha, content: b64enc(JSON.stringify(o)) }) });
+        if(put.ok){ work.files[f] = o.s; break; }
+        if((put.status !== 409 && put.status !== 422) || tries >= 2) throw new Error('HTTP ' + put.status);
+      }
+    }
+    toast(t('hrDelDone'));
+  }catch(e){ toast(t('hrDelErr', e.message)); }
+  renderTabs(); renderLists();
+}
+const ym = ts => { const d = new Date(ts); return d.getFullYear() + '-' + pad2(d.getMonth() + 1); };
 const hrDur = ms => { const mi = Math.max(0, Math.floor(ms / 60000)), h = Math.floor(mi / 60); return h ? h + ' h ' + pad2(mi % 60) + ' min' : mi + ' min'; };
 async function loadWork(force){
   if(!cfg || !cfg.token){ work.status = 'nosync'; if(ui.bill === 'hour') renderLists(); return; }
@@ -1631,6 +1662,7 @@ async function loadWork(force){
 setInterval(() => { if(document.visibilityState === 'visible' && ui.area === 'park' && ui.bill === 'hour' && ui.parkView !== 'out' && !$('#hourView').hidden){ loadWork(); renderTabs(); renderLists(); } }, 30000);
 function renderHour(){
   const { ins, outs } = hourStays(ui.lot), cur = ui.month === curMonth(), now = Date.now(), all = ui.lot === 'all';
+  const nTest = ins.concat(outs).filter(isTestStay).length;
   const priced = outs.filter(x => typeof x.p === 'number'), total = round2(priced.reduce((s, x) => s + x.p, 0));
   const lotName = id => { const l = state.lots[id]; return l ? lotLabel(l) : id; };
   const note = work.status === 'nosync' ? `<div class="msg err">${esc(t('hrNoSync'))}</div>`
@@ -1644,14 +1676,15 @@ function renderHour(){
       <div class="saldo"><span>${esc(t('hrSum'))}</span><b id="hrSum">${priced.length ? esc(fmtMoney(total)) : '–'}</b></div>
     </div>
     ${note ? `<div style="margin-top:10px">${note}</div>` : ''}
-    <div class="hint" style="margin-top:8px;display:flex;align-items:center;gap:10px">${work.at ? esc(t('hrUpd', fmtTime(work.at))) : ''}<button type="button" class="link" id="hrRefresh" style="margin-left:auto">${esc(t('hrRefresh'))}</button></div>`;
+    <div class="hint" style="margin-top:8px;display:flex;align-items:center;gap:10px">${work.at ? esc(t('hrUpd', fmtTime(work.at))) : ''}${nTest > 1 ? `<button type="button" class="link" data-hrdel="*" style="color:var(--unpaid)">${esc(t('hrDelAll', fmtPlate(TEST_PLATE), nTest))}</button>` : ''}<button type="button" class="link" id="hrRefresh" style="margin-left:auto">${esc(t('hrRefresh'))}</button></div>`;
+  const delBtn = x => `<div class="row-actions"><button type="button" class="ib no" data-hrdel="${esc(x.id)}" aria-label="${esc(t('hrDel'))}" title="${esc(t('hrDel'))}">🗑</button></div>`;
   const day = ts => fmtDate(new Date(ts).getFullYear() + '-' + pad2(new Date(ts).getMonth() + 1) + '-' + pad2(new Date(ts).getDate()));
   const rowIn = x => `<li class="row"><div class="row-main"><span class="row-name"><span class="plate" style="margin-left:0">${esc(x.k)}</span>${all ? ` <span class="badge">${esc(lotName(x.lot))}</span>` : ''}</span>
       <span class="row-sub">${esc(t('hrSince', (day(x.in) !== day(now) ? day(x.in) + ' ' : '') + fmtTime(x.in)))}</span></div>
-      <div class="row-amt hr-live">${esc(hrDur(now - x.in))}</div></li>`;
+      <div class="row-amt hr-live">${esc(hrDur(now - x.in))}</div>${isTestStay(x) ? delBtn(x) : ''}</li>`;
   const rowOut = x => `<li class="row"><div class="row-main"><span class="row-name"><span class="plate" style="margin-left:0">${esc(x.k)}</span>${all ? ` <span class="badge">${esc(lotName(x.lot))}</span>` : ''}</span>
       <span class="row-sub"><b class="row-date">${esc(day(x.out))}</b> · ${esc(fmtTime(x.in))} – ${esc(fmtTime(x.out))} · ${esc(hrDur(x.out - x.in))}</span></div>
-      <div class="row-amt${typeof x.p === 'number' ? ' pos' : ' none'}" title="${typeof x.p === 'number' ? '' : esc(t('hrNoPrice'))}">${typeof x.p === 'number' ? esc(fmtMoney(x.p)) : '–'}</div></li>`;
+      <div class="row-amt${typeof x.p === 'number' ? ' pos' : ' none'}" title="${typeof x.p === 'number' ? '' : esc(t('hrNoPrice'))}">${typeof x.p === 'number' ? esc(fmtMoney(x.p)) : '–'}</div>${isTestStay(x) ? delBtn(x) : ''}</li>`;
   const col = (cls, title, items, empty, foot) => `<section class="card col active ${cls}">
       <div class="col-head"><span class="mark"></span><span>${esc(title)}</span><span class="cnt">${items.length}</span></div>
       ${items.length ? '<ul>' + items.join('') + '</ul>' : `<div class="empty">${esc(empty)}</div>`}${foot || ''}</section>`;
@@ -4389,7 +4422,10 @@ $('#login').addEventListener('click', e => {
   if(e.target.id === 'codeAdmin') openSettings(true);
 });
 $('#billView').addEventListener('click', e => { const b = e.target.closest('[data-bill]'); if(!b) return; ui.bill = b.dataset.bill === 'hour' ? 'hour' : 'month'; if(ui.bill === 'hour' && ui.lot === NO_LOT) ui.lot = 'all'; saveUi(); render(); if(ui.bill === 'hour') loadWork(); });
-$('#hourLists').addEventListener('click', e => { if(e.target.closest('#hrRefresh')) loadWork(true); });
+document.addEventListener('click', e => {
+  if(e.target.closest('#hrRefresh')) loadWork(true);
+  const d = e.target.closest('[data-hrdel]'); if(d) delTestStays(d.dataset.hrdel === '*' ? null : d.dataset.hrdel);
+});
 $('#tabs').addEventListener('click', e => { const b = e.target.closest('[data-lot]'); if(!b) return; ui.lot = b.dataset.lot; saveUi(); render(); });
 $('#prev').onclick = () => { ui.month = addMonth(ui.month, -1); render(); };
 $('#next').onclick = () => { ui.month = addMonth(ui.month, 1); render(); };
