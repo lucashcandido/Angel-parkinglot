@@ -3547,10 +3547,11 @@ function openImport(){
    (#alta=...) which, when tapped by the owners, opens the new-customer window already filled in. */
 const altaSettings = () => { const a = (state.settings && state.settings.alta) || {}; return { wa: a.wa || '' }; };
 const PAY_KINDS = ['mp', 'cash', 'transfer'];
+const REG_URL = 'https://reg.castcomercial.com/', REG_DEFAULT_TO = '5491178170831';
 function altaUrl(){
   const wa = altaSettings().wa; if(!wa) return '';
   const num = waNumber(wa, waSettings().area); if(!num) return '';
-  return new URL('alta.html', location.href.split('#')[0]).href.replace(/\?.*$/, '') + '?to=' + num;
+  return REG_URL + (num === REG_DEFAULT_TO ? '' : '?to=' + num);          /* reg.castcomercial.com has the business number built in */
 }
 let qrReady = null;
 const loadQr = () => qrReady || (qrReady = new Promise((ok, no) => { if(window.qrcode) return ok(); const sc = document.createElement('script'); sc.src = 'qrcode.js'; sc.onload = () => ok(); sc.onerror = () => { qrReady = null; no(); }; document.head.appendChild(sc); }));
