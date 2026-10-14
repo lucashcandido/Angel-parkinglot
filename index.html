@@ -3551,7 +3551,11 @@ const REG_URL = 'https://reg.castcomercial.com/', REG_DEFAULT_TO = '549117817083
 function altaUrl(){
   const wa = altaSettings().wa; if(!wa) return '';
   const num = waNumber(wa, waSettings().area); if(!num) return '';
-  return REG_URL + (num === REG_DEFAULT_TO ? '' : '?to=' + num);          /* reg.castcomercial.com has the business number built in */
+  const q = new URLSearchParams();           /* reg.castcomercial.com has the business number built in */
+  if(num !== REG_DEFAULT_TO) q.set('to', num);
+  const names = lotsList().map(l => (!l.t && /^Parkanlage \d+$/.test(l.name)) ? 'Estacionamiento ' + l.order : l.name).filter(Boolean);    /* the parking lots as they are now, always in Spanish */
+  if(names.length) q.set('e', names.join('|'));
+  return REG_URL + (q.toString() ? '?' + q.toString() : '');
 }
 let qrReady = null;
 const loadQr = () => qrReady || (qrReady = new Promise((ok, no) => { if(window.qrcode) return ok(); const sc = document.createElement('script'); sc.src = 'qrcode.js'; sc.onload = () => ok(); sc.onerror = () => { qrReady = null; no(); }; document.head.appendChild(sc); }));
