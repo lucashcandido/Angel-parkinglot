@@ -102,6 +102,14 @@ h1,h2,h3,p{margin:0}
 .pview button{min-height:44px;border:1px solid var(--line);border-radius:11px;background:var(--card);color:var(--muted);font:inherit;font-size:15.5px;font-weight:700;cursor:pointer}
 .pview button.in.on{background:var(--paid-soft);border-color:var(--paid);color:var(--paid)}
 .pview button.out.on{background:var(--unpaid-soft);border-color:var(--unpaid);color:var(--unpaid)}
+.bview{display:inline-grid;grid-template-columns:1fr 1fr;gap:3px;padding:3px;margin:0 0 12px;border:1px solid var(--line);border-radius:11px;background:var(--soft)}
+.bview button{min-height:34px;padding:0 16px;border:0;border-radius:8px;background:none;color:var(--muted);font:inherit;font-size:14.5px;font-weight:700;cursor:pointer}
+.bview button.on{background:var(--card);color:var(--text);box-shadow:0 1px 3px rgba(16,24,40,.14)}
+.col.hin .mark{background:var(--accent)} .col.hin .col-head{background:var(--accent-soft)}
+.col.hout .mark{background:var(--paid)} .col.hout .col-head{background:var(--paid-soft)}
+.row-amt.none{color:var(--muted);font-weight:500}
+.hr-live{font-variant-numeric:tabular-nums}
+@media (max-width:560px){#hourLists.lists.duo{grid-template-columns:minmax(0,1fr)}}
 .btn.fix{color:var(--partial);border-color:var(--partial)} .btn.var{color:var(--unclear);border-color:var(--unclear)}
 #parkOut .toolbar .btn{flex:1 1 0}
 .col.fix .mark{background:var(--partial)} .col.fix .col-head{background:var(--partial-soft)}
@@ -133,7 +141,7 @@ h1,h2,h3,p{margin:0}
 .login .link{margin-top:18px;color:var(--muted)}
 .login .msg{text-align:left}
 .code{font:700 23px/1.3 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.08em;text-align:center;padding:12px 8px;border:1.5px dashed var(--muted);border-radius:12px;margin:8px 0;background:var(--card);-webkit-user-select:all;user-select:all}
-body.locked .tabs,body.locked .areas,body.locked .monthbar,body.locked #summary,body.locked .toolbar,body.locked #switch,body.locked #lists,body.locked #barView,body.locked #saldoView,body.locked #parkView,body.locked #parkOut{display:none}
+body.locked .tabs,body.locked .areas,body.locked .monthbar,body.locked #summary,body.locked .toolbar,body.locked #switch,body.locked #lists,body.locked #barView,body.locked #saldoView,body.locked #parkView,body.locked #parkOut,body.locked #billView,body.locked #hourView{display:none}
 
 .toolbar{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0 10px}
 .toolbar input{flex:1 1 240px;min-width:0}
@@ -463,9 +471,11 @@ code{background:var(--soft);border-radius:5px;padding:1px 5px;font-size:13.5px;o
   </section>
   <nav id="parkView" class="pview"></nav>
   <nav id="tabs" class="tabs"></nav>
+  <nav id="billView" class="bview" hidden></nav>
 
   <section id="summary" class="card summary"></section>
   <div id="banner"></div>
+  <section id="hourView" hidden><div id="hourLists" class="lists duo"></div></section>
 
   <section id="parkOut" hidden>
     <div class="toolbar">
@@ -692,6 +702,16 @@ const I18N = {
   payShort_mp:['MP','MP'], payShort_cash:['Efectivo','Cash'], payShort_transfer:['Transf.','Transfer'],
   areaPark:['Estacionamientos','Parking'], areaSaldo:['Saldo','Balance'], salTotal:['Saldo total de {0}','Total balance for {0}'], salOpen:['Ver','Open'],
   pvIn:['Ingresos','Income'], pvOut:['Gastos','Expenses'],
+  bvMonth:['Mensual','Monthly'], bvHour:['Por hora','Hourly'], bvAria:['Tipo de cliente','Customer type'],
+  hrTab:['{0} adentro','{0} inside'], hrTabDone:['{0} terminados','{0} finished'], hrTabDone1:['1 terminado','1 finished'],
+  hrIn:['Adentro ahora','Inside now'], hrOut:['Terminados','Finished'], hrInL:['Adentro ahora','Inside now'], hrOutL:['Terminados en {0}','Finished in {0}'],
+  hrSum:['Cobrado por hora','Hourly income'], hrNoPrice:['Precio: próximamente','Price: coming soon'],
+  hrEmptyIn:['No hay vehículos adentro.','No vehicles inside.'], hrEmptyOut:['Ningún estacionamiento terminado en este mes.','No finished stays this month.'],
+  hrSince:['desde las {0}','since {0}'], hrLoading:['Cargando datos de work.castcomercial.com…','Loading data from work.castcomercial.com…'],
+  hrNoSync:['Para ver los estacionamientos por hora, primero conectá la sincronización en los ajustes.','To see hourly parking, connect sync in the settings first.'],
+  hrNoAccess_html:['El token no tiene acceso a <code>{0}</code>. En GitHub: Settings → Developer settings → Fine-grained tokens → abrí el token de la app → «Repository access» → agregá <code>{1}</code> (Contents: Read) → Update.','The token has no access to <code>{0}</code>. On GitHub: Settings → Developer settings → Fine-grained tokens → open the app token → “Repository access” → add <code>{1}</code> (Contents: Read) → Update.'],
+  hrErr:['No se pudieron cargar los datos por hora ({0}).','Could not load the hourly data ({0}).'],
+  hrUpd:['Actualizado {0}','Updated {0}'], hrRefresh:['Actualizar','Refresh'],
   costFixL:['Costos fijos','Fixed costs'], costVarL:['Costos variables','Variable costs'], costAll:['Gastos de {0}','Expenses for {0}'],
   costAddFix:['+ Costo fijo','+ Fixed cost'], costAddVar:['+ Costo variable','+ Variable cost'],
   costKindFix:['Fijo (todos los meses)','Fixed (every month)'], costKindVar:['Variable (una vez)','Variable (one-off)'],
@@ -954,7 +974,7 @@ let rev = 0;
 const sync = { status: cfg ? 'pending' : 'local', msg:'', last:0, busy:false, again:false, timer:null };
 
 function saveLocal(){ if(!store.set(LS.data, state)) toast(t('storageFail')); }
-function saveUi(){ store.set(LS.ui, { lot:ui.lot, list:ui.list, sort:ui.sort, lang:ui.lang, area:ui.area, cur:ui.cur, fxCasa:ui.fxCasa }); }
+function saveUi(){ store.set(LS.ui, { lot:ui.lot, list:ui.list, sort:ui.sort, lang:ui.lang, area:ui.area, cur:ui.cur, fxCasa:ui.fxCasa, bill:ui.bill }); }
 function commit(){
   rev++;
   saveLocal(); store.set(LS.dirty, true);
@@ -1105,7 +1125,7 @@ function quickStatus(cid, s){
 }
 
 /* ---------- rendering ---------- */
-function render(){ ai = aiFromState(); renderLogin(); applyArea(); renderTabs(); renderMonth(); renderLists(); renderSync(); if(dupView) dupView(); if(altaPending || /#alta=/.test(location.hash)) setTimeout(altaCheck); }
+function render(){ if(ui.bill === 'hour' && ui.area === 'park' && ui.parkView !== 'out') setTimeout(loadWork); ai = aiFromState(); renderLogin(); applyArea(); renderTabs(); renderMonth(); renderLists(); renderSync(); if(dupView) dupView(); if(altaPending || /#alta=/.test(location.hash)) setTimeout(altaCheck); }
 
 function applyStatic(){
   document.documentElement.lang = ui.lang;
@@ -1129,9 +1149,13 @@ function setLang(l){
 
 function renderTabs(){
   const lots = lotsList();
-  if(hasNoLot()) lots.push(state.lots[NO_LOT]);          /* "?" gets its own tab as soon as someone is in it */
+  if(hasNoLot() && ui.bill !== 'hour') lots.push(state.lots[NO_LOT]);          /* "?" gets its own tab as soon as someone is in it */
   if(ui.lot !== 'all' && !lots.some(l => l.id === ui.lot)) ui.lot = lots[0] ? lots[0].id : 'all';
   const cell = (id, name) => {
+    if(ui.bill === 'hour'){                                       /* hourly: cars inside now / stays finished this month */
+      const st = hourStays(id), nIn = ui.month === curMonth() ? st.ins.length : 0;
+      return `<button type="button" class="tab${ui.lot === id ? ' on' : ''}" data-lot="${esc(id)}" aria-pressed="${ui.lot === id}"><b>${esc(name)}</b><small>${esc(nIn ? t('hrTab', nIn) : t(st.outs.length === 1 ? 'hrTabDone1' : 'hrTabDone', st.outs.length))}${nIn ? `<span class="open">${esc(t(st.outs.length === 1 ? 'hrTabDone1' : 'hrTabDone', st.outs.length))}</span>` : ''}</small></button>`;
+    }
     const cs = customersFor(id, ui.month);
     const paid = cs.filter(c => statusOf(c.id, ui.month) === 'paid').length;
     return `<button type="button" class="tab${ui.lot === id ? ' on' : ''}" data-lot="${esc(id)}" aria-pressed="${ui.lot === id}"${id === NO_LOT ? ` title="${esc(t('lotNone'))}" aria-label="${esc(t('lotNone'))}"` : ''}><b>${esc(name)}</b><small>${esc(t('tabCount', paid, cs.length))}${cs.length > paid ? `<span class="open">${esc(t('tabOpen', cs.length - paid))}</span>` : ''}</small></button>`;
@@ -1259,8 +1283,13 @@ function applyArea(){
   const bar = ui.area === 'bar', sal = ui.area === 'saldo';
   $('#barView').hidden = !bar; $('#saldoView').hidden = !sal; $('#parkView').hidden = sal;
   const out = !bar && !sal && ui.parkView === 'out';             /* parking: Ingresos (customers) or Gastos */
-  for(const sel of ['#tabs', '#parkTools', '#switch', '#lists']) $(sel).hidden = bar || out || sal;
+  const hour = !bar && !sal && !out && ui.bill === 'hour';     /* parking income: monthly customers or hourly stays from work.castcomercial.com */
+  $('#tabs').hidden = bar || out || sal;
+  for(const sel of ['#parkTools', '#switch', '#lists']) $(sel).hidden = bar || out || sal || hour;
   $('#parkOut').hidden = !out;
+  $('#billView').hidden = bar || out || sal; $('#hourView').hidden = !hour;
+  $('#billView').setAttribute('aria-label', t('bvAria'));
+  $('#billView').innerHTML = [['month', 'bvMonth'], ['hour', 'bvHour']].map(([k, key]) => `<button type="button" data-bill="${k}" class="${(ui.bill === 'hour' ? 'hour' : 'month') === k ? 'on' : ''}" aria-pressed="${(ui.bill === 'hour' ? 'hour' : 'month') === k}">${esc(t(key))}</button>`).join('');
   const view = (bar ? ui.barView : ui.parkView) || 'in';        /* the same Ingresos / Gastos buttons in both areas */
   $('#parkView').innerHTML = [['in', 'pvIn'], ['out', 'pvOut']].map(([k, key]) => `<button type="button" class="${k}${view === k ? ' on' : ''}" data-pview="${k}" aria-pressed="${view === k}">${esc(t(key))}</button>`).join('')
     + `<button type="button" class="pv-ov" id="pvOverview">${esc(t('barOverview'))}</button>`;
@@ -1532,6 +1561,89 @@ function renderCosts(){
       ${lists[k] ? '<ul>' + lists[k] + '</ul>' : `<div class="empty">${esc(t(k === 'fix' ? 'costEmptyFix' : 'costEmptyVar'))}</div>`}
       <div class="col-foot"><span>${esc(t('barTotal'))}</span><b class="neg">${esc(fmtMoney(sum[k]))}</b></div>
     </section>`).join('') + `<div class="card saldo-end"><span>${esc(t('costAll', fmtMonthLong(month)))}</span><span class="calc">${esc(fmtMoney(sum.fix))} + ${esc(fmtMoney(sum.var))} =</span><b class="neg" id="costEnd">${esc(fmtMoney(total))}</b></div>`;
+}
+/* ---------- hourly parking: the stays recorded at the entrance on work.castcomercial.com ----------
+   The workers' devices write <lot>/<YYYY-MM>.json into a separate private repository (they have no access to this app or
+   its data). The app only reads those files with its own token: { v, lot, name, month, s: { id: {id, k: plate, in, out?, p?: price, del?, t} } }.
+   A stay lives in the file of the month it started in, so the month before is loaded as well. */
+const WORK_REPO = 'lucashcandido/castcomercial-work-data';
+const work = { files: {}, status: '', msg: '', at: 0, busy: false };
+try{ Object.assign(work.files, JSON.parse(localStorage.getItem('apl.work.v1') || '{}')); }catch(e){}
+const workMonths = () => [ui.month, addMonth(ui.month, -1)];
+function hourStays(lot){
+  const ids = lot === 'all' ? lotsList().map(l => l.id) : [lot], seen = new Set(), ins = [], outs = [];
+  const m = ui.month, cur = m === curMonth();
+  for(const id of ids) for(const mm of [...workMonths(), ...(cur ? [addMonth(m, -2)] : [])]){
+    const f = work.files[id + '/' + mm]; if(!f) continue;
+    for(const st of Object.values(f)){
+      if(!st || st.del || !st.in || seen.has(st.id)) continue; seen.add(st.id);
+      const x = Object.assign({ lot: id }, st);
+      if(!st.out){ if(cur) ins.push(x); }
+      else if(new Date(st.out).getFullYear() + '-' + pad2(new Date(st.out).getMonth() + 1) === m) outs.push(x);
+    }
+  }
+  ins.sort((a, b) => a.in - b.in); outs.sort((a, b) => b.out - a.out);
+  return { ins, outs };
+}
+const hrDur = ms => { const mi = Math.max(0, Math.floor(ms / 60000)), h = Math.floor(mi / 60); return h ? h + ' h ' + pad2(mi % 60) + ' min' : mi + ' min'; };
+async function loadWork(force){
+  if(!cfg || !cfg.token){ work.status = 'nosync'; if(ui.bill === 'hour') renderLists(); return; }
+  if(work.busy || (!force && work.month === ui.month && Date.now() - work.at < 20000)) return;
+  work.busy = true; if(!work.at) { work.status = 'loading'; if(ui.bill === 'hour') renderLists(); }
+  try{
+    const lots = lotsList().map(l => l.id), months = workMonths().concat(ui.month === curMonth() ? [addMonth(ui.month, -2)] : []);
+    let missing = 0;
+    for(const lot of lots) for(const m of months){
+      const res = await gh(cfg, `/repos/${WORK_REPO}/contents/${lot}/${m}.json`);
+      if(res.status === 404){ missing++; delete work.files[lot + '/' + m]; continue; }
+      if(res.status === 401 || res.status === 403){ work.status = 'noaccess'; throw null; }
+      if(!res.ok){ work.status = 'err'; work.msg = 'HTTP ' + res.status; throw null; }
+      const j = await res.json(), o = JSON.parse(b64dec(j.content) || '{}');
+      work.files[lot + '/' + m] = o.s || {};
+    }
+    if(missing === lots.length * months.length){        /* everything missing: maybe the token cannot see the repository */
+      const r = await gh(cfg, `/repos/${WORK_REPO}`);
+      if(!r.ok){ work.status = r.status === 404 || r.status === 403 ? 'noaccess' : 'err'; work.msg = 'HTTP ' + r.status; throw null; }
+    }
+    work.status = 'ok'; work.at = Date.now(); work.month = ui.month;
+    try{ localStorage.setItem('apl.work.v1', JSON.stringify(work.files)); }catch(e){}
+  }catch(e){
+    if(e){ work.status = 'err'; work.msg = e.message || String(e); }
+    if(work.status === 'noaccess'){ work.files = {}; }
+  }
+  work.busy = false;
+  if(ui.area === 'park' && ui.bill === 'hour' && ui.parkView !== 'out'){ renderTabs(); renderLists(); }
+}
+setInterval(() => { if(document.visibilityState === 'visible' && ui.area === 'park' && ui.bill === 'hour' && ui.parkView !== 'out' && !$('#hourView').hidden){ loadWork(); renderTabs(); renderLists(); } }, 30000);
+function renderHour(){
+  const { ins, outs } = hourStays(ui.lot), cur = ui.month === curMonth(), now = Date.now(), all = ui.lot === 'all';
+  const priced = outs.filter(x => typeof x.p === 'number'), total = round2(priced.reduce((s, x) => s + x.p, 0));
+  const lotName = id => { const l = state.lots[id]; return l ? lotLabel(l) : id; };
+  const note = work.status === 'nosync' ? `<div class="msg err">${esc(t('hrNoSync'))}</div>`
+    : work.status === 'noaccess' ? `<div class="msg err">${t('hrNoAccess_html', esc(WORK_REPO), esc(WORK_REPO.split('/')[1]))}</div>`
+    : work.status === 'err' ? `<div class="msg err">${esc(t('hrErr', work.msg))}</div>`
+    : work.status === 'loading' && !work.at ? `<div class="msg">${esc(t('hrLoading'))}</div>` : '';
+  $('#summary').innerHTML = `
+    <div class="bar-sum">
+      ${cur ? `<div><span>${esc(t('hrInL'))}</span><b id="hrNIn">${ins.length}</b></div>` : ''}
+      <div><span>${esc(t('hrOutL', fmtMonthLong(ui.month)))}</span><b id="hrNOut">${outs.length}</b></div>
+      <div class="saldo"><span>${esc(t('hrSum'))}</span><b id="hrSum">${priced.length ? esc(fmtMoney(total)) : '–'}</b></div>
+    </div>
+    ${note ? `<div style="margin-top:10px">${note}</div>` : ''}
+    <div class="hint" style="margin-top:8px;display:flex;align-items:center;gap:10px">${work.at ? esc(t('hrUpd', fmtTime(work.at))) : ''}<button type="button" class="link" id="hrRefresh" style="margin-left:auto">${esc(t('hrRefresh'))}</button></div>`;
+  const day = ts => fmtDate(new Date(ts).getFullYear() + '-' + pad2(new Date(ts).getMonth() + 1) + '-' + pad2(new Date(ts).getDate()));
+  const rowIn = x => `<li class="row"><div class="row-main"><span class="row-name"><span class="plate" style="margin-left:0">${esc(x.k)}</span>${all ? ` <span class="badge">${esc(lotName(x.lot))}</span>` : ''}</span>
+      <span class="row-sub">${esc(t('hrSince', (day(x.in) !== day(now) ? day(x.in) + ' ' : '') + fmtTime(x.in)))}</span></div>
+      <div class="row-amt hr-live">${esc(hrDur(now - x.in))}</div></li>`;
+  const rowOut = x => `<li class="row"><div class="row-main"><span class="row-name"><span class="plate" style="margin-left:0">${esc(x.k)}</span>${all ? ` <span class="badge">${esc(lotName(x.lot))}</span>` : ''}</span>
+      <span class="row-sub"><b class="row-date">${esc(day(x.out))}</b> · ${esc(fmtTime(x.in))} – ${esc(fmtTime(x.out))} · ${esc(hrDur(x.out - x.in))}</span></div>
+      <div class="row-amt${typeof x.p === 'number' ? ' pos' : ' none'}" title="${typeof x.p === 'number' ? '' : esc(t('hrNoPrice'))}">${typeof x.p === 'number' ? esc(fmtMoney(x.p)) : '–'}</div></li>`;
+  const col = (cls, title, items, empty, foot) => `<section class="card col active ${cls}">
+      <div class="col-head"><span class="mark"></span><span>${esc(title)}</span><span class="cnt">${items.length}</span></div>
+      ${items.length ? '<ul>' + items.join('') + '</ul>' : `<div class="empty">${esc(empty)}</div>`}${foot || ''}</section>`;
+  $('#hourLists').className = 'lists ' + (cur ? 'duo' : 'one');
+  $('#hourLists').innerHTML = (cur ? col('hin', t('hrIn'), ins.map(rowIn), t('hrEmptyIn')) : '')
+    + col('hout', t('hrOut'), outs.map(rowOut), t('hrEmptyOut'), `<div class="col-foot"><span>${esc(t('barTotal'))}</span><b>${priced.length ? esc(fmtMoney(total)) : esc(t('hrNoPrice'))}</b></div>`);
 }
 let costLastDate = '';
 function openCost(id, kind){
@@ -1890,6 +2002,7 @@ function renderLists(){
   if(ui.area === 'bar'){ renderBanner(); renderBar(); return; }
   if(ui.area === 'saldo'){ renderBanner(); renderSaldo(); return; }
   if(ui.parkView === 'out'){ renderBanner(); renderCosts(); return; }
+  if(ui.bill === 'hour'){ renderBanner(); renderHour(); return; }
   const month = ui.month, q = norm($('#search').value), qPlate = plateKey(q);
   const all = customersFor(ui.lot, month);
   const groups = { paid:[], partial:[], unpaid:[], unclear:[] }, totals = { paid:0, partial:0, unpaid:0, unclear:0 }, counts = { paid:0, partial:0, unpaid:0, unclear:0 };
@@ -4204,6 +4317,8 @@ $('#login').addEventListener('click', e => {
   if(e.target.id === 'codeGo') submitCode($('#codeIn').value);
   if(e.target.id === 'codeAdmin') openSettings(true);
 });
+$('#billView').addEventListener('click', e => { const b = e.target.closest('[data-bill]'); if(!b) return; ui.bill = b.dataset.bill === 'hour' ? 'hour' : 'month'; if(ui.bill === 'hour' && ui.lot === NO_LOT) ui.lot = 'all'; saveUi(); render(); if(ui.bill === 'hour') loadWork(); });
+$('#hourLists').addEventListener('click', e => { if(e.target.closest('#hrRefresh')) loadWork(true); });
 $('#tabs').addEventListener('click', e => { const b = e.target.closest('[data-lot]'); if(!b) return; ui.lot = b.dataset.lot; saveUi(); render(); });
 $('#prev').onclick = () => { ui.month = addMonth(ui.month, -1); render(); };
 $('#next').onclick = () => { ui.month = addMonth(ui.month, 1); render(); };
@@ -4257,6 +4372,7 @@ let sessionMonth = curMonth();
 document.addEventListener('visibilitychange', () => {
   if(document.visibilityState !== 'visible') return;
   refreshFx(false);
+  if(ui.bill === 'hour') loadWork();
   if(sessionMonth !== curMonth()){            /* month changed while the app was open */
     sessionMonth = curMonth();
     if(!modals.length){ ui.month = sessionMonth; render(); }

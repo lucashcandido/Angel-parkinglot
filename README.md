@@ -112,3 +112,7 @@ Der Token wird nur an `api.github.com` gesendet.
 - `access.json` – verschlüsselter Zugang für weitere Geräte; wird von der App geschrieben, nicht von Hand ändern
 - `sw.js` – hält die App-Dateien für den Start ohne Internet vor (Netz zuerst, gespeicherte Kopie als Rückfall)
 - `manifest.webmanifest`, `icon-*.png` – Symbol für den Home-Bildschirm
+
+## Por hora (work.castcomercial.com)
+
+Unter der Auswahl der Parkanlagen schaltet „Mensual / Por hora“ zwischen den Monatskunden und den Parkvorgängen nach Stunden um. „Por hora“ liest die Dateien `<lot>/<YYYY-MM>.json` aus dem privaten Repo `lucashcandido/castcomercial-work-data`, das die Geräte an den Einfahrten (work.castcomercial.com) schreiben. Angezeigt werden die Fahrzeuge, die gerade drin sind, und die abgeschlossenen Parkvorgänge des Monats mit Dauer und Preis (`p`, sobald es Tarife gibt). Der Token der App braucht dafür zusätzlich Lesezugriff auf `castcomercial-work-data`.
