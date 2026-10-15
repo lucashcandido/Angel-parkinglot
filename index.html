@@ -203,6 +203,7 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 .badge.warn{background:var(--unpaid-soft);color:var(--unpaid)}
 .badge.sim{background:var(--accent-soft);color:var(--accent);font-weight:600}
 .plate{display:inline-block;font:700 12.5px/1.25 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.06em;white-space:nowrap;border:1.5px solid var(--text);border-radius:5px;padding:1px 6px;margin-left:6px;vertical-align:1px;background:var(--card);color:var(--text)}
+.plate.nm{font-family:inherit;letter-spacing:0;border-style:dashed;font-weight:650}
 .sheet-head .plate{font-size:13.5px;margin:0 6px 0 0}
 .row-actions{display:flex;align-items:center;gap:6px;padding:0 10px 0 4px}
 .ib{width:44px;height:44px;border-radius:12px;border:1px solid var(--line);background:var(--card);display:grid;place-items:center;font-size:19px;font-weight:800;line-height:1}
@@ -1714,10 +1715,10 @@ function renderHour(){
     <div class="hint" style="margin-top:8px;display:flex;align-items:center;gap:10px">${work.at ? esc(t('hrUpd', fmtTime(work.at))) : ''}<button type="button" class="link" id="hrRefresh" style="margin-left:auto">${esc(t('hrRefresh'))}</button></div>`;
   const delBtn = x => `<div class="row-actions"><button type="button" class="ib no" data-hrdel="${esc(x.id)}" aria-label="${esc(t('hrDel'))}" title="${esc(t('hrDel'))}">✕</button></div>`;
   const day = ts => fmtDate(new Date(ts).getFullYear() + '-' + pad2(new Date(ts).getMonth() + 1) + '-' + pad2(new Date(ts).getDate()));
-  const rowIn = x => `<li class="row"><div class="row-main"><span class="row-name"><span class="plate" style="margin-left:0">${esc(x.k)}</span> <span class="badge">${esc(t(VEH.find(v => v[0] === vehOf(x))[1]))}</span>${all ? ` <span class="badge">${esc(lotName(x.lot))}</span>` : ''}</span>
+  const rowIn = x => `<li class="row"><div class="row-main"><span class="row-name"><span class="plate${vehOf(x) === 'bike' ? ' nm' : ''}" style="margin-left:0">${esc(x.k)}</span> <span class="badge">${esc(t(VEH.find(v => v[0] === vehOf(x))[1]))}</span>${all ? ` <span class="badge">${esc(lotName(x.lot))}</span>` : ''}</span>
       <span class="row-sub">${esc(t('hrSince', (day(x.in) !== day(now) ? day(x.in) + ' ' : '') + fmtTime(x.in)))}</span></div>
       <div class="row-amt hr-live" style="flex-direction:column;align-items:flex-end;justify-content:center">${esc(hrDur(now - x.in))}<small style="font-weight:600;color:var(--muted)">${esc(fmtMoney(hrHours(now - x.in) * workRate(vehOf(x))))}</small></div>${delBtn(x)}</li>`;
-  const rowOut = x => `<li class="row"><div class="row-main"><span class="row-name"><span class="plate" style="margin-left:0">${esc(x.k)}</span> <span class="badge">${esc(t(VEH.find(v => v[0] === vehOf(x))[1]))}</span>${all ? ` <span class="badge">${esc(lotName(x.lot))}</span>` : ''}</span>
+  const rowOut = x => `<li class="row"><div class="row-main"><span class="row-name"><span class="plate${vehOf(x) === 'bike' ? ' nm' : ''}" style="margin-left:0">${esc(x.k)}</span> <span class="badge">${esc(t(VEH.find(v => v[0] === vehOf(x))[1]))}</span>${all ? ` <span class="badge">${esc(lotName(x.lot))}</span>` : ''}</span>
       <span class="row-sub"><b class="row-date">${esc(day(x.out))}</b> · ${esc(fmtTime(x.in))} – ${esc(fmtTime(x.out))} · ${esc(hrDur(x.out - x.in))}</span></div>
       <div class="row-amt pos">${esc(fmtMoney(stayPrice(x)))}</div>${delBtn(x)}</li>`;
   const byDay = [];                      /* finished stays grouped by day, newest first, each day with its total */
