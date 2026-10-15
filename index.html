@@ -720,6 +720,8 @@ const I18N = {
   hrTab:['{0} adentro','{0} inside'], hrTabDone:['{0} terminados','{0} finished'], hrTabDone1:['1 terminado','1 finished'],
   hrIn:['Adentro ahora','Inside now'], hrOut:['Terminados','Finished'], hrInL:['Adentro ahora','Inside now'], hrOutL:['Terminados en {0}','Finished in {0}'],
   hrSum:['Cobrado por hora','Hourly income'], hrNoPrice:['Precio: próximamente','Price: coming soon'],
+  wkRate:['Precio por hora (ARS)','Price per hour (ARS)'], wkRateHint:['Se cobra cada hora empezada (mínimo 1 hora). Los dispositivos de las entradas toman el precio nuevo solos.','Every started hour is charged (at least 1 hour). The entrance devices pick up the new price by themselves.'],
+  wkRateSave:['Guardar precio','Save price'], wkRateOk:['Precio guardado: {0} por hora.','Price saved: {0} per hour.'], wkRateErr:['No se pudo enviar el precio a las entradas ({0}). Revisá que el token de la app tenga «Read and write» en castcomercial-work-data.','Could not send the price to the entrances ({0}). Check that the app token has “Read and write” on castcomercial-work-data.'],
   hrEmptyIn:['No hay vehículos adentro.','No vehicles inside.'], hrEmptyOut:['Ningún estacionamiento terminado en este mes.','No finished stays this month.'],
   hrSince:['desde las {0}','since {0}'], hrLoading:['Cargando datos de work.castcomercial.com…','Loading data from work.castcomercial.com…'],
   hrNoSync:['Para ver los estacionamientos por hora, primero conectá la sincronización en los ajustes.','To see hourly parking, connect sync in the settings first.'],
@@ -1629,6 +1631,9 @@ async function delStay(id){
   renderTabs(); renderLists();
 }
 const ym = ts => { const d = new Date(ts); return d.getFullYear() + '-' + pad2(d.getMonth() + 1); };
+/* every started hour, at least one; a stay ended on an entrance device carries its price (p), older ones are priced now */
+const hrHours = ms => Math.max(1, Math.ceil(ms / 3600000));
+const stayPrice = x => typeof x.p === 'number' ? x.p : hrHours(x.out - x.in) * workRate();
 const hrDur = ms => { const mi = Math.max(0, Math.floor(ms / 60000)), h = Math.floor(mi / 60); return h ? h + ' h ' + pad2(mi % 60) + ' min' : mi + ' min'; };
 async function loadWork(force){
   if(!cfg || !cfg.token){ work.status = 'nosync'; if(ui.bill === 'hour') renderLists(); return; }
@@ -1661,7 +1666,7 @@ async function loadWork(force){
 setInterval(() => { if(document.visibilityState === 'visible' && ui.area === 'park' && ui.bill === 'hour' && ui.parkView !== 'out' && !$('#hourView').hidden){ loadWork(); renderTabs(); renderLists(); } }, 30000);
 function renderHour(){
   const { ins, outs } = hourStays(ui.lot), cur = ui.month === curMonth(), now = Date.now(), all = ui.lot === 'all';
-  const priced = outs.filter(x => typeof x.p === 'number'), total = round2(priced.reduce((s, x) => s + x.p, 0));
+  const priced = outs, total = round2(outs.reduce((s, x) => s + stayPrice(x), 0));
   const lotName = id => { const l = state.lots[id]; return l ? lotLabel(l) : id; };
   const note = work.status === 'nosync' ? `<div class="msg err">${esc(t('hrNoSync'))}</div>`
     : work.status === 'noaccess' ? `<div class="msg err">${t('hrNoAccess_html', esc(WORK_REPO), esc(WORK_REPO.split('/')[1]))}</div>`
@@ -1671,7 +1676,7 @@ function renderHour(){
     <div class="bar-sum">
       ${cur ? `<div><span>${esc(t('hrInL'))}</span><b id="hrNIn">${ins.length}</b></div>` : ''}
       <div><span>${esc(t('hrOutL', fmtMonthLong(ui.month)))}</span><b id="hrNOut">${outs.length}</b></div>
-      <div class="saldo"><span>${esc(t('hrSum'))}</span><b id="hrSum">${priced.length ? esc(fmtMoney(total)) : '–'}</b></div>
+      <div class="saldo"><span>${esc(t('hrSum'))}</span><b id="hrSum">${esc(fmtMoney(total))}</b></div>
     </div>
     ${note ? `<div style="margin-top:10px">${note}</div>` : ''}
     <div class="hint" style="margin-top:8px;display:flex;align-items:center;gap:10px">${work.at ? esc(t('hrUpd', fmtTime(work.at))) : ''}<button type="button" class="link" id="hrRefresh" style="margin-left:auto">${esc(t('hrRefresh'))}</button></div>`;
@@ -1679,16 +1684,16 @@ function renderHour(){
   const day = ts => fmtDate(new Date(ts).getFullYear() + '-' + pad2(new Date(ts).getMonth() + 1) + '-' + pad2(new Date(ts).getDate()));
   const rowIn = x => `<li class="row"><div class="row-main"><span class="row-name"><span class="plate" style="margin-left:0">${esc(x.k)}</span>${all ? ` <span class="badge">${esc(lotName(x.lot))}</span>` : ''}</span>
       <span class="row-sub">${esc(t('hrSince', (day(x.in) !== day(now) ? day(x.in) + ' ' : '') + fmtTime(x.in)))}</span></div>
-      <div class="row-amt hr-live">${esc(hrDur(now - x.in))}</div>${delBtn(x)}</li>`;
+      <div class="row-amt hr-live" style="flex-direction:column;align-items:flex-end;justify-content:center">${esc(hrDur(now - x.in))}<small style="font-weight:600;color:var(--muted)">${esc(fmtMoney(hrHours(now - x.in) * workRate()))}</small></div>${delBtn(x)}</li>`;
   const rowOut = x => `<li class="row"><div class="row-main"><span class="row-name"><span class="plate" style="margin-left:0">${esc(x.k)}</span>${all ? ` <span class="badge">${esc(lotName(x.lot))}</span>` : ''}</span>
       <span class="row-sub"><b class="row-date">${esc(day(x.out))}</b> · ${esc(fmtTime(x.in))} – ${esc(fmtTime(x.out))} · ${esc(hrDur(x.out - x.in))}</span></div>
-      <div class="row-amt${typeof x.p === 'number' ? ' pos' : ' none'}" title="${typeof x.p === 'number' ? '' : esc(t('hrNoPrice'))}">${typeof x.p === 'number' ? esc(fmtMoney(x.p)) : '–'}</div>${delBtn(x)}</li>`;
+      <div class="row-amt pos">${esc(fmtMoney(stayPrice(x)))}</div>${delBtn(x)}</li>`;
   const col = (cls, title, items, empty, foot) => `<section class="card col active ${cls}">
       <div class="col-head"><span class="mark"></span><span>${esc(title)}</span><span class="cnt">${items.length}</span></div>
       ${items.length ? '<ul>' + items.join('') + '</ul>' : `<div class="empty">${esc(empty)}</div>`}${foot || ''}</section>`;
   $('#hourLists').className = 'lists ' + (cur ? 'duo' : 'one');
   $('#hourLists').innerHTML = (cur ? col('hin', t('hrIn'), ins.map(rowIn), t('hrEmptyIn')) : '')
-    + col('hout', t('hrOut'), outs.map(rowOut), t('hrEmptyOut'), `<div class="col-foot"><span>${esc(t('barTotal'))}</span><b>${priced.length ? esc(fmtMoney(total)) : esc(t('hrNoPrice'))}</b></div>`);
+    + col('hout', t('hrOut'), outs.map(rowOut), t('hrEmptyOut'), `<div class="col-foot"><span>${esc(t('barTotal'))}</span><b>${esc(fmtMoney(total))}</b></div>`);
 }
 let costLastDate = '';
 function openCost(id, kind){
@@ -3783,6 +3788,7 @@ function openSettings(focusSync){
       ${cfg ? `<div class="sec" id="wkSec">
         <h3>${esc(t('wkTitle'))}</h3>
         <p class="hint" style="margin-top:0">${esc(t('wkIntro'))}</p>
+        <div class="field"><label for="wkRate">${esc(t('wkRate'))}</label><div style="display:flex;gap:8px"><input id="wkRate" type="text" inputmode="numeric" autocomplete="off" value="${esc(fmtNum(workRate()))}" style="flex:1"><button type="button" class="btn small primary" id="wkRateGo">${esc(t('wkRateSave'))}</button></div><div class="hint">${esc(t('wkRateHint'))}</div><div id="wkRateMsg"></div></div>
         ${workCode() ? `<p style="margin-bottom:4px"><b>${esc(t('wkCode'))}</b></p><div class="code" id="wkCode">${esc(showCode(workCode()))}</div>
           <p class="hint">${esc(t('wkHow'))}</p>
           <div class="actions" style="margin-top:8px">${lotsList().map(l => `<button type="button" class="btn small primary" data-wkqr="${esc(l.id)}">${esc(t('wkQr', lotLabel(l)))}</button>`).join('')}</div>
@@ -3895,6 +3901,15 @@ function openSettings(focusSync){
     const altaSave = () => { const inp = $('#sAltaWa', el); if(!inp) return; const wa = inp.value.trim(); if(wa !== altaSettings().wa){ state.settings.alta = { wa, t: Date.now() }; commit(); } altaDraw(); };
     $('#sAltaWa', el).oninput = () => { clearTimeout(altaT); altaT = setTimeout(altaSave, 500); };      /* the button appears while typing, no need to leave the field */
     $('#sAltaWa', el).onchange = () => { clearTimeout(altaT); altaSave(); };
+    if($('#wkRateGo', el)) $('#wkRateGo', el).onclick = async () => {
+      const r = parseAmount($('#wkRate', el).value), box = $('#wkRateMsg', el);
+      if(!(r > 0)){ box.innerHTML = `<div class="msg err">${esc(t('errBarAmount'))}</div>`; return; }
+      box.innerHTML = `<div class="msg">${esc(t('checking'))}</div>`;
+      state.settings.work = Object.assign({}, state.settings.work, { rate: r, t: Date.now() }); commit();
+      const err = await pushWorkRate(r);
+      box.innerHTML = err ? `<div class="msg err">${esc(t('wkRateErr', err))}</div>` : `<div class="msg good">${esc(t('wkRateOk', fmtARS(r)))}</div>`;
+      if(ui.bill === 'hour') renderLists();
+    };
     if($('#wkMake', el)) $('#wkMake', el).onclick = async () => {
       const tok = $('#wkTok', el).value.trim(), btn = $('#wkMake', el);
       if(!tok){ wkNote = `<div class="msg err">${esc(t('errNoToken'))}</div>`; draw(); return; }
@@ -4301,6 +4316,24 @@ async function publishAccess(code){
    device downloads it, decrypts it with the code and never sees anything else. The code itself stays in the synced
    settings, so every owner's device can show it and the QR codes. */
 const WORK_URL = 'https://work.castcomercial.com/', WORK_ACCESS_FILE = 'work-access.json';
+const workRate = () => { const w = state.settings && state.settings.work; return w && w.rate > 0 ? w.rate : 4000; };
+/* config.json in the stays repository: the entrance devices read the price from there. '' = ok, otherwise the error. */
+async function pushWorkRate(rate){
+  if(!cfg) return 'sync';
+  const path = `/repos/${WORK_REPO}/contents/config.json`;
+  try{
+    for(let tries = 0; tries < 3; tries++){
+      const got = await gh(cfg, path);
+      if(!got.ok && got.status !== 404) return 'HTTP ' + got.status;
+      const body = { message: 'Price per hour ' + rate, content: b64enc(JSON.stringify({ v: 1, rate })) };
+      if(got.ok){ const j = await got.json(); body.sha = j.sha; try{ if(JSON.parse(b64dec(j.content)).rate === rate) return ''; }catch(e){} }
+      const put = await gh(cfg, path, { method: 'PUT', body: JSON.stringify(body) });
+      if(put.ok) return '';
+      if(put.status !== 409 && put.status !== 422) return 'HTTP ' + put.status;
+    }
+    return 'conflict';
+  }catch(e){ return t('eNet'); }
+}
 const workCode = () => { const w = state.settings && state.settings.work; return w && w.code ? cleanCode(w.code) : ''; };
 async function setupWork(tok){
   const conf = { repo: WORK_REPO, token: tok };
@@ -4322,7 +4355,8 @@ async function setupWork(tok){
     const put = await gh(cfg, path, { method:'PUT', body: JSON.stringify(body) });
     if(!put.ok) return t('wkErrSave', 'HTTP ' + put.status);
   }catch(e){ return t('eNet'); }
-  if(code !== workCode()){ state.settings.work = { code, t: Date.now() }; commit(); }
+  if(code !== workCode()){ state.settings.work = Object.assign({}, state.settings.work, { code, t: Date.now() }); commit(); }
+  await pushWorkRate(workRate());           /* the entrances start with the current price */
   return '';
 }
 const accessCode = () => { const a = state.settings && state.settings.access; return a && a.code ? cleanCode(a.code) : ''; };
