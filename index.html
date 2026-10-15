@@ -108,6 +108,9 @@ h1,h2,h3,p{margin:0}
 .col.hin .mark{background:var(--accent)} .col.hin .col-head{background:var(--accent-soft)}
 .col.hout .mark{background:var(--paid)} .col.hout .col-head{background:var(--paid-soft)}
 .row-amt.none{color:var(--muted);font-weight:500}
+.hr-day{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:8px 14px;background:var(--soft);border-bottom:1px solid var(--line);font-weight:700;font-size:14px}
+.hr-day small{color:var(--muted);font-weight:500}
+.hr-day b{color:var(--paid);font-variant-numeric:tabular-nums}
 .hr-live{font-variant-numeric:tabular-nums}
 @media (max-width:560px){#hourLists.lists.duo{grid-template-columns:minmax(0,1fr)}}
 .btn.fix{color:var(--partial);border-color:var(--partial)} .btn.var{color:var(--unclear);border-color:var(--unclear)}
@@ -313,6 +316,7 @@ a.btn{display:inline-flex;align-items:center;gap:8px;text-decoration:none}
   .lists.duo .col-foot{padding:8px 10px;font-size:14.5px}
   .lists.duo .empty{padding:14px 10px}
 }
+@media (max-width:560px){#hourLists .row{display:flex} #hourLists .row-main{width:auto;padding:8px 4px 8px 10px} #hourLists .row-amt{padding:0 4px;font-size:15px} #hourLists .row-actions{padding:0 8px 0 2px} #hourLists .ib{width:38px;height:38px;font-size:16px} .hr-day{padding:8px 10px}}
 .btn.in{color:var(--paid);border-color:var(--paid)} .btn.out{color:var(--unpaid);border-color:var(--unpaid)}
 .btn-pair{display:flex} .btn-pair[hidden]{display:none}
 .btn-pair .btn:first-child{border-radius:11px 0 0 11px;flex:1}
@@ -720,6 +724,8 @@ const I18N = {
   hrTab:['{0} adentro','{0} inside'], hrTabDone:['{0} terminados','{0} finished'], hrTabDone1:['1 terminado','1 finished'],
   hrIn:['Adentro ahora','Inside now'], hrOut:['Terminados','Finished'], hrInL:['Adentro ahora','Inside now'], hrOutL:['Terminados en {0}','Finished in {0}'],
   hrSum:['Cobrado por hora','Hourly income'], hrNoPrice:['Precio: próximamente','Price: coming soon'],
+  hrToday:['Cobrado hoy','Received today'], hrMonthSum:['Cobrado por hora en {0}','Hourly income in {0}'], hrAvg:['Promedio por estadía','Average per stay'],
+  hrPlus:['Además {0} de estacionamiento por hora','Plus {0} from hourly parking'], today:['hoy','today'],
   wkRate:['Precio por hora (ARS)','Price per hour (ARS)'], wkRateHint:['Se cobra cada hora empezada (mínimo 1 hora). Los dispositivos de las entradas toman el precio nuevo solos.','Every started hour is charged (at least 1 hour). The entrance devices pick up the new price by themselves.'],
   wkRateSave:['Guardar precio','Save price'], wkRateOk:['Precio guardado: {0} por hora.','Price saved: {0} per hour.'], wkRateErr:['No se pudo enviar el precio a las entradas ({0}). Revisá que el token de la app tenga «Read and write» en castcomercial-work-data.','Could not send the price to the entrances ({0}). Check that the app token has “Read and write” on castcomercial-work-data.'],
   hrEmptyIn:['No hay vehículos adentro.','No vehicles inside.'], hrEmptyOut:['Ningún estacionamiento terminado en este mes.','No finished stays this month.'],
@@ -1144,7 +1150,7 @@ function quickStatus(cid, s){
 }
 
 /* ---------- rendering ---------- */
-function render(){ if(ui.bill === 'hour' && ui.area === 'park' && ui.parkView !== 'out') setTimeout(loadWork); ai = aiFromState(); renderLogin(); applyArea(); renderTabs(); renderMonth(); renderLists(); renderSync(); if(dupView) dupView(); if(altaPending || /#alta=/.test(location.hash)) setTimeout(altaCheck); }
+function render(){ if(cfg) setTimeout(loadWork); ai = aiFromState(); renderLogin(); applyArea(); renderTabs(); renderMonth(); renderLists(); renderSync(); if(dupView) dupView(); if(altaPending || /#alta=/.test(location.hash)) setTimeout(altaCheck); }
 
 function applyStatic(){
   document.documentElement.lang = ui.lang;
@@ -1586,8 +1592,19 @@ function renderCosts(){
    its data). The app only reads those files with its own token: { v, lot, name, month, s: { id: {id, k: plate, in, out?, p?: price, del?, t} } }.
    A stay lives in the file of the month it started in, so the month before is loaded as well. */
 const WORK_REPO = 'lucashcandido/castcomercial-work-data';
-const work = { files: {}, status: '', msg: '', at: 0, busy: false };
-try{ Object.assign(work.files, JSON.parse(localStorage.getItem('apl.work.v1') || '{}')); }catch(e){}
+const work = { files: {}, sha: {}, status: '', msg: '', at: 0, busy: false };
+try{ const c = JSON.parse(localStorage.getItem('apl.work.v2') || '{}'); Object.assign(work.files, c.files || {}); Object.assign(work.sha, c.sha || {}); }catch(e){}
+/* every finished stay with its price, as income of the parking lots on the day it ended (all months, all lots) */
+function hourIncome(){
+  const out = [], seen = new Set();
+  for(const f in work.files) for(const x of Object.values(work.files[f] || {})){
+    const lot = f.split('/')[0];
+    if(!x || x.del || !x.in || !x.out || seen.has(x.id)) continue; seen.add(x.id);
+    const d = new Date(x.out);
+    out.push({ k:'in', a: stayPrice(x), d: d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()), h: 1, lot });
+  }
+  return out;
+}
 const workMonths = () => [ui.month, addMonth(ui.month, -1)];
 function hourStays(lot){
   const ids = lot === 'all' ? lotsList().map(l => l.id) : [lot], seen = new Set(), ins = [], outs = [];
@@ -1635,38 +1652,52 @@ const ym = ts => { const d = new Date(ts); return d.getFullYear() + '-' + pad2(d
 const hrHours = ms => Math.max(1, Math.ceil(ms / 3600000));
 const stayPrice = x => typeof x.p === 'number' ? x.p : hrHours(x.out - x.in) * workRate();
 const hrDur = ms => { const mi = Math.max(0, Math.floor(ms / 60000)), h = Math.floor(mi / 60); return h ? h + ' h ' + pad2(mi % 60) + ' min' : mi + ' min'; };
+/* Loads every month of every lot: the folder listing gives each file's sha, only changed files are downloaded again. */
 async function loadWork(force){
   if(!cfg || !cfg.token){ work.status = 'nosync'; if(ui.bill === 'hour') renderLists(); return; }
-  if(work.busy || (!force && work.month === ui.month && Date.now() - work.at < 20000)) return;
-  work.busy = true; if(!work.at) { work.status = 'loading'; if(ui.bill === 'hour') renderLists(); }
+  if(work.busy || (!force && Date.now() - work.at < 20000)) return;
+  work.busy = true; if(!work.at) { work.status = 'loading'; if(ui.bill === 'hour' && ui.area === 'park') renderLists(); }
+  let changed = false;
   try{
-    const lots = lotsList().map(l => l.id), months = workMonths().concat(ui.month === curMonth() ? [addMonth(ui.month, -2)] : []);
-    let missing = 0;
-    for(const lot of lots) for(const m of months){
-      const res = await gh(cfg, `/repos/${WORK_REPO}/contents/${lot}/${m}.json`);
-      if(res.status === 404){ missing++; delete work.files[lot + '/' + m]; continue; }
+    const lots = lotsList().map(l => l.id), seen = new Set();
+    let none = 0;
+    for(const lot of lots){
+      const res = await gh(cfg, `/repos/${WORK_REPO}/contents/${lot}`);
+      if(res.status === 404){ none++; continue; }
       if(res.status === 401 || res.status === 403){ work.status = 'noaccess'; throw null; }
       if(!res.ok){ work.status = 'err'; work.msg = 'HTTP ' + res.status; throw null; }
-      const j = await res.json(), o = JSON.parse(b64dec(j.content) || '{}');
-      work.files[lot + '/' + m] = o.s || {};
+      const list = await res.json();
+      for(const f of Array.isArray(list) ? list : []){
+        const m = /^(\d{4}-\d{2})\.json$/.exec(f.name || ''); if(!m) continue;
+        const k = lot + '/' + m[1]; seen.add(k);
+        if(work.sha[k] === f.sha && work.files[k]) continue;
+        const r = await gh(cfg, `/repos/${WORK_REPO}/contents/${lot}/${f.name}`);
+        if(!r.ok){ work.status = 'err'; work.msg = 'HTTP ' + r.status; throw null; }
+        const j = await r.json(), o = JSON.parse(b64dec(j.content) || '{}');
+        work.files[k] = o.s || {}; work.sha[k] = j.sha; changed = true;
+      }
     }
-    if(missing === lots.length * months.length){        /* everything missing: maybe the token cannot see the repository */
+    for(const k of Object.keys(work.files)) if(!seen.has(k)){ delete work.files[k]; delete work.sha[k]; changed = true; }
+    if(none === lots.length){        /* no folder at all: either nothing recorded yet or the token cannot see the repository */
       const r = await gh(cfg, `/repos/${WORK_REPO}`);
       if(!r.ok){ work.status = r.status === 404 || r.status === 403 ? 'noaccess' : 'err'; work.msg = 'HTTP ' + r.status; throw null; }
     }
-    work.status = 'ok'; work.at = Date.now(); work.month = ui.month;
-    try{ localStorage.setItem('apl.work.v1', JSON.stringify(work.files)); }catch(e){}
+    if(work.status !== 'ok') changed = true;
+    work.status = 'ok'; work.at = Date.now();
+    try{ localStorage.setItem('apl.work.v2', JSON.stringify({ files: work.files, sha: work.sha })); }catch(e){}
   }catch(e){
     if(e){ work.status = 'err'; work.msg = e.message || String(e); }
-    if(work.status === 'noaccess'){ work.files = {}; }
+    if(work.status === 'noaccess'){ work.files = {}; work.sha = {}; }
+    changed = true;
   }
   work.busy = false;
-  if(ui.area === 'park' && ui.bill === 'hour' && ui.parkView !== 'out'){ renderTabs(); renderLists(); }
+  if(changed && !modals.length && (ui.area === 'saldo' || (ui.area === 'park' && ui.parkView !== 'out'))){ renderTabs(); renderLists(); }
 }
 setInterval(() => { if(document.visibilityState === 'visible' && ui.area === 'park' && ui.bill === 'hour' && ui.parkView !== 'out' && !$('#hourView').hidden){ loadWork(); renderTabs(); renderLists(); } }, 30000);
 function renderHour(){
   const { ins, outs } = hourStays(ui.lot), cur = ui.month === curMonth(), now = Date.now(), all = ui.lot === 'all';
-  const priced = outs, total = round2(outs.reduce((s, x) => s + stayPrice(x), 0));
+  const total = round2(outs.reduce((s, x) => s + stayPrice(x), 0)), dk = ts => { const d = new Date(ts); return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); };
+  const today = round2(outs.filter(x => dk(x.out) === todayISO()).reduce((s, x) => s + stayPrice(x), 0));
   const lotName = id => { const l = state.lots[id]; return l ? lotLabel(l) : id; };
   const note = work.status === 'nosync' ? `<div class="msg err">${esc(t('hrNoSync'))}</div>`
     : work.status === 'noaccess' ? `<div class="msg err">${t('hrNoAccess_html', esc(WORK_REPO), esc(WORK_REPO.split('/')[1]))}</div>`
@@ -1674,9 +1705,9 @@ function renderHour(){
     : work.status === 'loading' && !work.at ? `<div class="msg">${esc(t('hrLoading'))}</div>` : '';
   $('#summary').innerHTML = `
     <div class="bar-sum">
-      ${cur ? `<div><span>${esc(t('hrInL'))}</span><b id="hrNIn">${ins.length}</b></div>` : ''}
-      <div><span>${esc(t('hrOutL', fmtMonthLong(ui.month)))}</span><b id="hrNOut">${outs.length}</b></div>
-      <div class="saldo"><span>${esc(t('hrSum'))}</span><b id="hrSum">${esc(fmtMoney(total))}</b></div>
+      ${cur ? `<div><span>${esc(t('hrToday'))}</span><b class="pos" id="hrToday">${esc(fmtMoney(today))}</b></div><div><span>${esc(t('hrInL'))}</span><b id="hrNIn">${ins.length}</b></div>`
+        : `<div><span>${esc(t('hrOutL', fmtMonthLong(ui.month)))}</span><b id="hrNOut">${outs.length}</b></div><div><span>${esc(t('hrAvg'))}</span><b>${esc(outs.length ? fmtMoney(round2(total / outs.length)) : '–')}</b></div>`}
+      <div class="saldo"><span>${esc(t('hrMonthSum', fmtMonthLong(ui.month)))}</span><b id="hrSum">${esc(fmtMoney(total))}</b></div>
     </div>
     ${note ? `<div style="margin-top:10px">${note}</div>` : ''}
     <div class="hint" style="margin-top:8px;display:flex;align-items:center;gap:10px">${work.at ? esc(t('hrUpd', fmtTime(work.at))) : ''}<button type="button" class="link" id="hrRefresh" style="margin-left:auto">${esc(t('hrRefresh'))}</button></div>`;
@@ -1688,12 +1719,16 @@ function renderHour(){
   const rowOut = x => `<li class="row"><div class="row-main"><span class="row-name"><span class="plate" style="margin-left:0">${esc(x.k)}</span>${all ? ` <span class="badge">${esc(lotName(x.lot))}</span>` : ''}</span>
       <span class="row-sub"><b class="row-date">${esc(day(x.out))}</b> · ${esc(fmtTime(x.in))} – ${esc(fmtTime(x.out))} · ${esc(hrDur(x.out - x.in))}</span></div>
       <div class="row-amt pos">${esc(fmtMoney(stayPrice(x)))}</div>${delBtn(x)}</li>`;
-  const col = (cls, title, items, empty, foot) => `<section class="card col active ${cls}">
-      <div class="col-head"><span class="mark"></span><span>${esc(title)}</span><span class="cnt">${items.length}</span></div>
+  const byDay = [];                      /* finished stays grouped by day, newest first, each day with its total */
+  for(const x of outs){ const k = dk(x.out); let g = byDay[byDay.length - 1]; if(!g || g.k !== k){ g = { k, sum: 0, n: 0, rows: [] }; byDay.push(g); } g.sum = round2(g.sum + stayPrice(x)); g.n++; g.rows.push(rowOut(x)); }
+  const dayName = iso => { const [y, m, d] = iso.split('-').map(Number); return cap(new Intl.DateTimeFormat(loc(), { weekday:'long', day:'numeric', month:'short' }).format(new Date(y, m - 1, d)).replace(/\./g, '')); };
+  const outRows = byDay.map(g => `<li class="hr-day" data-day="${g.k}"><span>${esc(dayName(g.k))}${g.k === todayISO() ? ' · ' + esc(t('today')) : ''} <small>(${g.n})</small></span><b>${esc(fmtMoney(g.sum))}</b></li>` + g.rows.join(''));
+  const col = (cls, title, items, empty, foot, cnt) => `<section class="card col active ${cls}">
+      <div class="col-head"><span class="mark"></span><span>${esc(title)}</span><span class="cnt">${cnt == null ? items.length : cnt}</span></div>
       ${items.length ? '<ul>' + items.join('') + '</ul>' : `<div class="empty">${esc(empty)}</div>`}${foot || ''}</section>`;
   $('#hourLists').className = 'lists ' + (cur ? 'duo' : 'one');
   $('#hourLists').innerHTML = (cur ? col('hin', t('hrIn'), ins.map(rowIn), t('hrEmptyIn')) : '')
-    + col('hout', t('hrOut'), outs.map(rowOut), t('hrEmptyOut'), `<div class="col-foot"><span>${esc(t('barTotal'))}</span><b>${esc(fmtMoney(total))}</b></div>`);
+    + col('hout', t('hrOut'), outRows, t('hrEmptyOut'), `<div class="col-foot"><span>${esc(t('barTotal'))}</span><b>${esc(fmtMoney(total))}</b></div>`, outs.length);
 }
 let costLastDate = '';
 function openCost(id, kind){
@@ -1779,6 +1814,7 @@ function parkLive(upTo){
     const a = paidAmount(c, p.s, p); if(!a) continue;
     out.push({ k:'in', a, d: typeof p.d === 'string' && p.d.slice(0, 7) === m ? p.d : m + '-01', n: 1 });          /* n: one customer who paid */
   }
+  out.push(...hourIncome());                /* hourly parking from the entrances (work.castcomercial.com) */
   for(const e of costLive()){
     if(e.k === 'fix'){ if(/^\d{4}-\d{2}$/.test(e.from || '')) for(let m = e.from; m <= upTo && (!e.to || m <= e.to); m = addMonth(m, 1)){ const a = fixAmount(e, m); if(a) out.push({ k:'out', a, d: m + '-01' }); } }
     else if(typeof e.d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(e.d)) out.push({ k:'out', a: e.a || 0, d: e.d });
@@ -2077,6 +2113,8 @@ function renderLists(){
     </div>
     <div class="bar" aria-hidden="true"><i class="p" style="width:${pct('paid')}%"></i><i class="h" style="width:${pct('partial')}%"></i><i class="c" style="width:${pct('unclear')}%"></i><i class="u" style="width:${pct('unpaid')}%"></i></div>`
     : `<div class="sum-head"><span class="big">${esc(t('sumNone', fmtMonthLong(month)))}</span></div>`;
+  { const hr = round2(hourIncome().filter(e => e.d.slice(0, 7) === month && (ui.lot === 'all' || e.lot === ui.lot)).reduce((x, e) => x + e.a, 0));
+    if(hr) $('#summary').insertAdjacentHTML('beforeend', `<div class="hint" id="sumHour" style="margin-top:6px">${esc(t('hrPlus', fmtMoney(hr)))}</div>`); }
 
   renderBanner();
 
