@@ -726,7 +726,7 @@ const I18N = {
   hrTab:['{0} adentro','{0} inside'], hrTabDone:['{0} terminados','{0} finished'], hrTabDone1:['1 terminado','1 finished'],
   hrIn:['Adentro ahora','Inside now'], hrOut:['Terminados','Finished'], hrInL:['Adentro ahora','Inside now'], hrOutL:['Terminados en {0}','Finished in {0}'],
   hrSum:['Cobrado por hora','Hourly income'], hrNoPrice:['Precio: próximamente','Price: coming soon'],
-  hrToday:['Cobrado hoy','Received today'], payMp:['Mercado Pago','Mercado Pago'], payTransfer:['Transferencia','Transfer'], payCash:['Efectivo','Cash'], payNone:['sin dato','not recorded'], hrByPay:['Por forma de pago','By payment method'], hrMonthSum:['Cobrado por hora en {0}','Hourly income in {0}'], hrAvg:['Promedio por estadía','Average per stay'],
+  hrToday:['Cobrado hoy','Received today'], payMp:['Mercado Pago','Mercado Pago'], payTransfer:['Transferencia','Transfer'], payCash:['Efectivo','Cash'], payOther:['Otro','Other'], payNone:['sin dato','not recorded'], hrByPay:['Por forma de pago','By payment method'], hrMonthSum:['Cobrado por hora en {0}','Hourly income in {0}'], hrAvg:['Promedio por estadía','Average per stay'],
   hrPlus:['Además {0} de estacionamiento por hora','Plus {0} from hourly parking'], today:['hoy','today'],
   wkRate:['Precio por hora (ARS)','Price per hour (ARS)'], vehCar:['Auto','Car'], vehMoto:['Moto','Motorbike'], vehBike:['Bicicleta','Bicycle'], vehTruck:['Camión','Truck'], wkRatesOk:['Precios guardados.','Prices saved.'],
   wkRateHint:['Por tipo de vehículo. Se cobra cada hora empezada (mínimo 1 hora). Los dispositivos de las entradas toman los precios nuevos solos.','Per vehicle type. Every started hour is charged (at least 1 hour). The entrance devices pick up the new prices by themselves.'],
@@ -1654,7 +1654,7 @@ const ym = ts => { const d = new Date(ts); return d.getFullYear() + '-' + pad2(d
 /* every started hour, at least one; a stay ended on an entrance device carries its price (p), older ones are priced now */
 const hrHours = ms => Math.max(1, Math.ceil(ms / 3600000));
 const stayPrice = x => typeof x.p === 'number' ? x.p : hrHours(x.out - x.in) * workRate(vehOf(x));
-const HR_PAY = [['mp', 'payMp'], ['transfer', 'payTransfer'], ['cash', 'payCash']];
+const HR_PAY = [['mp', 'payMp'], ['transfer', 'payTransfer'], ['cash', 'payCash'], ['other', 'payOther']];
 const payLabel = k => { const p = HR_PAY.find(x => x[0] === k); return t(p ? p[1] : 'payNone'); };
 /* totals per payment method; stays from before the choice existed count as "not recorded" */
 const byPay = list => { const r = {}; for(const x of list){ const k = HR_PAY.some(p => p[0] === x.pay) ? x.pay : 'none'; r[k] = round2((r[k] || 0) + stayPrice(x)); } return r; };
@@ -1727,7 +1727,7 @@ function renderHour(){
       <div class="row-amt hr-live" style="flex-direction:column;align-items:flex-end;justify-content:center">${esc(hrDur(now - x.in))}<small style="font-weight:600;color:var(--muted)">${esc(fmtMoney(hrHours(now - x.in) * workRate(vehOf(x))))}</small></div>${delBtn(x)}</li>`;
   const rowOut = x => `<li class="row"><div class="row-main"><span class="row-name"><span class="plate${vehOf(x) === 'bike' ? ' nm' : ''}" style="margin-left:0">${esc(x.k)}</span> <span class="badge">${esc(t(VEH.find(v => v[0] === vehOf(x))[1]))}</span>${all ? ` <span class="badge">${esc(lotName(x.lot))}</span>` : ''}</span>
       <span class="row-sub"><b class="row-date">${esc(day(x.out))}</b> · ${esc(fmtTime(x.in))} – ${esc(fmtTime(x.out))} · ${esc(hrDur(x.out - x.in))}</span></div>
-      <div class="row-amt pos" style="flex-direction:column;align-items:flex-end;justify-content:center">${esc(fmtMoney(stayPrice(x)))}${x.pay ? `<small style="font-weight:600;color:var(--muted)">${esc(payLabel(x.pay))}</small>` : ''}</div>${delBtn(x)}</li>`;
+      <div class="row-amt pos" style="flex-direction:column;align-items:flex-end;justify-content:center">${esc(fmtMoney(stayPrice(x)))}${x.pay ? `<small style="font-weight:600;color:var(--muted)">${esc(payLabel(x.pay) + (x.payN ? ' (' + x.payN + ')' : ''))}</small>` : ''}</div>${delBtn(x)}</li>`;
   const byDay = [];                      /* finished stays grouped by day, newest first, each day with its total */
   for(const x of outs){ const k = dk(x.out); let g = byDay[byDay.length - 1]; if(!g || g.k !== k){ g = { k, sum: 0, n: 0, rows: [], xs: [] }; byDay.push(g); } g.sum = round2(g.sum + stayPrice(x)); g.n++; g.rows.push(rowOut(x)); g.xs.push(x); }
   const dayName = iso => { const [y, m, d] = iso.split('-').map(Number); return cap(new Intl.DateTimeFormat(loc(), { weekday:'long', day:'numeric', month:'short' }).format(new Date(y, m - 1, d)).replace(/\./g, '')); };
