@@ -1675,7 +1675,7 @@ function renderHour(){
     </div>
     ${note ? `<div style="margin-top:10px">${note}</div>` : ''}
     <div class="hint" style="margin-top:8px;display:flex;align-items:center;gap:10px">${work.at ? esc(t('hrUpd', fmtTime(work.at))) : ''}<button type="button" class="link" id="hrRefresh" style="margin-left:auto">${esc(t('hrRefresh'))}</button></div>`;
-  const delBtn = x => `<div class="row-actions"><button type="button" class="ib no" data-hrdel="${esc(x.id)}" aria-label="${esc(t('hrDel'))}" title="${esc(t('hrDel'))}">🗑</button></div>`;
+  const delBtn = x => `<div class="row-actions"><button type="button" class="ib no" data-hrdel="${esc(x.id)}" aria-label="${esc(t('hrDel'))}" title="${esc(t('hrDel'))}">✕</button></div>`;
   const day = ts => fmtDate(new Date(ts).getFullYear() + '-' + pad2(new Date(ts).getMonth() + 1) + '-' + pad2(new Date(ts).getDate()));
   const rowIn = x => `<li class="row"><div class="row-main"><span class="row-name"><span class="plate" style="margin-left:0">${esc(x.k)}</span>${all ? ` <span class="badge">${esc(lotName(x.lot))}</span>` : ''}</span>
       <span class="row-sub">${esc(t('hrSince', (day(x.in) !== day(now) ? day(x.in) + ' ' : '') + fmtTime(x.in)))}</span></div>
