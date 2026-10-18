@@ -108,6 +108,7 @@ h1,h2,h3,p{margin:0}
 .col.hin .mark{background:var(--accent)} .col.hin .col-head{background:var(--accent-soft)}
 .col.hout .mark{background:var(--paid)} .col.hout .col-head{background:var(--paid-soft)}
 .row-amt.none{color:var(--muted);font-weight:500}
+.hr-miss .row-name{color:var(--muted)}
 .hr-day{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:2px 10px;padding:8px 14px;background:var(--soft);border-bottom:1px solid var(--line);font-weight:700;font-size:14px}
 .hr-day small{color:var(--muted);font-weight:500}
 .hr-day .hr-day-pay{flex-basis:100%;text-align:right;font-size:12.5px}
@@ -695,7 +696,7 @@ const I18N = {
   salChartD:['Totales del mes, sumados día a día (estacionamientos + bar)','Month totals, added up day by day (parking + bar)'], salUpTo:['Hasta el {0}','Up to {0}'], wdChartEmpty:['Sin retiros en estos 12 meses.','No withdrawals in these 12 months.'], wdTot12:['Total 12 meses','12-month total'], wdEmpty:['Sin retiros este mes.','No withdrawals this month.'], wdDeleted:['Retiro eliminado.','Withdrawal deleted.'],
   wdLeft:['Queda después de los retiros','Left after withdrawals'], wdAfter:['Retiros personales: {0} · queda {1}','Personal withdrawals: {0} · left {1}'],
   wkTitle:['Entradas (work.castcomercial.com)','Entrances (work.castcomercial.com)'],
-  wkIntro:['Los dispositivos de las entradas registran patente y hora. No tienen acceso a esta app ni a los datos de clientes.','The entrance devices record plate and time. They have no access to this app or to customer data.'],
+  wkIntro:['Los dispositivos de las entradas cargan la recaudación de cada día. No tienen acceso a esta app ni a los datos de clientes.','The entrance devices enter each day\'s revenue. They have no access to this app or to customer data.'],
   wkAdmin_html:['<b>Una sola vez, el administrador:</b> pegá el token creado solo para <code>{0}</code> (Contents: Read and write). Se guarda cifrado; después alcanza con el código.','<b>Once, by the administrator:</b> paste the token created only for <code>{0}</code> (Contents: Read and write). It is stored encrypted; afterwards the code is enough.'],
   wkTokLbl:['Token de las entradas','Entrance token'], wkMake:['Crear código para las entradas','Create code for the entrances'],
   wkErrTok:['Este token no puede escribir en {0}. Revisá «Repository access» y «Contents: Read and write».','This token cannot write to {0}. Check “Repository access” and “Contents: Read and write”.'],
@@ -726,7 +727,11 @@ const I18N = {
   hrTab:['{0} adentro','{0} inside'], hrTabDone:['{0} terminados','{0} finished'], hrTabDone1:['1 terminado','1 finished'],
   hrIn:['Adentro ahora','Inside now'], hrOut:['Terminados','Finished'], hrInL:['Adentro ahora','Inside now'], hrOutL:['Terminados en {0}','Finished in {0}'],
   hrSum:['Cobrado por hora','Hourly income'], hrNoPrice:['Precio: próximamente','Price: coming soon'],
-  hrToday:['Cobrado hoy','Received today'], payMp:['Mercado Pago','Mercado Pago'], payTransfer:['Transferencia','Transfer'], payCash:['Efectivo','Cash'], payOther:['Otro','Other'], payNone:['sin dato','not recorded'], hrByPay:['Por forma de pago','By payment method'], hrMonthSum:['Cobrado por hora en {0}','Hourly income in {0}'], hrAvg:['Promedio por estadía','Average per stay'],
+  hrToday:['Cobrado hoy','Received today'],
+  hrDays:['Recaudación por día','Revenue per day'], hrDayMissing:['sin cargar','not entered'], hrDayAt:['cargado a las {0}','entered at {0}'],
+  hrDaysEmpty:['Todavía no se cargó ningún día en este mes.','No day entered this month yet.'], hrTabSum:['{0} este mes','{0} this month'], hrTabToday:['hoy sin cargar','today not entered'],
+  hrDayDelText:['Se borra la recaudación de {0} del {1} ({2}), también en el dispositivo de la entrada.','The revenue of {0} on {1} ({2}) will be deleted, also on the entrance device.'],
+  hrOldStays:['Estacionamientos registrados uno por uno (antes)','Stays recorded one by one (earlier)'], payMp:['Mercado Pago','Mercado Pago'], payTransfer:['Transferencia','Transfer'], payCash:['Efectivo','Cash'], payOther:['Otro','Other'], payNone:['sin dato','not recorded'], hrByPay:['Por forma de pago','By payment method'], hrMonthSum:['Cobrado por hora en {0}','Hourly income in {0}'], hrAvg:['Promedio por estadía','Average per stay'],
   hrPlus:['Además {0} de estacionamiento por hora','Plus {0} from hourly parking'], today:['hoy','today'],
   wkRate:['Precio por hora (ARS)','Price per hour (ARS)'], vehCar:['Auto','Car'], vehMoto:['Moto','Motorbike'], vehBike:['Bicicleta','Bicycle'], vehTruck:['Camión','Truck'], wkRatesOk:['Precios guardados.','Prices saved.'],
   wkRateHint:['Por tipo de vehículo. Se cobra cada hora empezada (mínimo 1 hora). Los dispositivos de las entradas toman los precios nuevos solos.','Per vehicle type. Every started hour is charged (at least 1 hour). The entrance devices pick up the new prices by themselves.'],
@@ -1181,8 +1186,9 @@ function renderTabs(){
   if(ui.lot !== 'all' && !lots.some(l => l.id === ui.lot)) ui.lot = lots[0] ? lots[0].id : 'all';
   const cell = (id, name) => {
     if(ui.bill === 'hour'){                                       /* hourly: cars inside now / stays finished this month */
-      const st = hourStays(id), nIn = ui.month === curMonth() ? st.ins.length : 0;
-      return `<button type="button" class="tab${ui.lot === id ? ' on' : ''}" data-lot="${esc(id)}" aria-pressed="${ui.lot === id}"><b>${esc(name)}</b><small>${esc(nIn ? t('hrTab', nIn) : t(st.outs.length === 1 ? 'hrTabDone1' : 'hrTabDone', st.outs.length))}${nIn ? `<span class="open">${esc(t(st.outs.length === 1 ? 'hrTabDone1' : 'hrTabDone', st.outs.length))}</span>` : ''}</small></button>`;
+      const sum = round2(hourIncome().filter(e => e.d.slice(0, 7) === ui.month && (id === 'all' || e.lot === id)).reduce((x, e) => x + e.a, 0));
+      const lots = id === 'all' ? lotsList().map(l => l.id) : [id], todayMissing = ui.month === curMonth() && lots.some(l => !hourDays(l).some(x => x.d === todayISO()));
+      return `<button type="button" class="tab${ui.lot === id ? ' on' : ''}" data-lot="${esc(id)}" aria-pressed="${ui.lot === id}"><b>${esc(name)}</b><small>${esc(t('hrTabSum', fmtMoney(sum)))}${todayMissing ? `<span class="open">${esc(t('hrTabToday'))}</span>` : ''}</small></button>`;
     }
     const cs = customersFor(id, ui.month);
     const paid = cs.filter(c => statusOf(c.id, ui.month) === 'paid').length;
@@ -1602,11 +1608,19 @@ function hourIncome(){
   const out = [], seen = new Set();
   for(const f in work.files) for(const x of Object.values(work.files[f] || {})){
     const lot = f.split('/')[0];
+    if(x && x.k === 'day'){ if(!x.del && typeof x.a === 'number' && /^\d{4}-\d{2}-\d{2}$/.test(x.d || '') && !seen.has(x.id)){ seen.add(x.id); out.push({ k:'in', a: x.a, d: x.d, h: 1, lot }); } continue; }      /* daily revenue typed at the entrance */
     if(!x || x.del || !x.in || !x.out || seen.has(x.id)) continue; seen.add(x.id);
     const d = new Date(x.out);
     out.push({ k:'in', a: stayPrice(x), d: d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()), h: 1, lot });
   }
   return out;
+}
+/* daily revenue records of the month shown: [{id, lot, d, a, t}] */
+function hourDays(lot, month = ui.month){
+  const ids = lot === 'all' ? lotsList().map(l => l.id) : [lot], out = [];
+  for(const id of ids){ const f = work.files[id + '/' + month]; if(!f) continue;
+    for(const x of Object.values(f)) if(x && x.k === 'day' && !x.del && typeof x.a === 'number' && (x.d || '').slice(0, 7) === month) out.push(Object.assign({ lot: id }, x)); }
+  return out.sort((a, b) => b.d.localeCompare(a.d));
 }
 const workMonths = () => [ui.month, addMonth(ui.month, -1)];
 function hourStays(lot){
@@ -1615,7 +1629,7 @@ function hourStays(lot){
   for(const id of ids) for(const mm of [...workMonths(), ...(cur ? [addMonth(m, -2)] : [])]){
     const f = work.files[id + '/' + mm]; if(!f) continue;
     for(const st of Object.values(f)){
-      if(!st || st.del || !st.in || seen.has(st.id)) continue; seen.add(st.id);
+      if(!st || st.del || !st.in || st.k === 'day' || seen.has(st.id)) continue; seen.add(st.id);
       const x = Object.assign({ lot: id }, st);
       if(!st.out){ if(cur) ins.push(x); }
       else if(new Date(st.out).getFullYear() + '-' + pad2(new Date(st.out).getMonth() + 1) === m) outs.push(x);
@@ -1627,10 +1641,12 @@ function hourStays(lot){
 /* Only the owners' app can delete an hourly stay (the entrance devices cannot). Deleting = del:true with a newer time,
    the same way the entrance devices merge, so they drop it as well. */
 async function delStay(id){
-  const { ins, outs } = hourStays(ui.lot), list = ins.concat(outs).filter(x => x.id === id);
+  const { ins, outs } = hourStays(ui.lot), list = ins.concat(outs, hourDays(ui.lot)).filter(x => x.id === id);
   if(!list.length || !cfg) return;
-  const x0 = list[0];
-  if(!await confirmBox(t('hrDelTitle'), t('hrDelText', x0.k, fmtDate(new Date(x0.in).getFullYear() + '-' + pad2(new Date(x0.in).getMonth() + 1) + '-' + pad2(new Date(x0.in).getDate())) + ' ' + fmtTime(x0.in)), t('del'), true)) return;
+  const x0 = list[0], lotN = l => { const o = state.lots[l]; return o ? lotLabel(o) : l; };
+  const ok = x0.k === 'day' ? await confirmBox(t('hrDelTitle'), t('hrDayDelText', lotN(x0.lot), fmtDate(x0.d), fmtMoney(x0.a)), t('del'), true)
+    : await confirmBox(t('hrDelTitle'), t('hrDelText', x0.k, fmtDate(new Date(x0.in).getFullYear() + '-' + pad2(new Date(x0.in).getMonth() + 1) + '-' + pad2(new Date(x0.in).getDate())) + ' ' + fmtTime(x0.in)), t('del'), true);
+  if(!ok) return;
   const byFile = {};
   for(const x of list){ const f = x.lot + '/' + ym(x.in); (byFile[f] = byFile[f] || []).push(x.id); }
   try{
@@ -1704,8 +1720,9 @@ async function loadWork(force){
 setInterval(() => { if(document.visibilityState === 'visible' && ui.area === 'park' && ui.bill === 'hour' && ui.parkView !== 'out' && !$('#hourView').hidden){ loadWork(); renderTabs(); renderLists(); } }, 30000);
 function renderHour(){
   const { ins, outs } = hourStays(ui.lot), cur = ui.month === curMonth(), now = Date.now(), all = ui.lot === 'all';
-  const total = round2(outs.reduce((s, x) => s + stayPrice(x), 0)), dk = ts => { const d = new Date(ts); return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); };
-  const today = round2(outs.filter(x => dk(x.out) === todayISO()).reduce((s, x) => s + stayPrice(x), 0));
+  const days = hourDays(ui.lot), daySum = round2(days.reduce((s, x) => s + x.a, 0));
+  const total = round2(outs.reduce((s, x) => s + stayPrice(x), 0) + daySum), dk = ts => { const d = new Date(ts); return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); };
+  const today = round2(outs.filter(x => dk(x.out) === todayISO()).reduce((s, x) => s + stayPrice(x), 0) + days.filter(x => x.d === todayISO()).reduce((s, x) => s + x.a, 0));
   const lotName = id => { const l = state.lots[id]; return l ? lotLabel(l) : id; };
   const note = work.status === 'nosync' ? `<div class="msg err">${esc(t('hrNoSync'))}</div>`
     : work.status === 'noaccess' ? `<div class="msg err">${t('hrNoAccess_html', esc(WORK_REPO), esc(WORK_REPO.split('/')[1]))}</div>`
@@ -1713,8 +1730,7 @@ function renderHour(){
     : work.status === 'loading' && !work.at ? `<div class="msg">${esc(t('hrLoading'))}</div>` : '';
   $('#summary').innerHTML = `
     <div class="bar-sum">
-      ${cur ? `<div><span>${esc(t('hrToday'))}</span><b class="pos" id="hrToday">${esc(fmtMoney(today))}</b></div><div><span>${esc(t('hrInL'))}</span><b id="hrNIn">${ins.length}</b></div>`
-        : `<div><span>${esc(t('hrOutL', fmtMonthLong(ui.month)))}</span><b id="hrNOut">${outs.length}</b></div><div><span>${esc(t('hrAvg'))}</span><b>${esc(outs.length ? fmtMoney(round2(total / outs.length)) : '–')}</b></div>`}
+      ${cur ? `<div><span>${esc(t('hrToday'))}</span><b class="pos" id="hrToday">${esc(fmtMoney(today))}</b></div>` : ''}
       <div class="saldo"><span>${esc(t('hrMonthSum', fmtMonthLong(ui.month)))}</span><b id="hrSum">${esc(fmtMoney(total))}</b></div>
     </div>
     ${outs.length ? `<div class="hint" id="hrPay" style="margin-top:6px">${payLine(outs)}</div>` : ''}
@@ -1735,9 +1751,23 @@ function renderHour(){
   const col = (cls, title, items, empty, foot, cnt) => `<section class="card col active ${cls}">
       <div class="col-head"><span class="mark"></span><span>${esc(title)}</span><span class="cnt">${cnt == null ? items.length : cnt}</span></div>
       ${items.length ? '<ul>' + items.join('') + '</ul>' : `<div class="empty">${esc(empty)}</div>`}${foot || ''}</section>`;
-  $('#hourLists').className = 'lists ' + (cur ? 'duo' : 'one');
-  $('#hourLists').innerHTML = (cur ? col('hin', t('hrIn'), ins.map(rowIn), t('hrEmptyIn')) : '')
-    + col('hout', t('hrOut'), outRows, t('hrEmptyOut'), `<div class="col-foot"><span>${esc(t('barTotal'))}</span><b>${esc(fmtMoney(total))}</b></div>`, outs.length);
+  /* revenue per day: every day of the month up to today, a missing one says "sin cargar" so nothing is forgotten */
+  const lotIds = all ? lotsList().map(l => l.id) : [ui.lot], [yy, mm] = ui.month.split('-').map(Number);
+  const lastDay = cur ? new Date().getDate() : ui.month > curMonth() ? 0 : new Date(yy, mm, 0).getDate();
+  const dayRows = [];
+  for(let dd = lastDay; dd >= 1; dd--){
+    const iso = ui.month + '-' + pad2(dd), recs = lotIds.map(l => days.find(x => x.lot === l && x.d === iso));
+    const sum = round2(recs.reduce((s, x) => s + (x ? x.a : 0), 0));
+    if(!recs.some(Boolean) && !(cur && dd >= lastDay - 6)) continue;          /* empty days only for the last week */
+    const line = (x, l) => `<li class="row${x ? '' : ' hr-miss'}"><div class="row-main"><span class="row-name">${all ? esc(lotName(l)) : esc(dayName(iso)) + (iso === todayISO() ? ' · ' + esc(t('today')) : '')}</span>${x ? `<span class="row-sub">${esc(t('hrDayAt', fmtTime(x.t)))}</span>` : ''}</div>
+      <div class="row-amt ${x ? 'pos' : 'none'}">${x ? esc(fmtMoney(x.a)) : esc(t('hrDayMissing'))}</div>${x ? delBtn(x) : '<div class="row-actions" style="width:54px"></div>'}</li>`;
+    dayRows.push(all ? `<li class="hr-day"><span>${esc(dayName(iso))}${iso === todayISO() ? ' · ' + esc(t('today')) : ''}</span><b>${esc(fmtMoney(sum))}</b></li>` + recs.map((x, i) => line(x, lotIds[i])).join('') : line(recs[0], ui.lot));
+  }
+  const oldStays = ins.length + outs.length > 0;
+  $('#hourLists').className = 'lists one';
+  $('#hourLists').innerHTML = col('hout', t('hrDays'), dayRows, t('hrDaysEmpty'), `<div class="col-foot"><span>${esc(t('barTotal'))}</span><b>${esc(fmtMoney(daySum))}</b></div>`, days.length)
+    + (oldStays ? `<h3 class="viz-h" style="margin:8px 4px 0">${esc(t('hrOldStays'))}</h3>` + (ins.length ? col('hin', t('hrIn'), ins.map(rowIn), t('hrEmptyIn')) : '')
+      + col('hout', t('hrOut'), outRows, t('hrEmptyOut'), `<div class="col-foot"><span>${esc(t('barTotal'))}</span><b>${esc(fmtMoney(round2(total - daySum)))}</b></div>`, outs.length) : '');
 }
 let costLastDate = '';
 function openCost(id, kind){
@@ -3835,10 +3865,6 @@ function openSettings(focusSync){
       ${cfg ? `<div class="sec" id="wkSec">
         <h3>${esc(t('wkTitle'))}</h3>
         <p class="hint" style="margin-top:0">${esc(t('wkIntro'))}</p>
-        <div class="field"><label>${esc(t('wkRate'))}</label>
-          <div class="two">${VEH.filter(([v]) => VEH_PICK.includes(v)).map(([v, key]) => `<div class="field" style="margin-bottom:6px"><label for="wkRate_${v}" style="font-weight:600">${esc(t(key))}</label><input id="wkRate_${v}" data-rate="${v}" type="text" inputmode="numeric" autocomplete="off" value="${esc(fmtNum(workRate(v)))}"></div>`).join('')}</div>
-          <button type="button" class="btn small primary" id="wkRateGo">${esc(t('wkRateSave'))}</button>
-          <div class="hint">${esc(t('wkRateHint'))}</div><div id="wkRateMsg"></div></div>
         ${workCode() ? `<p style="margin-bottom:4px"><b>${esc(t('wkCode'))}</b></p><div class="code" id="wkCode">${esc(showCode(workCode()))}</div>
           <p class="hint">${esc(t('wkHow'))}</p>
           <div class="actions" style="margin-top:8px">${lotsList().map(l => `<button type="button" class="btn small primary" data-wkqr="${esc(l.id)}">${esc(t('wkQr', lotLabel(l)))}</button>`).join('')}</div>
