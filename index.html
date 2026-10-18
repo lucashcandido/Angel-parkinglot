@@ -728,7 +728,7 @@ const I18N = {
   hrIn:['Adentro ahora','Inside now'], hrOut:['Terminados','Finished'], hrInL:['Adentro ahora','Inside now'], hrOutL:['Terminados en {0}','Finished in {0}'],
   hrSum:['Cobrado por hora','Hourly income'], hrNoPrice:['Precio: próximamente','Price: coming soon'],
   hrToday:['Cobrado hoy','Received today'],
-  hrDays:['Recaudación por día','Revenue per day'], hrDayMissing:['sin cargar','not entered'], hrDayAt:['cargado a las {0}','entered at {0}'],
+  hrDays:['Recaudación por día','Revenue per day'], hrEdited:['editado','edited'], hrBefore:['antes','before'], hrEditedAt:['editado a las {0}','edited at {0}'], hrDayMissing:['sin cargar','not entered'], hrDayAt:['cargado a las {0}','entered at {0}'],
   hrDaysEmpty:['Todavía no se cargó ningún día en este mes.','No day entered this month yet.'], hrTabSum:['{0} este mes','{0} this month'], hrTabToday:['hoy sin cargar','today not entered'],
   hrDayDelText:['Se borra la recaudación de {0} del {1} ({2}), también en el dispositivo de la entrada.','The revenue of {0} on {1} ({2}) will be deleted, also on the entrance device.'],
   hrOldStays:['Estacionamientos registrados uno por uno (antes)','Stays recorded one by one (earlier)'], payMp:['Mercado Pago','Mercado Pago'], payTransfer:['Transferencia','Transfer'], payCash:['Efectivo','Cash'], payOther:['Otro','Other'], payNone:['sin dato','not recorded'], hrByPay:['Por forma de pago','By payment method'], hrMonthSum:['Cobrado por hora en {0}','Hourly income in {0}'], hrAvg:['Promedio por estadía','Average per stay'],
@@ -1759,9 +1759,10 @@ function renderHour(){
     const iso = ui.month + '-' + pad2(dd), recs = lotIds.map(l => days.find(x => x.lot === l && x.d === iso));
     const sum = round2(recs.reduce((s, x) => s + (x ? x.a : 0), 0));
     if(!recs.some(Boolean) && !(cur && dd >= lastDay - 6)) continue;          /* empty days only for the last week */
-    const line = (x, l) => `<li class="row${x ? '' : ' hr-miss'}"><div class="row-main"><span class="row-name">${all ? esc(lotName(l)) : esc(dayName(iso)) + (iso === todayISO() ? ' · ' + esc(t('today')) : '')}</span>${x ? `<span class="row-sub">${esc(t('hrDayAt', fmtTime(x.t)))}</span>` : ''}</div>
+    const edited = x => x && Array.isArray(x.h) && x.h.length ? x.h : null;
+    const line = (x, l) => `<li class="row${x ? '' : ' hr-miss'}${edited(x) ? ' hr-edited' : ''}"><div class="row-main"><span class="row-name">${all ? esc(lotName(l)) : esc(dayName(iso)) + (iso === todayISO() ? ' · ' + esc(t('today')) : '')}${edited(x) ? ` <span class="badge warn">${esc(t('hrEdited'))}</span>` : ''}</span>${x ? `<span class="row-sub">${esc(t(edited(x) ? 'hrEditedAt' : 'hrDayAt', fmtTime(x.t)))}${edited(x) ? ` · ${esc(t('hrBefore'))} ${edited(x).map(h => `<s>${esc(fmtMoney(h.a))}</s>`).join(' → ')}` : ''}</span>` : ''}</div>
       <div class="row-amt ${x ? 'pos' : 'none'}">${x ? esc(fmtMoney(x.a)) : esc(t('hrDayMissing'))}</div>${x ? delBtn(x) : '<div class="row-actions" style="width:54px"></div>'}</li>`;
-    dayRows.push(all ? `<li class="hr-day"><span>${esc(dayName(iso))}${iso === todayISO() ? ' · ' + esc(t('today')) : ''}</span><b>${esc(fmtMoney(sum))}</b></li>` + recs.map((x, i) => line(x, lotIds[i])).join('') : line(recs[0], ui.lot));
+    dayRows.push(all ? `<li class="hr-day"><span>${esc(dayName(iso))}${iso === todayISO() ? ' · ' + esc(t('today')) : ''}${recs.some(edited) ? ` <span class="badge warn">${esc(t('hrEdited'))}</span>` : ''}</span><b>${esc(fmtMoney(sum))}</b></li>` + recs.map((x, i) => line(x, lotIds[i])).join('') : line(recs[0], ui.lot));
   }
   const oldStays = ins.length + outs.length > 0;
   $('#hourLists').className = 'lists one';
