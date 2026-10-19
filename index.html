@@ -534,6 +534,7 @@ const ORDER = ['paid','partial','unpaid','unclear'];
 /* ---------- texts: [español, English] ---------- */
 const I18N = {
   paid:['Pagado','Paid'], partial:['Parcial','Partial'], unpaid:['No pagado','Unpaid'], unclear:['Dudoso','Unclear'],
+  payAdd:['Agregar un pago (se suma a lo ya pagado)','Add a payment (added to what was paid)'], payAddBtn:['+ Sumar','+ Add'], payAddPh:['p. ej. 5.000','e.g. 5.000'], payParts:['Pagos: {0}','Payments: {0}'], payAdded:['{0} sumado: ahora {1}','{0} added: now {1}'],
   progOf:['{0} de {1}','{0} of {1}'], progLeft:['faltan {0}','{0} missing'], sumPartial:['{0} en parte','{0} in part'],
   emptyPartial:['Nadie pagó en partes.','No partial payments.'],
   errPartial:['Ingresá cuánto pagó hasta ahora.','Enter how much has been paid so far.'],
@@ -1051,6 +1052,7 @@ function setPayment(cid, month, rec){                 /* leaves the record untou
   if(rec.p) clean.p = rec.p;
   if(rec.n) clean.n = rec.n;
   if(rec.x && rec.x.length) clean.x = rec.x;      /* transfers already imported from a statement */
+  if(rec.h && rec.h.length && clean.s !== 'unpaid') clean.h = rec.h;      /* the single payments of a month paid in parts: [{a, d}] */
   const key = payKey(cid, month), old = state.payments[key];
   if(old && old.r && clean.s !== 'paid') clean.r = old.r;        /* the reminder dates stay until it is paid */
   if(old && old.r2 && clean.s !== 'paid') clean.r2 = old.r2;
@@ -2265,6 +2267,7 @@ function openCustomer(cid, pre){
   const payKind = (pre && pre.pay) || (c && c.pay) || '';
   const extra = cars.slice(1).map(x => ({ k: x.k, s: x.s, a: fmtNum(x.a) }));        /* further cars, as typed */
   const hist = {};                       /* earlier month -> status as shown; changed ones are saved */
+  const parts = c && Array.isArray(p.h) ? p.h.slice() : [];        /* single payments of this month */
   const mark = { paid:'✓', partial:'½', unpaid:'✕', unclear:'?' };
   let histHtml = '';
   if(c) for(let i = 12; i >= 1; i--){
@@ -2282,6 +2285,7 @@ function openCustomer(cid, pre){
         <div class="field"><label for="pd">${esc(t('receivedOn'))}</label><input id="pd" type="date" value="${esc(p.d || '')}"></div>
       </div>
       <div class="hint" id="payProg" style="margin:-6px 0 12px"></div>
+      <div class="field"><label for="padd">${esc(t('payAdd'))}</label><div style="display:flex;gap:8px"><input id="padd" type="text" inputmode="decimal" autocomplete="off" placeholder="${esc(t('payAddPh'))}" style="flex:1;min-width:0"><button type="button" class="btn primary" id="paddGo">${esc(t('payAddBtn'))}</button></div><div class="hint" id="payParts"></div></div>
       <div class="field"><label for="pp">${esc(t('payer'))}</label>
         <input id="pp" type="text" list="payerNames" autocomplete="off" value="${esc(p.p || '')}" placeholder="${esc(t('payerPh'))}">
         <datalist id="payerNames">${[c.name].concat(c.aliases || []).map(n => `<option value="${esc(n)}">`).join('')}</datalist>
@@ -2384,8 +2388,25 @@ function openCustomer(cid, pre){
       showProg();
     }));
     f('ca').addEventListener('input', showProg); onFee = showProg;
+    /* paid in parts: type only the new payment, the app adds it to what was already paid */
+    const showParts = () => { f('payParts').textContent = parts.length ? t('payParts', parts.map(x => (x.d ? fmtDate(x.d) + ' ' : '') + fmtARS(x.a)).join(' + ')) : ''; };
+    const addPay = () => {
+      const add = parseAmount(f('padd').value); if(!(add > 0)){ f('padd').focus(); return; }
+      const st = stNow(), cur = st === 'unpaid' ? 0 : parseAmount(f('pa').value) || (st === 'paid' ? fee() : 0);
+      if(!parts.length && cur > 0) parts.push({ a: cur, d: f('pd').value || p.d || '' });       /* what was there before becomes the first payment */
+      parts.push({ a: add, d: todayISO() });
+      if(st === 'unpaid') setSt('partial');
+      f('pa').value = fmtNum(round2(cur + add)); f('pd').value = todayISO();
+      f('pa').dispatchEvent(new Event('input'));
+      f('padd').value = ''; showParts();
+      toast(t('payAdded', fmtARS(add), fmtARS(round2(cur + add))));
+    };
+    f('paddGo').onclick = addPay;
+    f('padd').addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); addPay(); } });
+    showParts();
     showProg();
     for(const id of ['pp','cn','cz']) f(id).addEventListener('input', refreshRemember);
+    $$('input[name=s]', el).forEach(r => r.addEventListener('change', () => { if(stNow() === 'unpaid'){ parts.length = 0; showParts(); } }));
     refreshRemember();
     const next = { unpaid:'paid', paid:'unclear', unclear:'unpaid', partial:'paid' };
     if(f('hist')) f('hist').addEventListener('click', e => {
@@ -2418,12 +2439,12 @@ function openCustomer(cid, pre){
       if(st === 'paid'){ if(!a) a = amount; if(!d) d = todayISO(); }
       if(st === 'partial' && !d) d = todayISO();
       if(st === 'unpaid') a = 0;
-      setPayment(id, month, { s: st, a, d, p: pv, n: f('pn').value.trim(), x: st === 'unpaid' ? null : p.x });
+      setPayment(id, month, { s: st, a, d, p: pv, n: f('pn').value.trim(), x: st === 'unpaid' ? null : p.x, h: st === 'unpaid' ? null : parts });
       if(pv && !f('rememberRow').hidden && f('remember').checked) aliases.push(pv);
       for(const m in hist){
         const ns = hist[m]; if(ns === statusOf(id, m)) continue;
         const o = payOf(id, m) || {};
-        setPayment(id, m, ns === 'unpaid' ? { s: ns, n: o.n } : { s: ns, a: ns === 'paid' ? (amount ? Math.max(amount, o.a || 0) : o.a) : o.a, d: o.d, p: o.p, n: o.n, x: o.x });
+        setPayment(id, m, ns === 'unpaid' ? { s: ns, n: o.n } : { s: ns, a: ns === 'paid' ? (amount ? Math.max(amount, o.a || 0) : o.a) : o.a, d: o.d, p: o.p, n: o.n, x: o.x, h: o.h });
       }
     }
     const next = { id, lot: f('cl').value, name, plate: car.plate, spot: car.spot, amount, cars: car.cars, aliases, phone: f('cp').value.trim(), note: f('co').value.trim(), from, until, pay: f('cy').value || undefined, flag: f('cg').checked || undefined };
