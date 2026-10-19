@@ -339,8 +339,20 @@ a.btn{display:inline-flex;align-items:center;gap:8px;text-decoration:none}
   .switch{display:none}
   .top h1{font-size:19px}
 }
-@media (min-width:1250px){
+@media (min-width:1000px){                 /* iPad in landscape and wider: the four lists side by side */
   .lists{grid-template-columns:repeat(4,minmax(0,1fr))}
+}
+@media (min-width:1000px) and (max-width:1249px){      /* four narrower columns: a little more compact */
+  .lists{gap:10px}
+  #lists .col-head{padding:10px;gap:6px;font-size:15px}
+  #lists .col-head .sum{font-size:12px;min-width:0;flex:0 1 auto;overflow:hidden;text-overflow:ellipsis}
+  #lists .col-head:has(.msgf){flex-wrap:nowrap}
+  #lists .col-head .tail{flex:none}
+  #lists .msgf{height:28px;padding:0 8px;font-size:12px}
+  #lists .row-main{padding:9px 4px 9px 10px}
+  #lists .row-name{font-size:15px}
+  #lists .row-actions{gap:4px;padding:0 8px 0 2px}
+  #lists .ib{width:36px;height:36px;font-size:16px;border-radius:10px}
 }
 @media (max-width:899px){
   .lists:not(.searching) .col:not(.active){display:none}
