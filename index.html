@@ -104,7 +104,7 @@ h1,h2,h3,p{margin:0}
 .pview button.out.on{background:var(--unpaid-soft);border-color:var(--unpaid);color:var(--unpaid)}
 .bview{display:inline-grid;grid-template-columns:1fr 1fr;gap:3px;padding:3px;margin:0 0 12px;border:1px solid var(--line);border-radius:11px;background:var(--soft)}
 .bview button{min-height:34px;padding:0 16px;border:0;border-radius:8px;background:none;color:var(--muted);font:inherit;font-size:14.5px;font-weight:700;cursor:pointer}
-.bview button.on{background:var(--card);color:var(--text);box-shadow:0 1px 3px rgba(16,24,40,.14)}
+.bview button.on{background:var(--accent);color:var(--on-accent);box-shadow:0 1px 3px rgba(16,24,40,.14)}
 .col.hin .mark{background:var(--accent)} .col.hin .col-head{background:var(--accent-soft)}
 .col.hout .mark{background:var(--paid)} .col.hout .col-head{background:var(--paid-soft)}
 .row-amt.none{color:var(--muted);font-weight:500}
@@ -514,7 +514,7 @@ code{background:var(--soft);border-radius:5px;padding:1px 5px;font-size:13.5px;o
   </section>
   <div class="toolbar" id="parkTools">
     <input id="search" type="search" autocomplete="off">
-    <button id="btnImport" class="btn" type="button"></button>
+    <button id="btnImport" class="btn primary" type="button"></button>
     <button id="btnDup" class="btn" type="button" hidden></button>
     <button id="btnAdd" class="btn primary" type="button"></button>
   </div>
@@ -1213,7 +1213,7 @@ function applyStatic(){
   $('#prev').setAttribute('aria-label', t('aPrev')); $('#next').setAttribute('aria-label', t('aNext'));
   $('#search').placeholder = t('searchPh'); $('#search').setAttribute('aria-label', t('aSearch'));
   $('#btnAdd').textContent = t('addCustomer');
-  $('#btnImport').textContent = t('stmtBtn');
+  $('#btnImport').textContent = '+ ' + t('stmtBtn');
   $('#btnDup').textContent = t('dupBtn');
   $('#costFix').textContent = t('costAddFix'); $('#costVar').textContent = t('costAddVar');
   $('#barIn').textContent = t('barAddIn'); $('#barOut').textContent = t('barAddOut'); 
