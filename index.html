@@ -867,7 +867,9 @@ const I18N = {
   dataXls:['«{0}» es un Excel antiguo (.xls). Abrilo y guardalo como .xlsx, .ods o .csv.','“{0}” is an old Excel file (.xls). Open it and save it as .xlsx, .ods or .csv.'],
   dataBadSheet:['No se pudo leer «{0}».','Could not read “{0}”.'],
   asTitle:['Asistente','Assistant'], asSub:['Claude carga los datos por vos','Claude enters the data for you'], asBtn:['Asistente','Assistant'],
-  asIntro:['Subí extractos, recibos, facturas, cierres de caja, planillas o fotos, o escribí lo que pasó. Claude lo ordena y te muestra todo antes de guardar.','Upload statements, receipts, invoices, cash closings, spreadsheets or photos, or write what happened. Claude sorts it and shows you everything before saving.'],
+  asIntro:['Para ingresos, gastos, retiros y pagos: subí extractos, recibos, facturas, cierres de caja, planillas o fotos, o escribí lo que pasó. Claude lo ordena y te muestra todo antes de guardar.','For income, expenses, withdrawals and payments: upload statements, receipts, invoices, cash closings, spreadsheets or photos, or write what happened. Claude sorts it and shows you everything before saving.'],
+  asCustHere:['El asistente es solo para transacciones. Para crear o importar clientes usá el botón «{0}» de Estacionamientos: lee la lista y te muestra los clientes antes de guardarlos.','The assistant is for transactions only. To create or import customers use the “{0}” button under Parking lots: it reads the list and shows you the customers before saving them.'],
+  asCustGo:['Abrir «{0}»','Open “{0}”'], asNoneTx:['No se encontraron transacciones para cargar.','No transactions to enter were found.'],
   asTextLbl:['Mensaje (opcional)','Message (optional)'], asTextPh:['p. ej. «Ayer Angel retiró 50.000» o «Son los gastos del bar de octubre»','e.g. “Angel took out 50.000 yesterday” or “These are the bar expenses of October”'],
   asPick:['Agregar archivos o fotos','Add files or photos'], asPickHint:['PDF, Excel (.xlsx), CSV, fotos o capturas – hasta 10 archivos.','PDF, Excel (.xlsx), CSV, photos or screenshots – up to 10 files.'],
   asBadFile:['«{0}» no se puede leer. Usá PDF, Excel (.xlsx), CSV o una foto.','“{0}” cannot be read. Use PDF, Excel (.xlsx), CSV or a photo.'],
@@ -3499,10 +3501,10 @@ function openBarPhoto(kind){
    Nothing is saved before the owner has seen it: a confirmation page lists every proposed entry, grouped by where it goes,
    editable, with possible duplicates (against what is already in the app and inside the files) unticked. Duplicates that are
    already in the app are listed as well, so they can be cleaned up in the same step. */
-const AS_KINDS = ['barIn', 'barOut', 'costVar', 'costFix', 'wd', 'pay', 'cust', 'day'];
+const AS_KINDS = ['barIn', 'barOut', 'costVar', 'costFix', 'wd', 'pay', 'day'];
 const ASSIST_TOOL = {
   name: 'report_changes',
-  description: 'Report every entry found in the files and the message, sorted by where it belongs in the app.',
+  description: 'Report every money transaction found in the files and the message, sorted by where it belongs in the app.',
   input_schema: { type:'object', required:['summary'], properties:{
     summary:{ type:'string', description:'One or two short sentences: what the files are and what was found.' },
     bar:{ type:'array', description:'Income or expenses of the bar.', items:{ type:'object', required:['kind','amount'], properties:{
@@ -3518,8 +3520,7 @@ const ASSIST_TOOL = {
       customer:{ type:['integer','null'], description:'Number of the existing customer, or null if unknown' }, month:{ type:'string', description:'YYYY-MM the payment is for' },
       date:{ type:'string', description:'YYYY-MM-DD it was received' }, amount:{ type:'number' }, payer:{ type:'string', description:'Name on the transfer, if any' },
       confidence:{ type:'string', enum:['sure','unsure','none'] }, reason:{ type:'string' } } } },
-    new_customers:{ type:'array', description:'New monthly customers that do not exist yet.', items:{ type:'object', required:['name'], properties:{
-      name:{ type:'string' }, plate:{ type:'string' }, parking_lot:{ type:['integer','null'] }, space:{ type:'string' }, monthly_amount:{ type:['number','null'] }, phone:{ type:'string' }, note:{ type:'string' } } } },
+    customers_requested:{ type:'boolean', description:'true if the files or the message are about creating, importing or changing CUSTOMERS (e.g. a customer list, a new customer to add) instead of money transactions.' },
     day_revenue:{ type:'array', description:'Total revenue of one day from hourly parking, per parking lot.', items:{ type:'object', required:['amount'], properties:{
       parking_lot:{ type:['integer','null'] }, date:{ type:'string' }, amount:{ type:'number' } } } }
   } }
@@ -3530,13 +3531,13 @@ function assistPrompt(text, month, custs){
   const fixed = costLive().filter(e => e.k === 'fix').map(e => '- ' + (e.c || '?') + ': ' + (fixAmount(e, month) || '-'));
   return `You are the assistant inside "Cast Comercial", the app of a family business in Buenos Aires, Argentina: three parking lots (monthly customers and hourly parking) and the bar "${BAR_NAME}". The owners are Angel and Jorge. Today is ${todayISO()}. The month shown in the app is ${month}.
 
-The owner gives you files (bank statements, receipts, invoices, cash closings, spreadsheets, photos of hand-written lists) and/or a message. Find every entry in them and report it with ONE call of report_changes, sorted into the right list:
+The owner gives you files (bank statements, receipts, invoices, cash closings, spreadsheets, photos of hand-written lists) and/or a message. This assistant is ONLY for money transactions. Find every transaction in them and report it with ONE call of report_changes, sorted into the right list:
 - bar: income ("in") or expenses ("out") of the bar ${BAR_NAME}: drinks, food, suppliers of the bar, bar sales, card/Mercado Pago settlements of the bar.
 - parking_costs: expenses of the parking lots (cleaning, repairs, electricity of a lot, salaries of parking staff...). "fixed" only for costs paid every month.
 - withdrawals: money Angel or Jorge took out for themselves (retiro, retiré, se llevó).
 - payments: money received from a monthly parking customer. Match the customer by name, pays-via name or plate (names on bank statements are often upper-case, without accents, SURNAME NAME, cut off). "sure" only when the name clearly matches. Never match on the amount alone when several customers pay that amount. Give the month it is for (the month of the date unless the text says otherwise).
-- new_customers: only people who clearly start renting a monthly space and do not exist yet.
 - day_revenue: the total of one day of hourly parking ("recaudación", "caja del día") of one parking lot.
+Customers are NOT created or changed here: if the files or the message are about creating, importing or changing customers (a customer list, a new monthly customer, a change of plate or fee), report no customers and set customers_requested to true. A payment of an existing customer is still a transaction (payments).
 When it is not clear whether something belongs to the bar or the parking lots, use the wording and the supplier: a beer supplier is the bar, a parking-gate repair is a parking lot. When unsure, choose the more likely one and say so in the note.
 
 Rules:
@@ -3572,7 +3573,7 @@ function cleanAssist(objs, custs, month){
     const key = [it.kind, it.a, it.d || it.m || '', norm(it.c || it.name || ''), it.cid || '', it.lot || ''].join('|');
     if(seen.has(key)) return; seen.add(key); out.push(it);
   };
-  let summary = '';
+  let summary = '', wantsCustomers = false;
   for(const o of objs){
     if(!o || typeof o !== 'object') continue;
     if(o.summary) summary = text(o.summary, 400);
@@ -3587,11 +3588,10 @@ function cleanAssist(objs, custs, month){
       add({ kind:'pay', a: amt(x.amount), d, m: mon(x.month) || (d ? d.slice(0, 7) : month), cid: c ? c.id : '', payer: text(x.payer, 120),
         conf: c && (x.confidence === 'sure' || x.confidence === 'unsure') ? x.confidence : 'none', n: text(x.reason, 240) });
     }
-    for(const x of Array.isArray(o.new_customers) ? o.new_customers : []) if(x && text(x.name, 120))
-      add({ kind:'cust', name: text(x.name, 120), plate: cleanPlate(text(x.plate, 60)), lot: lotOf(x.parking_lot) || (lots[0] || {}).id || '', spot: text(x.space, 30), a: amt(x.monthly_amount), phone: text(x.phone, 40), n: text(x.note, 200) });
+    if(o.customers_requested === true || (Array.isArray(o.new_customers) && o.new_customers.length)) wantsCustomers = true;
     for(const x of Array.isArray(o.day_revenue) ? o.day_revenue : []) if(x) add({ kind:'day', a: amt(x.amount), d: day(x.date), lot: lotOf(x.parking_lot) });
   }
-  return { summary, items: out };
+  return { summary, items: out, wantsCustomers };
 }
 /* is there already something like it in the app? -> a short text saying what, or '' */
 const asNear = (d1, d2) => d1 && d2 && Math.abs(Date.parse(d1) - Date.parse(d2)) <= 2 * 864e5;
@@ -3633,7 +3633,7 @@ function existingDups(){
 }
 const AS_AREA = { barIn:'asBarIn', barOut:'asBarOut', costVar:'asCostVar', costFix:'asCostFix', wd:'asWd', pay:'asPay', cust:'asCust', day:'asDay' };
 function openAssist(){
-  let files = [], text = '', items = null, summary = '', dups = [], ctl = null, step = 'pick', err = '';
+  let files = [], text = '', items = null, summary = '', dups = [], ctl = null, step = 'pick', err = '', wantsCust = false;
   const el = openModal(`<div class="fs">
     <div class="sheet-head"><h2>${esc(t('asTitle'))}<span class="sub">${esc(t('asSub'))}</span></h2>${closeX()}</div>
     <div class="fs-body" id="asBody"></div>
@@ -3708,7 +3708,8 @@ function openAssist(){
     const keep = body.scrollTop;
     const nDup = items.filter(it => it.dup).length;
     let html = `${summary ? `<p class="tx-sum">${esc(summary)}</p>` : ''}
-      <p class="hint" style="margin:-4px 0 10px">${esc(items.length ? t('asCheck') : t('asNone'))}${nDup ? ' ' + esc(t('asDupHint', nDup)) : ''}</p>
+      ${wantsCust ? `<div class="msg as-cust"><p style="margin:0 0 8px">${esc(t('asCustHere', t('stmtBtn')))}</p><button type="button" class="btn small primary" id="asToData">${esc(t('asCustGo', t('stmtBtn')))}</button></div>` : ''}
+      <p class="hint" style="margin:-4px 0 10px">${esc(items.length ? t('asCheck') : wantsCust ? t('asNoneTx') : t('asNone'))}${nDup ? ' ' + esc(t('asDupHint', nDup)) : ''}</p>
       <datalist id="asCatsbarIn">${barCats('in').map(v => `<option value="${esc(v)}">`).join('')}</datalist><datalist id="asCatsbarOut">${barCats('out').map(v => `<option value="${esc(v)}">`).join('')}</datalist>`;
     for(const k of AS_KINDS){
       const list = items.map((it, i) => [it, i]).filter(([it]) => it.kind === k);
@@ -3724,6 +3725,7 @@ function openAssist(){
     body.scrollTop = keep;
     $('#asBack', foot).onclick = () => { step = 'pick'; items = null; draw(); };
     $('#asApply', foot).onclick = apply;
+    if($('#asToData', body)) $('#asToData', body).onclick = () => { closeModal(el); openImport(); };
   }
   function draw(){ if(!alive()) return; if(step === 'busy') drawBusy(); else if(step === 'review') drawReview(); else drawPick(); }
   async function run(){
@@ -3737,7 +3739,7 @@ function openAssist(){
       content.push({ type:'text', text: assistPrompt(text.trim(), ui.month, custs) });
       const got = cleanAssist(await aiAsk(content, ASSIST_TOOL, mine.signal, len => { const p = $('#asProg', body); if(p && step === 'busy') p.textContent = t('dataProgress', Math.max(1, Math.round(len / 1024))); }), custs, ui.month);
       if(mine.signal.aborted || !alive()) return;
-      summary = got.summary;
+      summary = got.summary; wantsCust = got.wantsCustomers;
       items = got.items.map(it => {
         if(!it.d && it.kind !== 'costFix' && it.kind !== 'cust' && it.kind !== 'pay') it.d = ui.month === curMonth() ? todayISO() : ui.month + '-01';
         it.dup = assistDup(it);
