@@ -93,6 +93,9 @@ h1,h2,h3,p{margin:0}
 .viz .hit{fill:transparent;cursor:pointer}
 .sk{display:inline-block;width:16px;height:3px;border-radius:2px;margin-right:6px;vertical-align:3px} .sk.in{background:var(--viz-in)} .sk.out{background:var(--viz-out)} .sk.net{background:var(--viz-bal)}
 .wd-card{grid-column:1/-1} .wd-card .col-head{background:var(--unclear-soft)} .wd-card .col-head .cnt{margin-left:0;color:var(--muted)} .wd-card .wd-add{margin-left:auto}
+.wd-card .wd-range{display:grid;grid-template-columns:repeat(3,1fr);margin:10px 12px 4px}
+.wd-card .wd-range button{padding:0 6px}
+.wd-sums{padding:10px 14px 4px} .wd-sums .k{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px} .wd-sums b{margin-left:4px}
 #saldoView{margin-top:12px}
 @media (max-width:560px){#saldoCards.lists.duo{grid-template-columns:minmax(0,1fr)}}
 .alta-big{text-align:center} .alta-big p{margin:4px 0 12px;font-size:16px} .alta-big .alta-qr{width:min(100%,340px)} .alta-big .alta-qr svg{width:100%;height:auto}
@@ -710,7 +713,7 @@ const I18N = {
   mgSum:['Son autos distintos: se suman los montos','Different cars: the amounts are added'], mgOne:['Es el mismo auto: queda un solo monto','The same car: one amount stays'],
   mgResult1:['Queda 1 auto: {0}','Result: 1 car: {0}'], mgResultN:['Quedan {0} autos: {1} = {2} por mes','Result: {0} cars: {1} = {2} per month'],
   salChart:['Totales por mes (estacionamientos + bar)','Totals per month (parking + bar)'], salTot_barIn:['Ingresos totales','Total income'], salTot_barOut:['Gastos totales','Total expenses'], salTot_vizSaldo:['Saldo total','Total balance'],
-  wdTitle:['Retiros personales','Personal withdrawals'], wdAdd:['+ Retiro','+ Withdrawal'], wdNew:['Nuevo retiro personal','New personal withdrawal'], wdEdit:['Editar retiro','Edit withdrawal'],
+  wdTitle:['Retiros personales','Personal withdrawals'], wdMonth:['Mensual','Monthly'], wdYear:['Anual','Yearly'], wdAll:['Todo','All time'], wdRangeAria:['Período de los retiros','Withdrawal period'], wdEmptyY:['Sin retiros este año.','No withdrawals this year.'], wdEmptyAll:['Todavía no hay retiros.','No withdrawals yet.'], wdAdd:['+ Retiro','+ Withdrawal'], wdNew:['Nuevo retiro personal','New personal withdrawal'], wdEdit:['Editar retiro','Edit withdrawal'],
   wdWho:['¿Quién retira?','Who takes it out?'], wdWhoErr:['Elegí quién retira: Angel o Jorge.','Choose who takes it out: Angel or Jorge.'], wdNoWho:['(sin nombre)','(no name)'],
   wdFor:['Para qué (opcional)','What for (optional)'], wdForPh:['p. ej. gastos personales','e.g. personal expenses'],
   wdChart:['Retiros por persona (12 meses)','Withdrawals per person (12 months)'], wdChartD:['Retiros por persona, día por día','Withdrawals per person, day by day'],
@@ -1050,7 +1053,7 @@ let rev = 0;
 const sync = { status: cfg ? 'pending' : 'local', msg:'', last:0, busy:false, again:false, timer:null };
 
 function saveLocal(){ if(!store.set(LS.data, state)) toast(t('storageFail')); }
-function saveUi(){ store.set(LS.ui, { lot:ui.lot, list:ui.list, sort:ui.sort, lang:ui.lang, area:ui.area, cur:ui.cur, fxCasa:ui.fxCasa, bill:ui.bill }); }
+function saveUi(){ store.set(LS.ui, { lot:ui.lot, list:ui.list, sort:ui.sort, lang:ui.lang, area:ui.area, cur:ui.cur, fxCasa:ui.fxCasa, bill:ui.bill, wdRange:ui.wdRange }); }
 function commit(){
   rev++;
   saveLocal(); store.set(LS.dirty, true);
@@ -1531,6 +1534,13 @@ function renderSaldo(){
   const park = sumOf(parkLive(month)), bar = sumOf(barLive()), total = round2(park.net + bar.net);
   const wds = Object.values(state.wd || {}).filter(e => e && !e.deleted && typeof e.d === 'string' && e.d.slice(0, 7) === month).sort((a, b) => b.d.localeCompare(a.d) || (b.t || 0) - (a.t || 0));
   const wdSum = round2(wds.reduce((x, e) => x + (e.a || 0), 0)), left = round2(total - wdSum);
+  /* the list of withdrawals can show the month, the year of that month or everything */
+  const wr = ['year', 'all'].includes(ui.wdRange) ? ui.wdRange : 'month', yr = month.slice(0, 4);
+  const wl = wr === 'month' ? wds : Object.values(state.wd || {}).filter(e => e && !e.deleted && typeof e.d === 'string' && (wr === 'all' || e.d.slice(0, 4) === yr)).sort((a, b) => b.d.localeCompare(a.d) || (b.t || 0) - (a.t || 0));
+  const wlSum = round2(wl.reduce((x, e) => x + (e.a || 0), 0));
+  const wlBy = k => round2(wl.reduce((x, e) => x + (wdWho(e) === k ? e.a || 0 : 0), 0));
+  const wDate = d => wr === 'month' || (wr === 'year' && d.slice(0, 4) === yr) ? fmtDate(d) : fmtDate(d) + ' ' + d.slice(0, 4);
+  const wrLabel = wr === 'month' ? fmtMonthLong(month) : wr === 'year' ? yr : t('wdAll');
   const cls = n => n < 0 ? 'neg' : 'bal';
   $('#summary').innerHTML = `
     <div class="bar-sum">
@@ -1547,10 +1557,12 @@ function renderSaldo(){
     </section>`;
   $('#saldoCards').innerHTML = card('park', t('areaPark'), park) + card('bar', BAR_NAME, bar)
     + `<div class="card saldo-end"><span>${esc(t('salTotal', fmtMonthLong(month)))}</span><span class="calc">${esc(signedMoney(park.net))} ${bar.net < 0 ? '−' : '+'} ${esc(fmtMoney(Math.abs(bar.net)))} =</span><b class="${cls(total)}" id="salEnd">${esc(signedMoney(total))}</b></div>`
-    + `<section class="card col active wd-card"><div class="col-head"><span>${esc(t('wdTitle'))}</span><span class="cnt">${wds.length || ''}</span><button type="button" class="btn small wd-add" id="wdAdd">${esc(t('wdAdd'))}</button></div>
-      ${wds.length ? '<ul>' + wds.map(e => `<li class="row" data-id="${esc(e.id)}"><button type="button" class="row-main" data-act="open"><span class="row-name"><i class="who-dot who-${wdWho(e) || 'none'}"></i>${esc(wdName(wdWho(e)) || t('wdNoWho'))}</span><span class="row-sub"><b class="row-date">${esc(fmtDate(e.d))}</b>${e.w && e.c ? ' · ' + esc(e.c) : ''}</span>${e.n ? `<span class="row-note">📝 ${esc(e.n)}</span>` : ''}</button><div class="row-amt neg">${esc(fmtMoney(e.a))}</div></li>`).join('') + '</ul>' : `<div class="empty">${esc(t('wdEmpty'))}</div>`}
-      <div class="col-foot"><span>${esc(t('barTotal'))}</span><b class="neg" id="wdSum">${esc(fmtMoney(wdSum))}</b></div></section>`
-    + `<div class="card saldo-end"><span>${esc(t('wdLeft'))}</span><span class="calc">${esc(signedMoney(total))} − ${esc(fmtMoney(wdSum))} =</span><b class="${cls(left)}" id="wdLeft">${esc(signedMoney(left))}</b></div>`
+    + `<section class="card col active wd-card"><div class="col-head"><span>${esc(t('wdTitle'))}</span><span class="cnt">${wl.length || ''}</span><button type="button" class="btn small wd-add" id="wdAdd">${esc(t('wdAdd'))}</button></div>
+      <nav class="bview wd-range" id="wdRange" aria-label="${esc(t('wdRangeAria'))}">${[['month', 'wdMonth'], ['year', 'wdYear'], ['all', 'wdAll']].map(([k, key]) => `<button type="button" data-wdr="${k}" class="${wr === k ? 'on' : ''}" aria-pressed="${wr === k}">${esc(t(key))}</button>`).join('')}</nav>
+      ${wl.length ? '<ul>' + wl.map(e => `<li class="row" data-id="${esc(e.id)}"><button type="button" class="row-main" data-act="open"><span class="row-name"><i class="who-dot who-${wdWho(e) || 'none'}"></i>${esc(wdName(wdWho(e)) || t('wdNoWho'))}</span><span class="row-sub"><b class="row-date">${esc(wDate(e.d))}</b>${e.w && e.c ? ' · ' + esc(e.c) : ''}</span>${e.n ? `<span class="row-note">📝 ${esc(e.n)}</span>` : ''}</button><div class="row-amt neg">${esc(fmtMoney(e.a))}</div></li>`).join('') + '</ul>' : `<div class="empty">${esc(t(wr === 'month' ? 'wdEmpty' : wr === 'year' ? 'wdEmptyY' : 'wdEmptyAll'))}</div>`}
+      ${wr !== 'month' && wl.length ? `<div class="wd-tot wd-sums">${WD_PEOPLE.map(([k, name]) => `<span><i class="k who-${k}"></i>${esc(name)} <b>${esc(fmtMoney(wlBy(k)))}</b></span>`).join('')}</div>` : ''}
+      <div class="col-foot"><span>${esc(t('barTotal'))} · ${esc(wrLabel)}</span><b class="neg" id="wdSum">${esc(fmtMoney(wlSum))}</b></div></section>`
+    + (wr !== 'month' ? '' : `<div class="card saldo-end"><span>${esc(t('wdLeft'))}</span><span class="calc">${esc(signedMoney(total))} − ${esc(fmtMoney(wdSum))} =</span><b class="${cls(left)}" id="wdLeft">${esc(signedMoney(left))}</b></div>`)
     + salChartHtml(month) + wdChartHtml(month);
   salCur = -1; wdCur = -1;
 }
@@ -5008,6 +5020,7 @@ $('#saldoCards').addEventListener('click', e => {
   const h = e.target.closest('rect[data-si]'); if(h){ salShow(+h.dataset.si); return; }
   const w = e.target.closest('rect[data-wi]'); if(w){ wdShow(+w.dataset.wi); return; }
   if(e.target.closest('#wdAdd')){ openWd(null); return; }
+  const wrb = e.target.closest('#wdRange [data-wdr]'); if(wrb){ ui.wdRange = wrb.dataset.wdr; saveUi(); renderLists(); return; }
   const r = e.target.closest('.wd-card [data-act="open"]'); if(r){ openWd(r.closest('.row').dataset.id); return; }
   const b = e.target.closest('button[data-area-go]'); if(!b) return; ui.area = b.dataset.areaGo; saveUi(); render(); window.scrollTo(0, 0); });
 $('#areas').addEventListener('click', e => { const b = e.target.closest('[data-area]'); if(!b) return; ui.area = b.dataset.area; saveUi(); render(); window.scrollTo(0, 0); });
