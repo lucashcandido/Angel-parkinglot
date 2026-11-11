@@ -1,7 +1,7 @@
 /* Cast Comercial - keeps the app itself available without a connection.
    Network first, so a new version arrives as soon as the device is online; the stored copy is the fallback.
    Only the app's own files are handled; requests to GitHub and Anthropic never pass through here. */
-const CACHE = 'apl-shell-v2';
+const CACHE = 'apl-shell-v3';
 const SHELL = ['./', 'manifest.webmanifest', 'icon-180.png', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', e => {
@@ -14,7 +14,7 @@ self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) return;
   e.respondWith(
-    fetch(req).then(res => {
+    fetch(req, { cache: 'no-cache' }).then(res => {          /* ask the server every time, so a new version is never held back by the browser cache */
       if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); }
       return res;
     }).catch(() => caches.match(req, { ignoreSearch: true }).then(hit => hit || (req.mode === 'navigate' ? caches.match('./') : Response.error())))
