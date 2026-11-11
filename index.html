@@ -467,6 +467,12 @@ code{background:var(--soft);border-radius:5px;padding:1px 5px;font-size:13.5px;o
 #toast{position:fixed;left:12px;right:12px;margin:0 auto;width:fit-content;bottom:calc(18px + env(safe-area-inset-bottom));z-index:60;background:#111827;color:#fff;border-radius:12px;padding:10px 12px 10px 16px;display:none;align-items:center;gap:12px;font-size:14.5px;max-width:calc(100vw - 24px);box-shadow:0 8px 24px rgba(0,0,0,.3)}
 #toast.show{display:flex}
 #toast button{flex:none;border:0;background:rgba(255,255,255,.16);color:#fff;border-radius:8px;padding:7px 11px;font-weight:650;min-height:36px}
+.wa-choice .wa-opt{display:block;text-decoration:none;color:inherit;border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:0 0 10px;background:var(--card)}
+.wa-choice .wa-opt:hover,.wa-choice .wa-opt:focus-visible{border-color:#25a244;background:color-mix(in srgb,#25a244 7%,var(--card))}
+.wa-choice .wa-opt b{display:block;margin-bottom:4px;color:#1d8a3a}
+.wa-choice .wa-opt span{display:block;font-size:13px;line-height:1.4;color:var(--muted)}
+.wa-choice .wa-opt.plain b{margin:0}
+.wa-choice h2 svg{vertical-align:-4px;color:#25a244}
 </style>
 </head>
 <body>
@@ -629,7 +635,9 @@ const I18N = {
   waText2Lbl:['Segundo recordatorio, para quien ya recibió uno este mes','Second reminder, for customers already reminded this month'],
   waTextLbl:['Mensaje de recordatorio (se envía siempre en español)','Reminder message (always sent in Spanish)'],
   waHint:['Se completan solos: {nombre} {monto} {pagado} {falta} {mes} {meses} {lugar} {patente} {estacionamiento}','Filled in automatically: {nombre} {monto} {pagado} {falta} {mes} {meses} {lugar} {patente} {estacionamiento}'],
-  waPreview:['Vista previa','Preview'],
+  waPreview:['Vista previa','Preview'], waChoose:['¿Qué mensaje querés enviar?','Which message do you want to send?'],
+  waK1:['Recordatorio de pago','Payment reminder'], waK2:['Segundo recordatorio (recargo 10%)','Second reminder (10% surcharge)'],
+  waKPrice:['Aumento de precio','Price increase'], waKLast:['Mañana es el último día sin recargo','Tomorrow is the last day without surcharge'],
   waArea:['Código de área por defecto','Default area code'],
   waAreaHint:['Se usa cuando un teléfono está cargado sin código de área. Vacío = 11 (Buenos Aires).','Used when a phone number was entered without an area code. Empty = 11 (Buenos Aires).'],
   waReset:['Restablecer los textos','Reset the texts'],
@@ -1115,7 +1123,11 @@ const WA_ICON = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" str
 /* the second reminder, for a customer who was already reminded this month: shorter, with the late-payment surcharge */
 const WA_DEFAULT_SECOND = 'Hola {nombre}, sigue pendiente el pago de {monto} correspondiente a {meses}. Lamentablemente, si se abona fuera de término debemos aplicar un recargo del 10%. Gracias.';
 const WA_DEFAULT_SECOND_PARTIAL = 'Hola {nombre}, del pago de {mes} todavía falta abonar {falta}. Lamentablemente, si se abona fuera de término debemos aplicar un recargo del 10%. Gracias.';
-const waSettings = () => { const w = (state.settings && state.settings.wa) || {}; return { text: w.text || '', text2: w.text2 || '', area: w.area || '' }; };
+/* two more messages that can be chosen after a tap on the WhatsApp button: a new price, and tomorrow is the last day without surcharge */
+const WA_DEFAULT_PRICE = 'Hola {nombre}, ¿cómo estás? Te escribimos del estacionamiento para informarte que a partir de {mes} el abono mensual de tu cochera pasa a ser de {monto}. Ante cualquier consulta estamos a disposición. ¡Muchas gracias!';
+const WA_DEFAULT_LAST = 'Hola {nombre}, ¿cómo estás? Te recordamos que mañana es el último día para abonar sin recargo el pago mensual de {monto} correspondiente a {mes}. A partir del día siguiente se aplica un recargo del 10%. Si ya lo hiciste, por favor envianos el comprobante. ¡Muchas gracias!';
+const WA_DEFAULT_LAST_PARTIAL = 'Hola {nombre}, ¿cómo estás? Te recordamos que mañana es el último día para abonar sin recargo lo que falta del pago de {mes}: {falta}. A partir del día siguiente se aplica un recargo del 10%. ¡Muchas gracias!';
+const waSettings = () => { const w = (state.settings && state.settings.wa) || {}; return { text: w.text || '', text2: w.text2 || '', price: w.price || '', last: w.last || '', area: w.area || '' }; };
 const waSecond = (c, month) => { const p = c.id ? payOf(c.id, month) : null; return !!(p && p.r && p.s !== 'paid'); };       /* already reminded once this month */
 /* Turns a number as people write it into what WhatsApp expects.
    Argentina: 54 9 + area code + number, without the leading 0 and without the 15. A number without area code gets the default one
@@ -1178,6 +1190,30 @@ function waText(c, month, template){
   const map = { nombre: niceName(c.name), monto: c.amount ? fmtARS(c.amount) : '', pagado: fmtARS(got), falta: fmtARS(Math.max(0, (c.amount || 0) - got)), mes: monthsInSpanish([month]), meses: monthsInSpanish(owed.length ? owed : [month]),
     lugar: c.spot || '', patente: c.plate || '', estacionamiento: c.lot === NO_LOT ? '' : lotName(c.lot) };
   return text.replace(/\{(\w+)\}/g, (m, k) => k in map ? map[k] : m).replace(/[ \t]{2,}/g, ' ').trim();
+}
+/* the text of one of the three messages: 'remind' (first or second reminder, as before), 'price', 'last' */
+function waKindText(c, month, kind){
+  const w = waSettings(), part = c.id && statusOf(c.id, month) === 'partial' && c.amount;
+  if(kind === 'price') return waText(c, month, w.price || WA_DEFAULT_PRICE);
+  if(kind === 'last') return waText(c, month, w.last || (part ? WA_DEFAULT_LAST_PARTIAL : WA_DEFAULT_LAST));
+  return waText(c, month);
+}
+/* after a tap on WhatsApp: choose which message goes out. num: the number to write to (the customer window passes the typed one) */
+function openWaChoice(cid, month, num){
+  const c = state.customers[cid]; if(!c) return;
+  num = num || waNumber(c.phone, waSettings().area); if(!num) return;
+  const p = payOf(cid, month), owes = statusOf(cid, month) !== 'paid';
+  const opts = (owes ? [['remind', p && p.r ? 'waK2' : 'waK1'], ['last', 'waKLast']] : []).concat([['price', 'waKPrice']]);
+  const el = openModal(`<div class="sheet-head"><h2>${WA_ICON} ${esc(niceName(c.name))}</h2>${closeX()}</div>
+    <div><p class="hint" style="margin:0 0 10px">${esc(t('waChoose'))}</p>
+      ${opts.map(([k, lbl]) => { const txt = waKindText(c, month, k); return `<a class="wa-opt" data-wak="${k}" href="${esc(waUrl(num, txt))}" target="_blank" rel="noopener"><b>${esc(t(lbl))}</b><span>${esc(txt)}</span></a>`; }).join('')}
+      ${owes ? '' : `<a class="wa-opt plain" data-wak="open" href="${esc(waUrl(num, ''))}" target="_blank" rel="noopener"><b>${esc(t('waOpen'))}</b></a>`}
+    </div>`, 'wa-choice');
+  el.addEventListener('click', e => {
+    const a = e.target.closest('[data-wak]'); if(!a) return;
+    const k = a.dataset.wak;
+    setTimeout(() => { closeModal(el); if(k === 'remind' || k === 'last') markReminded(cid, month); }, 400);     /* the link itself opens WhatsApp */
+  });
 }
 const waUrl = (number, text) => 'https://wa.me/' + number + (text ? '?text=' + encodeURIComponent(text) : '');
 /* remembers the day of the last reminder, so the other person sees it too */
@@ -2458,8 +2494,7 @@ function openCustomer(cid, pre){
     const num = waNumber(f('cp').value, waSettings().area), owes = statusOf(cid, month) !== 'paid';
     if(!num){ e.preventDefault(); f('waMsg').innerHTML = `<div class="msg err">${esc(f('cp').value.trim() ? t('waBad', c.name) : t('waNoPhone'))}</div>`; return; }
     f('waMsg').innerHTML = '';
-    e.currentTarget.href = waUrl(num, owes ? waText(c, month) : '');
-    if(owes) setTimeout(() => markReminded(cid, month), 400);
+    e.preventDefault(); openWaChoice(cid, month, num);
   });
 
   const knownNames = () => [f('cn').value.trim()].concat(splitNames(f('cz').value));
@@ -4375,6 +4410,10 @@ function openSettings(focusSync){
         <div class="msg" id="waPrev"></div>
         <div class="field"><label for="waText2">${esc(t('waText2Lbl'))}</label><textarea id="waText2" style="min-height:120px">${esc(waSettings().text2 || WA_DEFAULT_SECOND)}</textarea></div>
         <div class="msg" id="waPrev2"></div>
+        <div class="field"><label for="waText3">${esc(t('waKPrice'))}</label><textarea id="waText3" style="min-height:120px">${esc(waSettings().price || WA_DEFAULT_PRICE)}</textarea></div>
+        <div class="msg" id="waPrev3"></div>
+        <div class="field"><label for="waText4">${esc(t('waKLast'))}</label><textarea id="waText4" style="min-height:120px">${esc(waSettings().last || WA_DEFAULT_LAST)}</textarea></div>
+        <div class="msg" id="waPrev4"></div>
         <div class="field"><label for="waArea">${esc(t('waArea'))}</label><input id="waArea" type="text" inputmode="numeric" autocomplete="off" value="${esc(waSettings().area)}" placeholder="11"><div class="hint">${esc(t('waAreaHint'))}</div></div>
         <button type="button" class="btn small" id="waReset">${esc(t('waReset'))}</button>
       </div>
@@ -4470,15 +4509,21 @@ function openSettings(focusSync){
       const sample = customersFor(ui.lot, ui.month).find(c => statusOf(c.id, ui.month) !== 'paid') || { name:'Juan Pérez', amount:45000, spot:'12', plate:'AB 123 CD', lot:(lotsList()[0] || {}).id };
       $('#waPrev', el).textContent = t('waPreview') + ': ' + waText(sample, ui.month, $('#waText', el).value.trim() || WA_DEFAULT);
       $('#waPrev2', el).textContent = t('waPreview') + ': ' + waText(sample, ui.month, $('#waText2', el).value.trim() || WA_DEFAULT_SECOND);
+      $('#waPrev3', el).textContent = t('waPreview') + ': ' + waText(sample, ui.month, $('#waText3', el).value.trim() || WA_DEFAULT_PRICE);
+      $('#waPrev4', el).textContent = t('waPreview') + ': ' + waText(sample, ui.month, $('#waText4', el).value.trim() || WA_DEFAULT_LAST);
     };
     const waSave = () => {
       const typed = $('#waText', el).value.trim(), text = typed === WA_DEFAULT ? '' : typed, area = $('#waArea', el).value.replace(/\D/g,''), cur = waSettings();
       const typed2 = $('#waText2', el).value.trim(), text2 = typed2 === WA_DEFAULT_SECOND ? '' : typed2;
-      if(text !== cur.text || text2 !== cur.text2 || area !== cur.area){ state.settings.wa = { text, text2, area, t: Date.now() }; commit(); }
+      const typed3 = $('#waText3', el).value.trim(), price = typed3 === WA_DEFAULT_PRICE ? '' : typed3;
+      const typed4 = $('#waText4', el).value.trim(), last = typed4 === WA_DEFAULT_LAST ? '' : typed4;
+      if(text !== cur.text || text2 !== cur.text2 || price !== cur.price || last !== cur.last || area !== cur.area){ state.settings.wa = { text, text2, price, last, area, t: Date.now() }; commit(); }
     };
     $('#waText', el).oninput = waPreview; $('#waText', el).onchange = waSave; $('#waArea', el).onchange = waSave;
     $('#waText2', el).oninput = waPreview; $('#waText2', el).onchange = waSave;
-    $('#waReset', el).onclick = () => { $('#waText', el).value = WA_DEFAULT; $('#waText2', el).value = WA_DEFAULT_SECOND; waSave(); waPreview(); };
+    $('#waText3', el).oninput = waPreview; $('#waText3', el).onchange = waSave;
+    $('#waText4', el).oninput = waPreview; $('#waText4', el).onchange = waSave;
+    $('#waReset', el).onclick = () => { $('#waText', el).value = WA_DEFAULT; $('#waText2', el).value = WA_DEFAULT_SECOND; $('#waText3', el).value = WA_DEFAULT_PRICE; $('#waText4', el).value = WA_DEFAULT_LAST; waSave(); waPreview(); };
     waPreview();
     if(ai){
       $('#aiRemove', el).onclick = async () => { if(await confirmBox(t('aiRemoveTitle'), t('aiRemoveText'), t('aiRemove'), true)){ setAi('', ''); draw(); } };
@@ -5048,7 +5093,7 @@ $('#lists').addEventListener('click', e => {
   if(mf){ openMsgMenu(mf); return; }
   const b = e.target.closest('[data-act]'); if(!b) return;
   const id = b.closest('.row').dataset.id;
-  if(b.dataset.act === 'wa'){ setTimeout(() => markReminded(id, ui.month), 400); return; }      /* the link itself opens WhatsApp */
+  if(b.dataset.act === 'wa'){ e.preventDefault(); openWaChoice(id, ui.month); return; }
   if(b.dataset.act === 'wa-bad'){ toast(t('waBad', state.customers[id].name)); openCustomer(id); return; }
   if(b.dataset.act === 'open') openCustomer(id); else quickStatus(id, b.dataset.act);
 });
