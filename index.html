@@ -473,6 +473,9 @@ code{background:var(--soft);border-radius:5px;padding:1px 5px;font-size:13.5px;o
 .wa-choice .wa-opt span{display:block;font-size:13px;line-height:1.4;color:var(--muted)}
 .wa-choice .wa-opt.plain b{margin:0}
 .wa-choice h2 svg{vertical-align:-4px;color:#25a244}
+.wa-cm{border:1px solid var(--line);border-radius:12px;padding:10px;margin:0 0 12px}
+.wa-cm-h{display:flex;gap:8px;align-items:center;margin-bottom:8px} .wa-cm-h input{flex:1;font-weight:600}
+.wa-cm textarea{width:100%} .wa-cm .check{margin:8px 0} .wa-cm .msg{margin:0}
 </style>
 </head>
 <body>
@@ -637,7 +640,9 @@ const I18N = {
   waHint:['Se completan solos: {nombre} {monto} {pagado} {falta} {mes} {meses} {lugar} {patente} {estacionamiento}','Filled in automatically: {nombre} {monto} {pagado} {falta} {mes} {meses} {lugar} {patente} {estacionamiento}'],
   waPreview:['Vista previa','Preview'], waChoose:['¿Qué mensaje querés enviar?','Which message do you want to send?'],
   waK1:['Recordatorio de pago','Payment reminder'], waK2:['Segundo recordatorio (recargo 10%)','Second reminder (10% surcharge)'],
-  waKPrice:['Aumento de precio','Price increase'], waKLast:['Mañana es el último día sin recargo','Tomorrow is the last day without surcharge'],
+  waKPrice:['Aumento de precio','Price increase'], waAddMsg:['+ Agregar mensaje','+ Add message'], waOwnN:['Mensaje {0}','Message {0}'],
+  waOwnName:['Nombre del mensaje','Message name'], waOwnText:['Texto del mensaje','Message text'], waOwnDel:['Eliminar mensaje','Delete message'],
+  waOwnR:['Cuenta como recordatorio de pago','Counts as payment reminder'], waOwnDelTitle:['¿Eliminar mensaje?','Delete message?'], waOwnDelText:['«{0}» ya no aparecerá al enviar WhatsApp.','“{0}” will no longer appear when sending WhatsApp.'], waKLast:['Mañana es el último día sin recargo','Tomorrow is the last day without surcharge'],
   waArea:['Código de área por defecto','Default area code'],
   waAreaHint:['Se usa cuando un teléfono está cargado sin código de área. Vacío = 11 (Buenos Aires).','Used when a phone number was entered without an area code. Empty = 11 (Buenos Aires).'],
   waReset:['Restablecer los textos','Reset the texts'],
@@ -1127,7 +1132,8 @@ const WA_DEFAULT_SECOND_PARTIAL = 'Hola {nombre}, del pago de {mes} todavía fal
 const WA_DEFAULT_PRICE = 'Hola {nombre}, ¿cómo estás? Te escribimos del estacionamiento para informarte que a partir de {mes} el abono mensual de tu cochera pasa a ser de {monto}. Ante cualquier consulta estamos a disposición. ¡Muchas gracias!';
 const WA_DEFAULT_LAST = 'Hola {nombre}, ¿cómo estás? Te recordamos que mañana es el último día para abonar sin recargo el pago mensual de {monto} correspondiente a {mes}. A partir del día siguiente se aplica un recargo del 10%. Si ya lo hiciste, por favor envianos el comprobante. ¡Muchas gracias!';
 const WA_DEFAULT_LAST_PARTIAL = 'Hola {nombre}, ¿cómo estás? Te recordamos que mañana es el último día para abonar sin recargo lo que falta del pago de {mes}: {falta}. A partir del día siguiente se aplica un recargo del 10%. ¡Muchas gracias!';
-const waSettings = () => { const w = (state.settings && state.settings.wa) || {}; return { text: w.text || '', text2: w.text2 || '', price: w.price || '', last: w.last || '', area: w.area || '' }; };
+const waSettings = () => { const w = (state.settings && state.settings.wa) || {}; return { text: w.text || '', text2: w.text2 || '', price: w.price || '', last: w.last || '', area: w.area || '',
+  custom: Array.isArray(w.custom) ? w.custom.filter(m => m && m.id) : [] }; };          /* own messages added in the settings: [{id, name, text, r}] (r: counts as payment reminder) */
 const waSecond = (c, month) => { const p = c.id ? payOf(c.id, month) : null; return !!(p && p.r && p.s !== 'paid'); };       /* already reminded once this month */
 /* Turns a number as people write it into what WhatsApp expects.
    Argentina: 54 9 + area code + number, without the leading 0 and without the 15. A number without area code gets the default one
@@ -1196,6 +1202,7 @@ function waKindText(c, month, kind){
   const w = waSettings(), part = c.id && statusOf(c.id, month) === 'partial' && c.amount;
   if(kind === 'price') return waText(c, month, w.price || WA_DEFAULT_PRICE);
   if(kind === 'last') return waText(c, month, w.last || (part ? WA_DEFAULT_LAST_PARTIAL : WA_DEFAULT_LAST));
+  if(kind.startsWith('c:')){ const m = w.custom.find(x => x.id === kind.slice(2)); return m ? waText(c, month, m.text) : ''; }
   return waText(c, month);
 }
 /* after a tap on WhatsApp: choose which message goes out. num: the number to write to (the customer window passes the typed one) */
@@ -1203,16 +1210,18 @@ function openWaChoice(cid, month, num){
   const c = state.customers[cid]; if(!c) return;
   num = num || waNumber(c.phone, waSettings().area); if(!num) return;
   const p = payOf(cid, month), owes = statusOf(cid, month) !== 'paid';
-  const opts = (owes ? [['remind', p && p.r ? 'waK2' : 'waK1'], ['last', 'waKLast']] : []).concat([['price', 'waKPrice']]);
+  const own = waSettings().custom.filter(m => (m.text || '').trim());
+  const opts = (owes ? [['remind', t(p && p.r ? 'waK2' : 'waK1')], ['last', t('waKLast')]] : []).concat([['price', t('waKPrice')]], own.map((m, i) => ['c:' + m.id, (m.name || '').trim() || t('waOwnN', i + 1)]));
   const el = openModal(`<div class="sheet-head"><h2>${WA_ICON} ${esc(niceName(c.name))}</h2>${closeX()}</div>
     <div><p class="hint" style="margin:0 0 10px">${esc(t('waChoose'))}</p>
-      ${opts.map(([k, lbl]) => { const txt = waKindText(c, month, k); return `<a class="wa-opt" data-wak="${k}" href="${esc(waUrl(num, txt))}" target="_blank" rel="noopener"><b>${esc(t(lbl))}</b><span>${esc(txt)}</span></a>`; }).join('')}
+      ${opts.map(([k, lbl]) => { const txt = waKindText(c, month, k); return `<a class="wa-opt" data-wak="${esc(k)}" href="${esc(waUrl(num, txt))}" target="_blank" rel="noopener"><b>${esc(lbl)}</b><span>${esc(txt)}</span></a>`; }).join('')}
       ${owes ? '' : `<a class="wa-opt plain" data-wak="open" href="${esc(waUrl(num, ''))}" target="_blank" rel="noopener"><b>${esc(t('waOpen'))}</b></a>`}
     </div>`, 'wa-choice');
   el.addEventListener('click', e => {
     const a = e.target.closest('[data-wak]'); if(!a) return;
     const k = a.dataset.wak;
-    setTimeout(() => { closeModal(el); if(k === 'remind' || k === 'last') markReminded(cid, month); }, 400);     /* the link itself opens WhatsApp */
+    const own1 = k.startsWith('c:') && waSettings().custom.find(m => m.id === k.slice(2));
+    setTimeout(() => { closeModal(el); if(k === 'remind' || k === 'last' || (own1 && own1.r)) markReminded(cid, month); }, 400);     /* the link itself opens WhatsApp */
   });
 }
 const waUrl = (number, text) => 'https://wa.me/' + number + (text ? '?text=' + encodeURIComponent(text) : '');
@@ -4414,6 +4423,8 @@ function openSettings(focusSync){
         <div class="msg" id="waPrev3"></div>
         <div class="field"><label for="waText4">${esc(t('waKLast'))}</label><textarea id="waText4" style="min-height:120px">${esc(waSettings().last || WA_DEFAULT_LAST)}</textarea></div>
         <div class="msg" id="waPrev4"></div>
+        <div id="waCustom"></div>
+        <p><button type="button" class="btn small primary" id="waAddMsg">${esc(t('waAddMsg'))}</button></p>
         <div class="field"><label for="waArea">${esc(t('waArea'))}</label><input id="waArea" type="text" inputmode="numeric" autocomplete="off" value="${esc(waSettings().area)}" placeholder="11"><div class="hint">${esc(t('waAreaHint'))}</div></div>
         <button type="button" class="btn small" id="waReset">${esc(t('waReset'))}</button>
       </div>
@@ -4512,18 +4523,45 @@ function openSettings(focusSync){
       $('#waPrev3', el).textContent = t('waPreview') + ': ' + waText(sample, ui.month, $('#waText3', el).value.trim() || WA_DEFAULT_PRICE);
       $('#waPrev4', el).textContent = t('waPreview') + ': ' + waText(sample, ui.month, $('#waText4', el).value.trim() || WA_DEFAULT_LAST);
     };
+    const waSample = () => customersFor(ui.lot, ui.month).find(c => statusOf(c.id, ui.month) !== 'paid') || { name:'Juan Pérez', amount:45000, spot:'12', plate:'AB 123 CD', lot:(lotsList()[0] || {}).id };
+    const cmPrev = box => { $('.msg', box).textContent = t('waPreview') + ': ' + waText(waSample(), ui.month, $('textarea', box).value.trim() || ' '); };
+    const drawCustom = () => {
+      $('#waCustom', el).innerHTML = waSettings().custom.map((m, i) => `<div class="wa-cm" data-cm="${esc(m.id)}">
+        <div class="wa-cm-h"><input type="text" data-f="name" value="${esc(m.name || '')}" placeholder="${esc(t('waOwnN', i + 1))}" aria-label="${esc(t('waOwnName'))}"><button type="button" class="ib no" data-cmdel aria-label="${esc(t('waOwnDel'))}" title="${esc(t('waOwnDel'))}">✕</button></div>
+        <textarea data-f="text" style="min-height:110px" aria-label="${esc(t('waOwnText'))}">${esc(m.text || '')}</textarea>
+        <label class="check"><input type="checkbox" data-f="r"${m.r ? ' checked' : ''}><span>${esc(t('waOwnR'))}</span></label>
+        <div class="msg"></div></div>`).join('');
+      $$('.wa-cm', el).forEach(cmPrev);
+    };
+    const readCustom = () => $$('.wa-cm', el).map(b => ({ id: b.dataset.cm, name: $('[data-f=name]', b).value.trim(), text: $('[data-f=text]', b).value.trim(), r: $('[data-f=r]', b).checked || undefined }));
     const waSave = () => {
       const typed = $('#waText', el).value.trim(), text = typed === WA_DEFAULT ? '' : typed, area = $('#waArea', el).value.replace(/\D/g,''), cur = waSettings();
       const typed2 = $('#waText2', el).value.trim(), text2 = typed2 === WA_DEFAULT_SECOND ? '' : typed2;
       const typed3 = $('#waText3', el).value.trim(), price = typed3 === WA_DEFAULT_PRICE ? '' : typed3;
       const typed4 = $('#waText4', el).value.trim(), last = typed4 === WA_DEFAULT_LAST ? '' : typed4;
-      if(text !== cur.text || text2 !== cur.text2 || price !== cur.price || last !== cur.last || area !== cur.area){ state.settings.wa = { text, text2, price, last, area, t: Date.now() }; commit(); }
+      const custom = readCustom();
+      if(text !== cur.text || text2 !== cur.text2 || price !== cur.price || last !== cur.last || area !== cur.area || canon(custom) !== canon(cur.custom)){ state.settings.wa = { text, text2, price, last, area, custom: custom.length ? custom : undefined, t: Date.now() }; commit(); }
     };
     $('#waText', el).oninput = waPreview; $('#waText', el).onchange = waSave; $('#waArea', el).onchange = waSave;
     $('#waText2', el).oninput = waPreview; $('#waText2', el).onchange = waSave;
     $('#waText3', el).oninput = waPreview; $('#waText3', el).onchange = waSave;
     $('#waText4', el).oninput = waPreview; $('#waText4', el).onchange = waSave;
     $('#waReset', el).onclick = () => { $('#waText', el).value = WA_DEFAULT; $('#waText2', el).value = WA_DEFAULT_SECOND; $('#waText3', el).value = WA_DEFAULT_PRICE; $('#waText4', el).value = WA_DEFAULT_LAST; waSave(); waPreview(); };
+    drawCustom();
+    $('#waCustom', el).addEventListener('input', e => { const b = e.target.closest('.wa-cm'); if(b) cmPrev(b); });
+    $('#waCustom', el).addEventListener('change', waSave);
+    $('#waCustom', el).addEventListener('click', async e => {
+      const d = e.target.closest('[data-cmdel]'); if(!d) return;
+      const b = d.closest('.wa-cm'), name = $('[data-f=name]', b).value.trim() || $('[data-f=name]', b).placeholder;
+      if(!(await confirmBox(t('waOwnDelTitle'), t('waOwnDelText', name), t('waOwnDel'), true))) return;
+      b.remove(); waSave(); drawCustom();
+    });
+    $('#waAddMsg', el).onclick = () => {
+      const cur = waSettings();
+      state.settings.wa = Object.assign({}, state.settings.wa || {}, { custom: cur.custom.concat([{ id: uid(), name: '', text: 'Hola {nombre}, ' }]), t: Date.now() }); commit();
+      drawCustom();
+      const boxes = $$('.wa-cm', el), last = boxes[boxes.length - 1]; $('[data-f=name]', last).focus(); last.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    };
     waPreview();
     if(ai){
       $('#aiRemove', el).onclick = async () => { if(await confirmBox(t('aiRemoveTitle'), t('aiRemoveText'), t('aiRemove'), true)){ setAi('', ''); draw(); } };
